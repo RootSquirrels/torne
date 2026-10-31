@@ -15,12 +15,15 @@ from torne.acquisition import (
     AcquisitionErrorKind,
     AcquisitionRequest,
     AcquisitionStatus,
+    Conformite,
+    CritereConformite,
     Exhaustiveness,
     Fetcher,
     HttpResponse,
     RecordingTransport,
     RetryPolicy,
     TransportError,
+    VerdictConformite,
     classer_statut,
 )
 from torne.contracts.fingerprint import fingerprint_bytes
@@ -87,12 +90,14 @@ class AdapteurFixe:
         max_pages: int | None = None,
         declares_exhaustion: bool = False,
         erreur_adaptateur: Exception | None = None,
+        verdict: VerdictConformite | None = None,
     ) -> None:
         self._source = source
         self._nb_pages = nb_pages
         self._max_pages = max_pages if max_pages is not None else nb_pages
         self._declares_exhaustion = declares_exhaustion
         self._erreur_adaptateur = erreur_adaptateur
+        self._verdict = verdict
         self._emises = 0
         self.demandes: list[AcquisitionRequest] = []
 
@@ -135,6 +140,21 @@ class AdapteurFixe:
         )
         self.demandes.append(suivante)
         return suivante
+
+    def verdict_conformite(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> VerdictConformite:
+        """Le verdict rendu par cet adaptateur de test.
+
+        Par défaut, l'adaptateur ne déclare **aucun** critère sémantique : le
+        verdict est `non_applicable`, et non « conforme ». Une absence de
+        critère n'est pas un critère satisfait.
+        """
+        if self._verdict is not None:
+            return self._verdict
+        return VerdictConformite(conformite=Conformite.NON_APPLICABLE)
 
 
 SOURCE = Source(
@@ -505,3 +525,160 @@ def test_une_demande_sans_reference_ne_recoit_aucun_identifiant():
     _fetcher(transport, magasin).acquire(AdapteurFixe(SOURCE))
 
     assert transport.credentials_seen[0] == {}
+
+
+# --------------------------------------------------------------------------
+# Conformité — la porte
+# --------------------------------------------------------------------------
+
+
+def _verdict_non_conforme() -> VerdictConformite:
+    """Le verdict d'une source qui a renvoyé les lignes d'une autre station."""
+    return VerdictConformite(
+        conformite=Conformite.NON_CONFORME,
+        motif=(
+            "la source a renvoyé des lignes qui ne sont pas celles demandées : "
+            "code_station demandé « O919001001 », reçu « O509252003 »"
+        ),
+        criteres={
+            "code_station": CritereConformite(
+                demande="O919001001",
+                verifie=True,
+                recu="O509252003",
+                conforme=False,
+            )
+        },
+    )
+
+
+def test_une_source_qui_renvoie_les_lignes_d_une_autre_station_ne_cree_aucune_observation():
+    """La porte : un verdict défavorable bloque, et le statut le dit.
+
+    C'est le test central de la conformité d'acquisition : l'acquisition a
+    eu lieu — la réponse a été reçue — mais elle **ne produit aucune
+    observation**, et elle porte un vocabulaire qui ne laisse aucun doute.
+    """
+    transport = RecordingTransport([_reponse(b'{"data": []}')])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, verdict=_verdict_non_conforme())
+    )
+
+    assert issue.status is AcquisitionStatus.NON_CONFORME
+    assert issue.error_kind is AcquisitionErrorKind.NON_CONFORMITE
+    assert issue.conformite is Conformite.NON_CONFORME
+    assert issue.exploitable is False
+    assert issue.succeeded is False
+
+
+def test_la_reponse_brute_est_conservee_malgre_la_non_conformite():
+    """Une réponse qui a répondu à côté est une preuve : elle est conservée.
+
+    La preuve brute est écrite **avant** toute interprétation, et elle reste
+    là même quand le verdict est défavorable : c'est elle qui dit ce que le
+    fournisseur a réellement répondu.
+    """
+    corps = b'{"data": [{"code_station": "O509252003"}]}'
+    transport = RecordingTransport([_reponse(corps)])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, verdict=_verdict_non_conforme())
+    )
+
+    assert magasin.payloads == [corps]
+    assert len(issue.evidence) == 1
+    assert issue.evidence[0].content_sha256 == fingerprint_bytes(corps)
+
+
+def test_le_verdict_est_consigne_dans_issue_et_journal():
+    """Le verdict est consigné : motif et critères, pas seulement un statut."""
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, verdict=_verdict_non_conforme())
+    )
+
+    consignee = issue.as_dict()
+    assert consignee["conformite"] == "non_conforme"
+    assert "O509252003" in consignee["motif_conformite"]
+    assert consignee["criteres_conformite"]["code_station"]["conforme"] is False
+    assert len(magasin.evenements) == 1
+
+
+def test_la_porte_arrete_le_parcours():
+    """Demander la page suivante d'une source qui a répondu à côté n'apporte rien."""
+    transport = RecordingTransport([_reponse(b"{}"), _reponse(b"{}"), _reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, nb_pages=3, verdict=_verdict_non_conforme())
+    )
+
+    assert len(transport.requests) == 1
+    assert issue.page_count == 1
+
+
+def test_une_exhaustivite_indeclaree_accompagne_un_verdict_non_conforme():
+    """La porte arrête le parcours : on ne sait donc plus ce qu'il restait.
+
+    Une source qui a répondu à côté n'a pas déclaré avoir été épuisée, et le
+    parcours s'est arrêté avant sa fin : l'exhaustivité est **indéclarée**.
+    """
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, declares_exhaustion=True, verdict=_verdict_non_conforme())
+    )
+
+    assert issue.exhaustiveness is Exhaustiveness.UNDECLARED
+
+
+def test_une_absence_de_verdict_n_est_pas_une_conformite():
+    """Pas de verdict, pas de conformité : l'absence de contrôle ne passe pas."""
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(AdapteurFixe(SOURCE))
+
+    assert issue.conformite is Conformite.NON_APPLICABLE
+    assert issue.verdict_conformite is not None
+    assert issue.verdict_conformite.conforme is False
+
+
+def test_une_conformite_verifiee_laisse_l_issue_exploitable():
+    """Une source qui répond à la question n'est pas bloquée."""
+    verdict = VerdictConformite(
+        conformite=Conformite.CONFORME,
+        criteres={
+            "code_station": CritereConformite(
+                demande="O919001001",
+                verifie=True,
+                recu="O919001001",
+                conforme=True,
+            )
+        },
+    )
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(AdapteurFixe(SOURCE, verdict=verdict))
+
+    assert issue.status is AcquisitionStatus.SUCCESS
+    assert issue.conformite is Conformite.CONFORME
+    assert issue.exploitable is True
+
+
+def test_un_verdict_non_conforme_sans_motif_est_refuse():
+    """Un verdict qui ne dit pas pourquoi n'est pas un verdict acceptable."""
+    with pytest.raises(ValueError, match="motif"):
+        VerdictConformite(conformite=Conformite.NON_CONFORME)
+
+
+def test_un_critere_non_verifiable_ne_peut_pas_etre_donne_conforme():
+    """Ce qui n'a pas pu être vérifié ne peut pas être déclaré conforme."""
+    with pytest.raises(ValueError, match="non vérifiable"):
+        CritereConformite(demande="code_cours_eau", verifie=False, conforme=True)

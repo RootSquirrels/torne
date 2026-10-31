@@ -8,7 +8,7 @@ reçu, et ce qui a échoué.
 
 Quatre règles :
 
-1. **Une page acquise est conservée, même si la suivante échoue.** Ce qui a
+1. **Une page acquise est conservée, même si la suite échoue.** Ce qui a
    été obtenu ne se perd pas : l'issue est alors `PARTIAL`, qui est un
    résultat, pas un échec.
 2. **L'échec est consigné.** Une tentative qui rate reste dans le journal,
@@ -18,6 +18,23 @@ Quatre règles :
    garde que la **référence**.
 4. **Rien n'est réécrit.** Le magasin brut est adressé par le contenu : deux
    acquisitions du même contenu partagent la même preuve (INV-01, INV-05).
+
+Quatre contrôles, quatre propriétaires distincts. Le fetcher **orcestre**,
+il ne décide pas :
+
+| Contrôle | À qui appartient |
+|---|---|
+| le transport | le socle (temps, redirections, identifiants) |
+| la structure de la réponse | l'adaptateur (il connaît le format de sa source) |
+| la conformité à la question posée | l'adaptateur (le prédicat est propre à la source) |
+| l'exhaustivité du parcours | le socle, appuyé sur ce que la source déclare |
+
+Le troisième contrôle est une **porte**. Une source qui renvoie les lignes
+d'une autre station rend un verdict `non_conforme` : l'issue porte alors le
+statut `non_conforme`, elle **ne produit aucune observation**, et le parcours
+s'arrête là. La réponse brute, elle, est conservée : une réponse qui a
+répondu à côté est une preuve, et elle est d'autant plus utile qu'on sait
+qu'elle ne convient pas.
 """
 
 from __future__ import annotations
@@ -35,10 +52,12 @@ from .contracts import (
     AcquisitionOutcome,
     AcquisitionRequest,
     AcquisitionStatus,
+    Conformite,
     CredentialProvider,
     Exhaustiveness,
     HttpResponse,
     SourceAdapter,
+    VerdictConformite,
 )
 from .store import RawStore
 from .transport import Transport, TransportError
@@ -126,6 +145,7 @@ class Fetcher:
         preuves: list[RawEvidence] = []
         erreur: AcquisitionErrorKind | None = None
         detail: str | None = None
+        verdict: VerdictConformite | None = None
         page = 0
         tronque = False
 
@@ -144,27 +164,48 @@ class Fetcher:
                 break
 
             reponse_effective = reponse
+
+            # La preuve brute est conservée **avant** toute interprétation.
+            # C'est ce qui permet de garder une réponse non conforme : une
+            # réponse incorrecte est elle-même une preuve, et elle est
+            # d'autant plus utile qu'on sait qu'elle ne répond pas à la
+            # question posée.
             preuve = self._conserver(demande, reponse_effective, page)
             preuves.append(preuve)
             page += 1
 
-            # La poursuite dépend de la réponse reçue : une réponse
-            # malformée est un **échec de la source**, pas une fuite. Elle
-            # devient une issue structurée, jamais une exception qui sort
-            # de l'acquisition sans que rien ne soit consigné.
+            # La structure de la réponse, puis sa conformité à la question.
+            # Les deux sont lues par l'adaptateur : il connaît le format de
+            # sa source. Une réponse malformée est un **échec de la source**,
+            # pas une fuite : elle devient une issue structurée, jamais une
+            # exception qui sort de l'acquisition sans que rien ne soit
+            # consigné.
             try:
                 suivante = adapter.next_request(demande, reponse_effective)
+                verdict = adapter.verdict_conformite(demande, reponse_effective)
             except (ValueError, KeyError) as erreur_adaptateur:
                 erreur = AcquisitionErrorKind.MALFORMED
                 detail = f"la source a renvoyé une réponse illisible : {erreur_adaptateur}"
                 break
+
+            # La porte : un verdict défavorable **bloque**. L'acquisition est
+            # non conforme, elle ne produit aucune observation, et le parcours
+            # s'arrête là — demander la page suivante d'une source qui a
+            # répondu à côté n'apporterait rien.
+            if verdict.conformite is Conformite.NON_CONFORME:
+                erreur = AcquisitionErrorKind.NON_CONFORMITE
+                detail = verdict.motif
+                break
+
             if suivante is None:
                 break
             demande = suivante
 
         finished_at = self._clock()
 
-        if not preuves:
+        if verdict is not None and verdict.conformite is Conformite.NON_CONFORME:
+            statut = AcquisitionStatus.NON_CONFORME
+        elif not preuves:
             statut = AcquisitionStatus.FAILED
         elif tronque or erreur is not None:
             statut = AcquisitionStatus.PARTIAL
@@ -190,6 +231,7 @@ class Fetcher:
             error_kind=erreur,
             error_detail=detail,
             exhaustiveness=exhaustivite,
+            verdict_conformite=verdict,
         )
 
         # L'événement d'acquisition est journalisé **avant** que l'issue ne

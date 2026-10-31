@@ -270,6 +270,28 @@ deux pages Hub'EAU (25 848 et 25 845 octets), une page USGS (56 082 octets), une
 (13 470 octets), quatre lignes de manifeste. La troncature par le budget de pages est reportée
 `partial`, et l'épuisement de la source est reporté `success` : les deux ne se confondent pas.
 
+> **Corrigé le 31 octobre 2026, après la mise en place de la porte de conformité.** L'acquisition
+> Hub'EAU ci-dessus est **réellement allée chercher autre chose** : ce point d'accès accepte
+> `code_station` sans l'appliquer, et les pages reçues portaient d'autres stations. Les trois
+> sources ont bien répondu — mais une seule des trois acquisitions pouvait être exploitée. C'est
+> ce que la porte a mis au jour, et c'est pourquoi « l'acquisition a réussi sur les trois » ne
+> vaut pas ce qu'elle paraît dire.
+
+**31 octobre 2026 — la conformité d'acquisition est vérifiée, et elle bloque (C13).** Le quatrième
+contrôle du socle existe enfin : après le transport, la structure de la réponse et l'exhaustivité,
+une acquisition est confrontée à **la question qui lui a été posée**. L'orchestration reste au socle ;
+le **prédicat est propre à la source** — le socle ne connaît ni les identifiants de stations, ni les
+unités, ni les règles hydrologiques. Le constat qui a déclenché le chantier est mesuré, pas supposé :
+Hub'EAU accepte `code_station` sans l'appliquer (une station inexistante rend la même réponse que la
+station demandée, même `count`, mêmes lignes) ; USGS et Copernicus, eux, appliquent bien leur filtre.
+Une non-conformité porte désormais un **vocabulaire propre et bloquant** — statut `non_conforme`,
+cause `non_conformite`, motif et critères détaillés — et **l'issue ne produit aucune observation**.
+La **preuve brute est conservée malgré tout** : une réponse qui a répondu à côté est une preuve, et
+elle est d'autant plus utile qu'on sait qu'elle ne convient pas. Un critère que la réponse ne permet
+pas de vérifier est consigné comme **non vérifiable**, jamais comme satisfait. Aucun objet de domaine
+n'a été construit ; les huit prédicats de transférabilité ne sont pas concernés, et aucune couche,
+aucun moteur, aucun registre n'a été ajouté.
+
 **31 octobre 2026 — alignement sur les fondations scientifiques et nettoyage du namespace.**
 Le paquet de référence V2.0 (`docs/08-SCIENTIFIC-COMPUTING-FOUNDATION-AND-EVALUATION.md`,
 ADR-021, SPEC-010) a été appliqué, non recopié. Le namespace `athanor` a disparu du paquet :
@@ -301,4 +323,9 @@ ne déclare pas avoir rendu tout ce qu'elle avait. Aucun stockage distribué, au
 aucun framework supplémentaire.
 
 En cours : l’observatoire des sources (Sprint 3), qui dira ce que les données permettent réellement
-de reconstruire et où elles sont lacunaires.
+de reconstruire et où elles sont lacunaires. Une **contrainte déjà mesurée** y entrera : sur
+l’instance observée, le point d’accès Hub’EAU `observations_tr` ne sait pas rendre les observations
+d’une station précise — il rend le référentiel, filtré ou non. Toute reconstruction d’un état
+hydrologique sur le Rhin devra donc emprunter une autre voie, ou un filtrage vérifié côté
+acquisition. C’est un **constat de source**, pas une limite de l’architecture : le reste du socle
+tient, et le blocage qu’on observe est exactement celui qu’il devait produire.

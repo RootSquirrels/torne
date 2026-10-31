@@ -53,6 +53,12 @@ class AcquisitionStatus(StrEnum):
     FAILED = "failed"
     """Aucune page n'a pu être acquise."""
 
+    NON_CONFORME = "non_conforme"
+    """La réponse a été reçue et conservée, mais elle ne répond pas à la question
+    posée. L'acquisition a eu lieu ; son contenu ne peut pas être traité
+    comme une réponse. C'est le statut **bloquant** de la porte de conformité :
+    une acquisition non conforme ne produit aucune observation."""
+
 
 class AcquisitionErrorKind(StrEnum):
     """Pourquoi une acquisition a échoué. Vocabulaire fermé.
@@ -79,6 +85,15 @@ class AcquisitionErrorKind(StrEnum):
 
     MALFORMED = "malformed"
     """La réponse a été reçue mais n'a pas pu être comprise par l'adaptateur."""
+
+    NON_CONFORMITE = "non_conformite"
+    """La réponse a été comprise, mais elle ne répond pas à la question posée.
+
+    C'est la cause propre de la non-conformité sémantique : elle se distingue
+    de `MALFORMED` (la réponse n'a pas pu être lue) et de `NOT_FOUND` (le
+    fournisseur a refusé). La réponse brute est **conservée** malgré tout :
+    une réponse non conforme est une preuve, et le motif de non-conformité
+    est consigné avec elle."""
 
     UNKNOWN = "unknown"
     """Cause non determined. Elle est signalée, jamais masquée."""
@@ -118,6 +133,105 @@ class Exhaustiveness(StrEnum):
     DECLARED_EXHAUSTED = "declared_exhausted"
     TRUNCATED = "truncated"
     UNDECLARED = "undeclared"
+
+
+class Conformite(StrEnum):
+    """Ce que l'on peut dire de la conformité sémantique d'une page.
+
+    Vocabulaire **propre et fermé**, distinct de l'exhaustivité : l'un parle
+    de la *complétude* du parcours, l'autre de la *justesse* de la réponse au
+    regard de la question posée.
+
+    - `CONFORME` — la page répond bien à la question posée, et cela a été
+      **vérifié** sur ce qui a été reçu.
+    - `NON_CONFORME` — la page ne répond pas à la question posée. C'est un
+      verdict **bloquant** : elle ne produit aucune observation.
+    - `NON_APPLICABLE` — la source ne déclare aucun critère sémantique : il
+      n'y a rien à vérifier. Ce n'est **pas** une conformité : une absence
+      de critère n'est jamais un critère satisfait.
+    """
+
+    CONFORME = "conforme"
+    NON_CONFORME = "non_conforme"
+    NON_APPLICABLE = "non_applicable"
+
+
+@dataclass(frozen=True, slots=True)
+class CritereConformite:
+    """Un critère demandé, et ce que la réponse reçue permet d'en dire.
+
+    Trois états distincts, à ne pas confondre :
+
+    - `verifie=True` — la réponse permet de vérifier le critère. `recu` dit
+      ce qui a été trouvé, `conforme` dit si cela correspond ;
+    - `verifie=False` — la réponse **ne permet pas** de vérifier le critère :
+      le champ correspondant est absent. Le critère est alors consigné comme
+      non vérifiable : il n'est jamais confondu avec un critère vérifié et
+      satisfait ;
+    - `conforme=None` — le critère est vérifié et n'a pas été satisfait.
+    """
+
+    demande: str
+    verifie: bool
+    recu: str | None = None
+    conforme: bool | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.demande, str) or not self.demande.strip():
+            raise ValueError("CritereConformite.demande est obligatoire et non vide")
+        if not isinstance(self.verifie, bool):
+            raise TypeError("CritereConformite.verifie doit être un booléen")
+        if self.conforme is not None and not self.verifie:
+            raise ValueError("un critère non vérifiable ne peut pas être déclaré conforme")
+        if self.conforme is not None and self.recu is None:
+            raise ValueError("un critère vérifié porte ce qui a été reçu")
+
+    def as_dict(self) -> dict[str, object]:
+        """Vue sérialisable du critère, pour le journal d'acquisition."""
+        return {
+            "demande": self.demande,
+            "verifie": self.verifie,
+            "recu": self.recu,
+            "conforme": self.conforme,
+        }
+
+
+@dataclass(frozen=True, slots=True)
+class VerdictConformite:
+    """Le verdict de conformité d'une page, et ce qui l'étaye.
+
+    Il porte le **motif** — en clair, en une phrase — et le détail des
+    **critères** : ce qui a été demandé, ce qui a été reçu, ce qui n'a pas pu
+    être vérifié. Un verdict sans motif ni critère est un verdict qu'on ne
+    peut pas auditer : il n'est pas accepté ici.
+    """
+
+    conformite: Conformite
+    motif: str | None = None
+    criteres: Mapping[str, CritereConformite] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.conformite, Conformite):
+            raise TypeError("VerdictConformite.conformite doit être un Conformite")
+        object.__setattr__(self, "criteres", MappingProxyType(dict(self.criteres)))
+        if self.conformite is Conformite.NON_CONFORME and not self.motif:
+            raise ValueError("un verdict non conforme porte son motif")
+        for nom, critere in self.criteres.items():
+            if not isinstance(critere, CritereConformite):
+                raise TypeError(f"le critère « {nom} » n'est pas un CritereConformite")
+
+    @property
+    def conforme(self) -> bool:
+        """Le verdict est-il favorable ? Un critère non applicable ne l'est pas."""
+        return self.conformite is Conformite.CONFORME
+
+    def as_dict(self) -> dict[str, object]:
+        """Vue sérialisable du verdict, pour le journal d'acquisition."""
+        return {
+            "conformite": self.conformite.value,
+            "motif": self.motif,
+            "criteres": {nom: critere.as_dict() for nom, critere in self.criteres.items()},
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -218,6 +332,13 @@ class AcquisitionOutcome:
     error_kind: AcquisitionErrorKind | None = None
     error_detail: str | None = None
     exhaustiveness: Exhaustiveness = Exhaustiveness.UNDECLARED
+    verdict_conformite: VerdictConformite | None = None
+    """Le verdict de conformité de la réponse à la question posée.
+
+    Il est `None` lorsqu'aucun contrôle n'a pu être rendu — une panne de
+    transport, par exemple. Il ne l'est jamais pour dire que tout va bien :
+    un verdict absent n'est pas un verdict favorable.
+    """
 
     def __post_init__(self) -> None:
         if not isinstance(self.status, AcquisitionStatus):
@@ -234,11 +355,43 @@ class AcquisitionOutcome:
         )
         object.__setattr__(self, "attempts", tuple(self.attempts))
         object.__setattr__(self, "evidence", tuple(self.evidence))
+        if self.verdict_conformite is not None and not isinstance(
+            self.verdict_conformite, VerdictConformite
+        ):
+            raise TypeError("AcquisitionOutcome.verdict_conformite doit être un VerdictConformite")
 
     @property
     def succeeded(self) -> bool:
-        """L'acquisition a-t-elle abouti, même partiellement ?"""
+        """L'acquisition a-t-elle abouti, même partiellement ?
+
+        Une acquisition **non conforme** n'a pas abouti : elle a reçu une
+        réponse, mais cette réponse ne répond pas à la question posée. Le
+        statut `non_conforme` n'est donc pas un succès, même partiel.
+        """
         return self.status in (AcquisitionStatus.SUCCESS, AcquisitionStatus.PARTIAL)
+
+    @property
+    def conformite(self) -> Conformite:
+        """Ce que l'on sait de la conformité de la réponse à la question posée.
+
+        `NON_APPLICABLE` quand aucun verdict n'a pu être rendu : une absence
+        de contrôle n'est jamais une conformité.
+        """
+        if self.verdict_conformite is None:
+            return Conformite.NON_APPLICABLE
+        return self.verdict_conformite.conformite
+
+    @property
+    def exploitable(self) -> bool:
+        """L'issue peut-elle être transformée en observations ?
+
+        **C'est la porte.** Elle est fausse dès que la réponse n'est pas
+        conforme : une source qui renvoie les lignes d'une autre station ne
+        crée aucune observation, même si sa réponse a été reçue, conservée et
+        empreinte correctement. La preuve brute, elle, reste : une réponse
+        non conforme est une preuve, et elle est conservée.
+        """
+        return self.succeeded and self.conformite is not Conformite.NON_CONFORME
 
     @property
     def page_count(self) -> int:
@@ -262,6 +415,18 @@ class AcquisitionOutcome:
             "pagination": self.request.pagination.value,
             "status": self.status.value,
             "exhaustiveness": self.exhaustiveness.value,
+            "conformite": self.conformite.value,
+            "motif_conformite": (
+                self.verdict_conformite.motif if self.verdict_conformite else None
+            ),
+            "criteres_conformite": (
+                {
+                    nom: critere.as_dict()
+                    for nom, critere in self.verdict_conformite.criteres.items()
+                }
+                if self.verdict_conformite
+                else {}
+            ),
             "started_at": self.started_at.isoformat(),
             "finished_at": self.finished_at.isoformat(),
             "error_kind": self.error_kind.value if self.error_kind else None,
@@ -349,6 +514,31 @@ class SourceAdapter(Protocol):
         """
         ...
 
+    def verdict_conformite(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> VerdictConformite:
+        """Le verdict : cette page répond-elle bien à la question posée ?
+
+        C'est le **quatrième contrôle**, et le seul dont le prédicat soit
+        propre à la source. Les trois autres sont du ressort du socle
+        (transport), de l'adaptateur (structure de la réponse) et du socle
+        (exhaustivité). Le socle **orcestre** celui-ci : il appelle le
+        prédicat, enregistre le verdict, et bloque quand il est défavorable.
+
+        Le prédicat connaît ce que la source **expose** dans sa réponse, et
+        ce que la demande a **demandé** : c'est à lui de confronter les
+        deux. Il ne dit pas ce que les données signifient — il dit seulement
+        si ce qui est arrivé répond à ce qui a été demandé.
+
+        Trois états sont possibles : `CONFORME`, `NON_CONFORME` (bloquant) et
+        `NON_APPLICABLE` (cette source ne déclare aucun critère sémantique).
+        Une source qui renvoie les lignes d'une autre station rend un verdict
+        `NON_CONFORME`.
+        """
+        ...
+
 
 @dataclass(frozen=True, slots=True)
 class HttpResponse:
@@ -397,9 +587,12 @@ __all__ = [
     "AcquisitionOutcome",
     "AcquisitionRequest",
     "AcquisitionStatus",
+    "Conformite",
     "CredentialProvider",
+    "CritereConformite",
     "Exhaustiveness",
     "HttpResponse",
     "PaginationStrategy",
     "SourceAdapter",
+    "VerdictConformite",
 ]

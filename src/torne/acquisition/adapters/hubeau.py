@@ -25,6 +25,21 @@ développement) :
   observée, consignée ici pour que personne ne croie l'avoir vérifié à la
   place de quelqu'un d'autre ; l'adaptateur envoie malgré tout les filtres
   documentés, qui sont ceux de l'API publique.
+
+  **Mesuré de nouveau le 31 octobre 2026 à 23:29, sur cette instance.** Une
+  requête portant `code_station=O919001001` et `grandeur_hydro=H` rend le
+  même `count` (17 350 477) et les mêmes stations qu'une requête sans filtre
+  de station ; une station **inexistante** (`ZZZZZZZZZZ`) rend cette
+  réponse-là encore, identique. Le filtre est **écho** dans l'URL, il
+  n'agit pas sur la population. Un filtre `date_debut`/`date_fin` est
+  ignoré de la même manière : la requête sans `grandeur_hydro` rend alors le
+  `count` du référentiel entier.
+
+  C'est pourquoi le prédicat de conformité de cet adaptateur **vérifie les
+  identifiants présents dans les lignes réellement reçues** : il ne suppose
+  pas que le fournisseur a obéi. Sur cette instance, il rend un verdict
+  `non_conforme`, et l'acquisition est bloquée — la preuve brute, elle, est
+  conservée, et c'est bien l'intérêt d'une réponse qui a répondu à côté.
 """
 
 from __future__ import annotations
@@ -36,7 +51,14 @@ from typing import Any
 from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
 from ...contracts.observation import Source
-from ..contracts import AcquisitionRequest, HttpResponse, PaginationStrategy
+from ..contracts import (
+    AcquisitionRequest,
+    Conformite,
+    CritereConformite,
+    HttpResponse,
+    PaginationStrategy,
+    VerdictConformite,
+)
 
 URL_OBSERVATIONS_TR = "https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr"
 """Point d'accès Hub'EAU v2 des observations hydrométriques (temps réel)."""
@@ -198,10 +220,197 @@ class HubeauObservationsAdapter:
             raise ValueError("réponse Hub'EAU inattendue : le champ « next » n'est pas une URL")
         return donnees, suivant
 
+    def verdict_conformite(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> VerdictConformite:
+        """Les lignes reçues sont-elles bien celles qui ont été demandées ?
+
+        C'est le prédicat propre à cette source. Il confronte ce que la
+        demande a demandé aux identifiants **présents dans les lignes
+        réellement reçues** — il ne suppose pas que le fournisseur a obéi à
+        ses filtres, et il a des raisons de ne pas le supposer : mesuré le
+        31 octobre 2026, ce point d'accès accepte `code_station` sans
+        l'appliquer (voir la docstring du module).
+
+        Trois critères vérifiables ici : la **station**, la **grandeur**, et la
+        **fenêtre temporelle**. Le **cours d'eau**, lui, n'est pas exposé par
+        les lignes de ce point d'accès : le critère est donc consigné comme
+        **non vérifiable** — jamais comme satisfait. Le référentiel de la
+        station porte son cours d'eau, et c'est la station qui est vérifiée.
+        """
+        lignes, _ = self._lire_page(response)
+        criteres: dict[str, CritereConformite] = {}
+
+        if self._code_station:
+            criteres["code_station"] = self._criteres_identite(
+                lignes, "code_station", ", ".join(self._code_station), self._code_station
+            )
+
+        if self._grandeur_hydro:
+            criteres["grandeur_hydro"] = self._criteres_identite(
+                lignes, "grandeur_hydro", self._grandeur_hydro, (self._grandeur_hydro,)
+            )
+
+        if self._date_debut is not None or self._date_fin is not None:
+            criteres["fenetre_temporelle"] = self._criteres_fenetre(lignes)
+
+        if self._code_cours_eau:
+            # Ce point d'accès n'expose pas le code de cours d'eau dans ses
+            # lignes : le critère demandé ne peut pas être vérifié. Il est
+            # consigné comme tel — une absence de vérification n'est jamais
+            # une vérification réussie.
+            criteres["code_cours_eau"] = CritereConformite(
+                demande=", ".join(self._code_cours_eau),
+                verifie=False,
+            )
+
+        echecs = [nom for nom, critere in criteres.items() if critere.conforme is False]
+        if not echecs:
+            return VerdictConformite(conformite=Conformite.CONFORME, criteres=criteres)
+
+        details = " ; ".join(
+            f"{nom} demandé « {criteres[nom].demande} », reçu « {criteres[nom].recu} »"
+            for nom in echecs
+        )
+        return VerdictConformite(
+            conformite=Conformite.NON_CONFORME,
+            motif=(f"la source a renvoyé des lignes qui ne sont pas celles demandées : {details}"),
+            criteres=criteres,
+        )
+
+    def _criteres_identite(
+        self,
+        lignes: list[Any],
+        champ: str,
+        demande: str,
+        attendus: tuple[str, ...],
+    ) -> CritereConformite:
+        """Un critère d'identité : les lignes portent-elles l'identifiant demandé ?
+
+        Une ligne qui ne porte pas l'identifiant est une ligne qui ne peut
+        pas être attribuée à la question posée : elle compte comme un écart.
+        """
+        if not lignes:
+            return CritereConformite(demande=demande, verifie=False)
+        recues, sans = _champ(lignes, champ)
+        if not recues:
+            return CritereConformite(
+                demande=demande, verifie=False, recu=f"{sans} ligne(s) sans « {champ} »"
+            )
+        ecarts = [valeur for valeur in recues if valeur not in attendus]
+        recu = _rendre(recues)
+        if sans:
+            recu = f"{recu} (+{sans} sans « {champ} »)"
+        return CritereConformite(
+            demande=demande,
+            verifie=True,
+            recu=recu,
+            conforme=not ecarts and not sans,
+        )
+
+    def _criteres_fenetre(self, lignes: list[Any]) -> CritereConformite:
+        """Le critère de fenêtre temporelle, d'après les `date_obs` reçues."""
+        instants: list[datetime] = []
+        illisibles = 0
+        for ligne in lignes:
+            instant = _instant_utc(ligne.get("date_obs"))
+            if instant is None:
+                illisibles += 1
+            else:
+                instants.append(instant)
+
+        borne_debut = self._date_debut
+        borne_fin = self._date_fin
+        demande = (
+            f"de {_iso_utc(borne_debut)} à {_iso_utc(borne_fin)}"
+            if borne_debut is not None and borne_fin is not None
+            else (
+                f"depuis {_iso_utc(borne_debut)}"
+                if borne_debut is not None
+                else f"jusqu'à {_iso_utc(borne_fin)}"
+            )
+        )
+
+        if not instants:
+            return CritereConformite(
+                demande=demande,
+                verifie=False,
+                recu=None,
+            )
+        if illisibles:
+            return CritereConformite(
+                demande=demande,
+                verifie=False,
+                recu=f"{illisibles} date(s) illisible(s)",
+            )
+
+        hors = [
+            instant
+            for instant in instants
+            if (borne_debut is not None and instant < borne_debut)
+            or (borne_fin is not None and instant > borne_fin)
+        ]
+        recu = f"{min(instants).isoformat()} .. {max(instants).isoformat()}"
+        if hors:
+            recu = f"{recu} (dont {len(hors)} hors fenêtre)"
+        return CritereConformite(
+            demande=demande,
+            verifie=True,
+            recu=recu,
+            conforme=not hors,
+        )
+
 
 def _iso_utc(instant: datetime) -> str:
     """L'instant en ISO 8601 UTC, le format honoré par le point d'accès."""
     return instant.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _rendre(valeurs: list[str], maximum: int = 5) -> str:
+    """Les valeurs, rendues lisiblement : les premières, et le compte du reste.
+
+    Une réponse peut porter des dizaines de stations : en garder toutes rendrait
+    le motif illisible, et un motif illisible n'est pas un motif auditable.
+    """
+    if len(valeurs) <= maximum:
+        return ", ".join(valeurs)
+    return f"{', '.join(valeurs[:maximum])} (+{len(valeurs) - maximum} autres)"
+
+
+def _champ(lignes: list[Any], nom: str) -> tuple[list[str], int]:
+    """Les valeurs distinctes d'un champ, et combien de lignes n'en portent pas."""
+    valeurs: list[str] = []
+    sans = 0
+    for ligne in lignes:
+        if not isinstance(ligne, dict):
+            sans += 1
+            continue
+        brut = ligne.get(nom)
+        if brut is None:
+            sans += 1
+            continue
+        valeur = str(brut)
+        if valeur not in valeurs:
+            valeurs.append(valeur)
+    return valeurs, sans
+
+
+def _instant_utc(brut: object) -> datetime | None:
+    """L'instant ISO 8601 d'une valeur de source, ou `None` s'il est illisible."""
+    if not isinstance(brut, str) or not brut.strip():
+        return None
+    texte = brut.strip()
+    if texte.endswith("Z"):
+        texte = f"{texte[:-1]}+00:00"
+    try:
+        instant = datetime.fromisoformat(texte)
+    except ValueError:
+        return None
+    if instant.tzinfo is None:
+        return instant.replace(tzinfo=UTC)
+    return instant.astimezone(UTC)
 
 
 def _charger_json(response: HttpResponse, nom: str) -> dict[str, Any]:

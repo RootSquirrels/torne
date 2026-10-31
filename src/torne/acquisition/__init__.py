@@ -26,11 +26,14 @@ from .contracts import (
     AcquisitionOutcome,
     AcquisitionRequest,
     AcquisitionStatus,
+    Conformite,
     CredentialProvider,
+    CritereConformite,
     Exhaustiveness,
     HttpResponse,
     PaginationStrategy,
     SourceAdapter,
+    VerdictConformite,
 )
 from .fetcher import Fetcher, RetryPolicy, classer_statut
 from .store import FileRawStore, RawStore
@@ -42,7 +45,9 @@ __all__ = [
     "AcquisitionOutcome",
     "AcquisitionRequest",
     "AcquisitionStatus",
+    "Conformite",
     "CredentialProvider",
+    "CritereConformite",
     "Exhaustiveness",
     "Fetcher",
     "FileRawStore",
@@ -55,5 +60,6 @@ __all__ = [
     "SourceAdapter",
     "Transport",
     "TransportError",
+    "VerdictConformite",
     "classer_statut",
 ]

@@ -29,11 +29,20 @@ développement) :
 
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from typing import Any
 
 from ...contracts.observation import Source
-from ..contracts import AcquisitionRequest, HttpResponse, PaginationStrategy
+from ..contracts import (
+    AcquisitionRequest,
+    Conformite,
+    CritereConformite,
+    HttpResponse,
+    PaginationStrategy,
+    VerdictConformite,
+)
 
 URL_IV = "https://waterservices.usgs.gov/nwis/iv/"
 """Point d'accès des valeurs instantanées du NWIS."""
@@ -157,12 +166,131 @@ class UsgsInstantaneousValuesAdapter:
         """
         return None
 
+    def verdict_conformite(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> VerdictConformite:
+        """Les séries reçues sont-elles bien celles qui ont été demandées ?
+
+        Prédicat propre à cette source. Deux critères vérifiables ici, tous
+        deux portés par la réponse elle-même : la **station** et le **code de
+        grandeur**. Mesuré le 31 octobre 2026, ce fournisseur applique
+        effectivement `sites` — une station inexistante rend zéro série —
+        et le contrôle le vérifie plutôt que de le supposer.
+        """
+        charge = _charger_json(response, "USGS")
+        valeur = charge.get("value")
+        if not isinstance(valeur, dict):
+            raise ValueError("réponse USGS inattendue : le champ « value » n'est pas un objet")
+        series = valeur.get("timeSeries")
+        if series is None:
+            series = []
+        if not isinstance(series, list):
+            raise ValueError("réponse USGS inattendue : « timeSeries » n'est pas une liste")
+
+        criteres: dict[str, CritereConformite] = {
+            "sites": self._criteres_identite(series, "sourceInfo.siteCode", self._sites),
+            "parameter_cd": self._criteres_identite(
+                series, "variable.variableCode", self._parameter_cd
+            ),
+        }
+
+        echecs = [nom for nom, critere in criteres.items() if critere.conforme is False]
+        if not echecs:
+            return VerdictConformite(conformite=Conformite.CONFORME, criteres=criteres)
+
+        details = " ; ".join(
+            f"{nom} demandé « {criteres[nom].demande} », reçu « {criteres[nom].recu} »"
+            for nom in echecs
+        )
+        return VerdictConformite(
+            conformite=Conformite.NON_CONFORME,
+            motif=(f"la source a renvoyé des séries qui ne sont pas celles demandées : {details}"),
+            criteres=criteres,
+        )
+
+    def _criteres_identite(
+        self,
+        series: list[object],
+        chemin: str,
+        attendus: tuple[str, ...],
+    ) -> CritereConformite:
+        """Un critère d'identité, lu dans les séries reçues.
+
+        `chemin` nomme le chemin de l'identifiant dans la réponse :
+        `sourceInfo.siteCode` pour la station, `variable.variableCode` pour
+        la grandeur. Une série qui ne porte pas cet identifiant est une série
+        qui ne peut pas être attribuée à la question posée : elle compte
+        comme un écart.
+        """
+        demande = ", ".join(attendus)
+        if not series:
+            return CritereConformite(demande=demande, verifie=False)
+
+        recues: list[str] = []
+        sans = 0
+        for serie in series:
+            valeurs = _valeurs_du_chemin(serie, chemin)
+            if not valeurs:
+                sans += 1
+                continue
+            for valeur in valeurs:
+                if valeur not in recues:
+                    recues.append(valeur)
+
+        if not recues:
+            return CritereConformite(
+                demande=demande,
+                verifie=False,
+                recu=f"{sans} série(s) sans « {chemin} »",
+            )
+        ecarts = [valeur for valeur in recues if valeur not in attendus]
+        recu = ", ".join(recues)
+        if sans:
+            recu = f"{recu} (+{sans} sans « {chemin} »)"
+        return CritereConformite(
+            demande=demande,
+            verifie=True,
+            recu=recu,
+            conforme=not ecarts and not sans,
+        )
+
 
 def _iso_utc(instant: datetime | None) -> str:
     """L'instant en ISO 8601 UTC, le format que le fournisseur a honoré."""
     if instant is None:
         raise ValueError("instant attendu")
     return instant.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _charger_json(response: HttpResponse, nom: str) -> dict[str, Any]:
+    """Le corps de la réponse, lu comme un objet JSON."""
+    try:
+        charge = json.loads(response.body)
+    except (json.JSONDecodeError, UnicodeDecodeError) as erreur:
+        raise ValueError(f"réponse {nom} illisible : {erreur}") from erreur
+    if not isinstance(charge, dict):
+        raise ValueError(f"réponse {nom} inattendue : la racine n'est pas un objet JSON")
+    return charge
+
+
+def _valeurs_du_chemin(serie: object, chemin: str) -> list[str]:
+    """Les valeurs d'un identifiant dans une série : `siteCode`, `variableCode`."""
+    if not isinstance(serie, dict):
+        return []
+    noeud: Any = serie
+    for fragment in chemin.split("."):
+        if not isinstance(noeud, dict):
+            return []
+        noeud = noeud.get(fragment)
+    if not isinstance(noeud, list):
+        return []
+    valeurs: list[str] = []
+    for element in noeud:
+        if isinstance(element, dict) and element.get("value") is not None:
+            valeurs.append(str(element["value"]))
+    return valeurs
 
 
 __all__ = ["SOURCE_ID", "URL_IV", "UsgsInstantaneousValuesAdapter"]

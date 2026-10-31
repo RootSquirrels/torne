@@ -344,11 +344,50 @@ Consolidation ciblée, décidée par le propriétaire : quatre points, et pas de
    (UNDECLARED), une source paginée dont le lien de page suivante disparaît l’annonce (DECLARED_EXHAUSTED),
    et un parcours arrêté par notre budget est une troncature (TRUNCATED).
 
-**Ce qui n’est pas fait, et pourquoi :** ni stockage distribué, ni base de données, ni framework
+**Ce qui n’est pas fait, et pourquoi : ni stockage distribué, ni base de données, ni framework
 supplémentaire. Le garage S3 du homelab reste une **copie** d’un second implémentant du même contrat
 RawStore, à décider après cette consolidation, et non à la place du magasin local : la règle
 **« local d’abord, copie après »** est celle du dépôt (docs/audit/LEGACY-BOREE.md §2.10 et
 §4.6) — une panne de Garage retarde la copie, elle ne perd rien.
+
+### Sprint 2.2 — Conformité d’acquisition (C13)
+
+Le quatrième contrôle manquait. Il est désormais écrit, implémenté et vérifié sur le réseau.
+
+**Le constat, mesuré.** Le point d’accès Hub’EAU `observations_tr` **accepte** `code_station`,
+`code_cours_eau`, `date_debut` et `date_fin`, les renvoie dans ses liens `first`/`next` — et
+**ne les applique pas**. Mesure du 31 octobre 2026 : une requête portant `code_station=O919001001`
+rend le même `count` (17 350 477) et les mêmes stations qu’une requête sans filtre de station, et une
+station **inexistante** rend cette réponse-là encore. L’écho du filtre dans l’URL n’est pas une preuve
+de filtrage. En revanche `grandeur_hydro` filtre, ainsi que le curseur ; et USGS (`sites`) comme
+Copernicus (`$filter`) appliquent bien le leur.
+
+**Les quatre contrôles, et leur propriétaire.** Le socle **orcestre** et enregistre les verdicts ; il ne
+connaît ni les identifiants de stations, ni les unités, ni les règles hydrologiques.
+
+| Contrôle | Propriétaire |
+|---|---|
+| le transport | le socle |
+| la structure de la réponse | l’adaptateur |
+| la conformité à la question posée | le prédicat propre à la source |
+| l’exhaustivité du parcours | le socle, appuyé sur ce que la source déclare |
+
+**Le vocabulaire est propre et bloquant.** `Conformite` (`conforme` / `non_conforme` /
+`non_applicable`), `AcquisitionStatus.NON_CONFORME`, `AcquisitionErrorKind.NON_CONFORMITE`, et un
+`VerdictConformite` qui porte son **motif** et le détail des **critères** — ce qui a été demandé, ce
+qui a été reçu, et ce qui n’a pas pu être vérifié. Un verdict sans motif n’est pas accepté : un
+verdict qu’on ne peut pas auditer n’est pas un verdict.
+
+**La porte.** Une source qui renvoie les lignes d’une autre station **ne crée aucune observation** :
+`AcquisitionOutcome.exploitable` est faux, et le statut est `non_conforme`. La **preuve brute est
+conservée** — une réponse qui a répondu à côté est une preuve, et elle est d’autant plus utile qu’on
+sait qu’elle ne convient pas. Le socle conserve déjà la preuve **avant** toute interprétation ; la
+correction ne fait que ne pas casser cet ordre.
+
+**Ce qui n’est pas fait, et pourquoi :** ni couche sémantique, ni moteur, ni registre, ni ontologie.
+Le prédicat d’une source reste une **vérification d’identifiants** — « les lignes reçues portent-elles
+la station demandée ? » — et non une interprétation de domaine. Les huit prédicats de transférabilité
+ne sont pas concernés : ils relèvent du contrat de validation des affirmations, pas de l’acquisition.
 
 Aucun résultat scientifique n’est produit. Aucune performance sur le monde réel n’est démontrée. Le
 dépôt n’a toujours pas d’**observation** réelle : il a la capacité d’en obtenir, et le moyen de

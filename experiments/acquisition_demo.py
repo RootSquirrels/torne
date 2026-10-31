@@ -1,9 +1,9 @@
-"""Acquisition réelle : trois sources, une seule page chacune.
+"""Acquisition réelle : trois sources, un verdict de conformité chacune.
 
 Ce script n'est pas une démonstration simulée. Il **interroge réellement** trois
 points d'accès publics, conserve ce qu'ils renvoient comme preuves brutes, et
 affiche la chaîne complète : ce qui a été demandé, ce qui a été reçu, l'empreinte
-qui nomme la preuve, et le journal d'acquisition.
+qui nomme la preuve, le **verdict de conformité**, et le journal d'acquisition.
 
 C'est la preuve que le socle transversal d'acquisition fonctionne sur le monde
 réel — et non seulement en test hors ligne. Les tests du dépôt ne touchent
@@ -14,12 +14,24 @@ d'accès** — c'est le but, pas l'exhaustivité :
 
 | Source | Mode d'accès | Ce qu'elle montre |
 |---|---|---|
-| **Hub'EAU v2** (FR) | API JSON, pagination **par curseur** | un lien de page suivant fourni par le fournisseur |
-| **USGS NWIS IV** (US) | API JSON, **sans** pagination, fenêtre temporelle | une source qui rend tout d'un coup |
+| **Hub'EAU v2** (FR) | API JSON, pagination **par curseur** | un lien de page suivant fourni par le fournisseur, et un filtre **accepté sans être appliqué** |
+| **USGS NWIS IV** (US) | API JSON, **sans** pagination, fenêtre temporelle | une source qui rend tout d'un coup, et qui applique le filtre demandé |
 | **Copernicus Data Space** | catalogue **OData**, `$top`/`$skip`/`$filter` | une pagination portée par un lien encodé |
 
 Les paramètres sont minimaux et explicites : une station, une grandeur, une
 fenêtre. Rien n'est balayé, rien n'est téléchargé en masse.
+
+**Ce que la démonstration montre, et qui est le point important :** chaque
+source est confrontée à la question qui lui a été posée. Hub'EAU accepte
+`code_station` sans l'appliquer — mesuré le 31 octobre 2026 : une station
+inexistante rend la même réponse que la station demandée. Le verdict de
+conformité le voit, l'acquisition est **bloquée** et ne produit aucune
+observation, et la réponse brute est **conservée** : une réponse qui a répondu
+à côté est une preuve, et elle est d'autant plus utile qu'on sait qu'elle ne
+convient pas.
+
+Le script sort en code 1 tant qu'une source est bloquée : c'est un constat,
+pas un échec du script.
 
 Usage :
 
@@ -44,6 +56,12 @@ from torne.acquisition.store import NOM_MANIFESTE
 # Station de jauge du Rhin — le code de station est celui publié par Hub'EAU
 # pour la station de Maxé ; il est explicite ici pour que la démonstration soit
 # rejouable et que rien ne soit deviné.
+#
+# ATTENTION, et c'est le point de la démonstration : ce point d'accès accepte
+# `code_station` sans l'appliquer (mesuré le 31 octobre 2026 : une station
+# inexistante rend la même réponse). La demande ci-dessous est donc **legitime**
+# et la réponse reçue sera **non conforme** : c'est exactement ce que la porte
+# de conformité doit voir, dire et bloquer.
 CODE_STATION_RHIN = "O919001001"
 CODE_COURS_EAU_RHIN = "O919"
 
@@ -65,6 +83,19 @@ def _decrire(issue, magasin: FileRawStore) -> None:
     print(f"demande      : {issue.request.method} {issue.request.effective_url}")
     print(f"issue        : {issue.status.value}")
     print(f"exhaustivité : {issue.exhaustiveness.value}")
+    print(f"conformité   : {issue.conformite.value}")
+    print(f"exploitable  : {'oui' if issue.exploitable else 'non'}")
+    if issue.verdict_conformite is not None:
+        for nom, critere in issue.verdict_conformite.criteres.items():
+            etat = "vérifié" if critere.verifie else "non vérifiable"
+            verdict = (
+                ""
+                if critere.conforme is None
+                else ("· conforme" if critere.conforme else "· écart")
+            )
+            print(f"  critère    : {nom} · demandé « {critere.demande} » · {etat} {verdict}")
+        if issue.verdict_conformite.motif:
+            print(f"  motif      : {issue.verdict_conformite.motif}")
     print(f"pages        : {issue.page_count}")
     for tentative in issue.attempts:
         code = tentative.status_code if tentative.status_code is not None else "—"
@@ -206,19 +237,30 @@ def main(argv: list[str]) -> int:
     # ------------------------------------------------------------------
     _titre(6, "Ce que cette démonstration prouve — et ce qu'elle ne prouve pas")
     # ------------------------------------------------------------------
-    acquis = sum(1 for issue in issues if issue.succeeded)
-    print(f"sources acquises : {acquis}/{len(issues)}")
+    repondues = sum(1 for issue in issues if issue.evidence)
+    exploitables = sum(1 for issue in issues if issue.exploitable)
+    bloquees = [issue for issue in issues if not issue.exploitable]
+    print(f"sources interrogées : {repondues}/{len(issues)}")
+    print(f"sources exploitables : {exploitables}/{len(issues)}")
+    print()
+    for issue in bloquees:
+        print(f"  BLOQUÉE : {issue.request.source_id} — {issue.status.value}")
+        if issue.verdict_conformite is not None and issue.verdict_conformite.motif:
+            print(f"            {issue.verdict_conformite.motif}")
+        print(f"            preuve brute conservée : {issue.page_count} page(s)")
     print()
     print("Elle prouve : que le socle transversal sait récupérer, suivre la pagination,")
     print("conserver la réponse brute, l'empreinter, et consigner l'échec comme le succès.")
     print("Elle prouve aussi : que le contenu est dédupliqué, que chaque acquisition est")
     print("journalisée, et que l'exhaustivité du parcours est qualifiée plutôt que supposée.")
+    print("Elle prouve enfin : que la conformité est **vérifiée** et non supposée — une")
+    print("source qui répond à côté est bloquée, et sa preuve brute est conservée quand même.")
     print()
     print("Elle ne prouve pas : que les données sont comprises, qu'elles sont justes, ni")
     print("que quoi que ce soit de scientifique. Aucun objet de domaine n'a été construit :")
     print("c'est le travail du Sprint 3, et la question du Sprint 4.")
 
-    return 0 if acquis == len(issues) else 1
+    return 0 if exploitables == len(issues) else 1
 
 
 if __name__ == "__main__":

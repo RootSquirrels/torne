@@ -24,16 +24,27 @@ développement) :
 from __future__ import annotations
 
 import json
+import re
 from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
 from ...contracts.observation import Source
-from ..contracts import AcquisitionRequest, HttpResponse, PaginationStrategy
+from ..contracts import (
+    AcquisitionRequest,
+    Conformite,
+    CritereConformite,
+    HttpResponse,
+    PaginationStrategy,
+    VerdictConformite,
+)
 
 URL_PRODUCTS = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products"
 """Point d'accès OData du catalogue Copernicus Data Space."""
 
 SOURCE_ID = "copernicus.dataspace.products"
 """Identifiant de la source, stable et sans ambiguïté."""
+
+_PREFIXE_DE_NOM = re.compile(r"^startswith\(\s*Name\s*,\s*'([^']*)'\s*\)$")
+"""La seule forme de filtre dont le prédicat sait vérifier le résultat."""
 
 
 class CopernicusProductsAdapter:
@@ -174,6 +185,105 @@ class CopernicusProductsAdapter:
                 "réponse Copernicus inattendue : « @odata.nextLink » n'est pas une URL"
             )
         return suivant
+
+    def verdict_conformite(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> VerdictConformite:
+        """Les produits reçus sont-ils bien ceux qui ont été demandés ?
+
+        Prédicat propre à cette source. Le filtre demandé est une expression
+        OData que l'adaptateur ne cherche pas à comprendre : il en **déduit**
+        le seul critère qu'il sait vérifier — le préfixe de nom, lorsque le
+        filtre est de la forme `startswith(Name,'…')` — et il le déduit de la
+        **même chaîne qu'il envoie**, pour qu'il ne puisse pas y avoir de
+        divergence entre ce qui est demandé et ce qui est vérifié.
+
+        Un filtre d'une autre forme ne donne aucun critère vérifiable : le
+        verdict est alors `non_applicable`, et le motif le dit. Jamais
+        `conforme` par défaut : une absence de critère n'est pas un critère
+        satisfait.
+        """
+        prefixe = _PREFIXE_DE_NOM.match(self._filtre.strip())
+        if prefixe is None:
+            return VerdictConformite(
+                conformite=Conformite.NON_APPLICABLE,
+                motif=(
+                    "le filtre demandé n'est pas de la forme startswith(Name,'…') : "
+                    "aucun critère sémantique n'est vérifiable sur ce catalogue"
+                ),
+            )
+
+        attendu = prefixe.group(1)
+        produits = self._lire_produits(response)
+        criteres: dict[str, CritereConformite] = {
+            "prefixe_nom": self._criteres_prefixe(produits, attendu),
+        }
+
+        echecs = [nom for nom, critere in criteres.items() if critere.conforme is False]
+        if not echecs:
+            return VerdictConformite(conformite=Conformite.CONFORME, criteres=criteres)
+
+        details = " ; ".join(
+            f"{nom} demandé « {criteres[nom].demande} », reçu « {criteres[nom].recu} »"
+            for nom in echecs
+        )
+        return VerdictConformite(
+            conformite=Conformite.NON_CONFORME,
+            motif=(
+                f"le catalogue a renvoyé des produits qui ne sont pas ceux demandés : {details}"
+            ),
+            criteres=criteres,
+        )
+
+    def _lire_produits(self, response: HttpResponse) -> list[object]:
+        """Les produits de la page."""
+        try:
+            charge = json.loads(response.body)
+        except (json.JSONDecodeError, UnicodeDecodeError) as erreur:
+            raise ValueError(f"réponse Copernicus illisible : {erreur}") from erreur
+        if not isinstance(charge, dict):
+            raise ValueError("réponse Copernicus inattendue : la racine n'est pas un objet JSON")
+        produits = charge.get("value")
+        if not isinstance(produits, list):
+            raise ValueError(
+                "réponse Copernicus inattendue : le champ « value » n'est pas une liste"
+            )
+        return produits
+
+    def _criteres_prefixe(self, produits: list[object], attendu: str) -> CritereConformite:
+        """Le critère de préfixe de nom, d'après les produits reçus."""
+        demande = f"startswith(Name,'{attendu}')"
+        if not produits:
+            return CritereConformite(demande=demande, verifie=False)
+
+        noms: list[str] = []
+        sans = 0
+        for produit in produits:
+            if not isinstance(produit, dict) or produit.get("Name") is None:
+                sans += 1
+                continue
+            nom = str(produit["Name"])
+            if nom not in noms:
+                noms.append(nom)
+
+        if not noms:
+            return CritereConformite(
+                demande=demande, verifie=False, recu=f"{sans} produit(s) sans « Name »"
+            )
+        ecarts = [nom for nom in noms if not nom.startswith(attendu)]
+        recu = ", ".join(noms[:3])
+        if len(noms) > 3:
+            recu = f"{recu} (+{len(noms) - 3} autres)"
+        if sans:
+            recu = f"{recu} (+{sans} sans « Name »)"
+        return CritereConformite(
+            demande=demande,
+            verifie=True,
+            recu=recu,
+            conforme=not ecarts and not sans,
+        )
 
 
 def _decouper_url(url: str) -> tuple[str, dict[str, str]]:

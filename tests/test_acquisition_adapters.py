@@ -25,7 +25,7 @@ from torne.acquisition.adapters.hubeau import (
     HubeauObservationsAdapter,
 )
 from torne.acquisition.adapters.usgs import URL_IV, UsgsInstantaneousValuesAdapter
-from torne.acquisition.contracts import HttpResponse, PaginationStrategy
+from torne.acquisition.contracts import Conformite, HttpResponse, PaginationStrategy
 
 LIEN_SUIVANT_HUBEAU = (
     "https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr"
@@ -452,3 +452,198 @@ def test_chaque_adaptateur_expose_le_contrat_de_la_source():
         assert isinstance(adaptateur.declares_exhaustion, bool)
         assert callable(adaptateur.initial_request)
         assert callable(adaptateur.next_request)
+        assert callable(adaptateur.verdict_conformite)
+
+
+# --------------------------------------------------------------------------
+# Conformité — le prédicat propre à chaque source
+# --------------------------------------------------------------------------
+
+
+def test_hubeau_le_predicat_refuse_les_lignes_d_une_autre_station():
+    """Le cas mesuré : la source répond à côté, et le prédicat le dit.
+
+    Ce point d'accès accepte `code_station` sans l'appliquer — mesuré le
+    31 octobre 2026 : une station inexistante rend la même réponse. Le
+    prédicat ne suppose donc pas que le fournisseur a obéi : il regarde les
+    identifiants **présents dans les lignes reçues**.
+    """
+    adaptateur = _adaptateur_hubeau()
+    reponse = _page_hubeau(
+        donnees=[
+            {
+                "code_station": "O509252003",
+                "grandeur_hydro": "H",
+                "date_obs": "2026-10-31T22:30:00Z",
+            },
+            {
+                "code_station": "P135001001",
+                "grandeur_hydro": "H",
+                "date_obs": "2026-10-31T22:30:00Z",
+            },
+        ],
+        suivant=None,
+    )
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.conformite is Conformite.NON_CONFORME
+    assert "O509252003" in (verdict.motif or "")
+    assert verdict.criteres["code_station"].conforme is False
+
+
+def test_hubeau_le_predicat_accepte_les_lignes_de_la_station_demandee():
+    """Les lignes demandées, vérifiées : le verdict est favorable."""
+    adaptateur = _adaptateur_hubeau(grandeur_hydro="H")
+    reponse = _page_hubeau(
+        donnees=[
+            {
+                "code_station": "O919001001",
+                "grandeur_hydro": "H",
+                "date_obs": "2026-10-31T22:30:00Z",
+            }
+        ],
+        suivant=None,
+    )
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.conformite is Conformite.CONFORME
+    assert verdict.criteres["code_station"].conforme is True
+
+
+def test_hubeau_le_critere_non_verifiable_est_consigne_comme_tel():
+    """Le cours d'eau n'est pas dans les lignes : il n'est pas déclaré conforme.
+
+    Une absence de vérification n'est jamais une vérification réussie : le
+    critère est consigné comme **non vérifiable**.
+    """
+    adaptateur = _adaptateur_hubeau(code_cours_eau=["O919"])
+    reponse = _page_hubeau(
+        donnees=[
+            {
+                "code_station": "O919001001",
+                "grandeur_hydro": "H",
+                "date_obs": "2026-10-31T22:30:00Z",
+            }
+        ],
+        suivant=None,
+    )
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.criteres["code_cours_eau"].verifie is False
+    assert verdict.criteres["code_cours_eau"].conforme is None
+    assert verdict.conformite is Conformite.CONFORME
+
+
+def test_hubeau_le_predicat_verifie_la_fenetre_temporelle():
+    """Une observation hors de la fenêtre demandée est un écart."""
+    adaptateur = _adaptateur_hubeau(
+        date_debut=datetime(2026, 10, 30, tzinfo=UTC),
+        date_fin=datetime(2026, 10, 31, tzinfo=UTC),
+    )
+    reponse = _page_hubeau(
+        donnees=[
+            {
+                "code_station": "O919001001",
+                "date_obs": "2026-10-01T00:00:00Z",
+            }
+        ],
+        suivant=None,
+    )
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.criteres["fenetre_temporelle"].conforme is False
+    assert verdict.conformite is Conformite.NON_CONFORME
+
+
+def test_usgs_le_predicat_refuse_une_station_etrangere():
+    """Une série d'une autre station que celle demandée est un écart."""
+    adaptateur = UsgsInstantaneousValuesAdapter(
+        sites=["07381600"], parameter_cd=["00060"], period="P7D"
+    )
+    reponse = _reponse(
+        {
+            "value": {
+                "queryInfo": {},
+                "timeSeries": [
+                    {
+                        "sourceInfo": {"siteCode": [{"value": "03339000"}]},
+                        "variable": {"variableCode": [{"value": "00060"}]},
+                    }
+                ],
+            }
+        }
+    )
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.conformite is Conformite.NON_CONFORME
+    assert verdict.criteres["sites"].recu == "03339000"
+
+
+def test_usgs_le_predicat_accepte_les_series_demandees():
+    """Les séries demandées, vérifiées : le verdict est favorable."""
+    adaptateur = UsgsInstantaneousValuesAdapter(
+        sites=["07381600"], parameter_cd=["00060"], period="P7D"
+    )
+    reponse = _reponse(
+        {
+            "value": {
+                "queryInfo": {},
+                "timeSeries": [
+                    {
+                        "sourceInfo": {"siteCode": [{"value": "07381600"}]},
+                        "variable": {"variableCode": [{"value": "00060"}]},
+                    }
+                ],
+            }
+        }
+    )
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.conformite is Conformite.CONFORME
+
+
+def test_copernicus_le_predicat_refuse_un_produit_hors_prefixe():
+    """Un produit qui ne porte pas le préfixe demandé est un écart."""
+    adaptateur = CopernicusProductsAdapter(
+        filter_expression="startswith(Name,'Sentinel-2')", page_size=10, max_pages=2
+    )
+    reponse = _reponse({"value": [{"Name": "Sentinel-3A_2026"}]})
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.conformite is Conformite.NON_CONFORME
+    assert "Sentinel-3A_2026" in (verdict.motif or "")
+
+
+def test_copernicus_le_predicat_accepte_les_produits_demandes():
+    """Les produits demandés, vérifiés : le verdict est favorable."""
+    adaptateur = CopernicusProductsAdapter(
+        filter_expression="startswith(Name,'Sentinel-2')", page_size=10, max_pages=2
+    )
+    reponse = _reponse({"value": [{"Name": "Sentinel-2_mosaic_2026_Q3"}]})
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.conformite is Conformite.CONFORME
+
+
+def test_copernicus_un_filtre_inconnu_ne_donne_aucun_critere_verifiable():
+    """Un filtre que le prédicat ne sait pas vérifier ne vaut pas « conforme »."""
+    adaptateur = CopernicusProductsAdapter(
+        filter_expression="ContentDate/gt 2026-01-01T00:00:00.000Z",
+        page_size=10,
+        max_pages=2,
+    )
+    reponse = _reponse({"value": [{"Name": "Sentinel-2_mosaic_2026_Q3"}]})
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.conformite is Conformite.NON_APPLICABLE
+    assert verdict.conforme is False
+    assert verdict.motif is not None
