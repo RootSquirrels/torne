@@ -111,6 +111,18 @@ class HubeauObservationsAdapter:
             quality_status=None,
         )
 
+    @property
+    def declares_exhaustion(self) -> bool:
+        """Cette source **déclare** l'épuisement de son parcours.
+
+        La pagination est portée par le lien `next` : quand il disparaît, le
+        fournisseur dit lui-même qu'il n'y a plus rien à prendre. Une
+        réponse 200 signifie donc ici « le parcours est terminé », et non
+        « j'ai rendu tout ce que j'avais » : c'est une déclaration, et le
+        socle peut la consigner comme telle.
+        """
+        return True
+
     def initial_request(self) -> AcquisitionRequest:
         """La première question : la première page, avec les filtres choisis."""
         return AcquisitionRequest(

@@ -187,6 +187,17 @@ def test_hubeau_un_instant_naif_est_refuse():
         _adaptateur_hubeau(date_debut=datetime(2026, 10, 1))
 
 
+def test_hubeau_declare_l_epuisement_de_son_parcours():
+    """La source paginée dit elle-même quand il n'y a plus rien.
+
+    Le lien `next` disparaissant, Hub'EAU déclare la fin du parcours : une
+    réponse 200 signifie alors « c'est tout », et non « j'ai rendu ce que
+    j'avais ». Le socle peut donc consigner cette exhaustivité comme
+    déclarée.
+    """
+    assert _adaptateur_hubeau().declares_exhaustion is True
+
+
 # --------------------------------------------------------------------------
 # USGS
 # --------------------------------------------------------------------------
@@ -262,6 +273,24 @@ def test_usgs_sans_station_nest_pas_une_question():
     """Une station au moins, sinon la requête n'est pas bornée."""
     with pytest.raises(ValueError, match="sites est obligatoire"):
         UsgsInstantaneousValuesAdapter(sites=[], parameter_cd=["00060"], period="P7D")
+
+
+def test_usgs_ne_declare_pas_l_epuisement_de_son_parcours():
+    """Une source sans pagination ne déclare rien.
+
+    Le fournisseur ne renvoie ni jeton de page suivante, ni en-tête de lien :
+    il n'a aucun moyen de dire « il n'y a plus rien ». Une réponse 200 prouve
+    que la requête a abouti, **pas** que toutes les observations attendues
+    ont été rendues : l'exhaustivité reste indéclarée, et c'est le cas le
+    plus fréquent.
+    """
+    adaptateur = UsgsInstantaneousValuesAdapter(
+        sites=["03339000"],
+        parameter_cd=["00060"],
+        period="P7D",
+    )
+
+    assert adaptateur.declares_exhaustion is False
 
 
 # --------------------------------------------------------------------------
@@ -370,6 +399,21 @@ def test_copernicus_un_lien_suivant_etranger_est_refuse():
         )
 
 
+def test_copernicus_declare_l_epuisement_de_son_parcours():
+    """Le catalogue déclare la fin du parcours par l'absence de `@odata.nextLink`.
+
+    Une réponse 200 signifie alors « c'est tout », et non « j'ai rendu ce que
+    j'avais » : le socle peut consigner cette exhaustivité comme déclarée.
+    """
+    adaptateur = CopernicusProductsAdapter(
+        filter_expression="startswith(Name,'Sentinel-2')",
+        page_size=10,
+        max_pages=2,
+    )
+
+    assert adaptateur.declares_exhaustion is True
+
+
 # --------------------------------------------------------------------------
 # Ce que les trois adaptateurs ont en commun
 # --------------------------------------------------------------------------
@@ -388,3 +432,23 @@ def test_chaque_adaptateur_nomme_son_origine():
         assert adaptateur.source.producer
         assert adaptateur.source.access_point
         assert adaptateur.initial_request().source_id == adaptateur.source.source_id
+
+
+def test_chaque_adaptateur_expose_le_contrat_de_la_source():
+    """Les trois adaptateurs exposent ce que le contrat exige.
+
+    Dont `declares_exhaustion` : c'est par là que le socle sait si une
+    source **déclare** la fin de son parcours, ou si elle se contente de
+    répondre 200 — auquel cas l'exhaustivité reste indéclarée.
+    """
+    for adaptateur in (
+        _adaptateur_hubeau(),
+        UsgsInstantaneousValuesAdapter(sites=["03339000"], parameter_cd=["00060"], period="P7D"),
+        CopernicusProductsAdapter(
+            filter_expression="startswith(Name,'Sentinel-2')", page_size=10, max_pages=2
+        ),
+    ):
+        assert adaptateur.source.source_id
+        assert isinstance(adaptateur.declares_exhaustion, bool)
+        assert callable(adaptateur.initial_request)
+        assert callable(adaptateur.next_request)

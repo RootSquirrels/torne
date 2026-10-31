@@ -15,6 +15,7 @@ from torne.acquisition import (
     AcquisitionErrorKind,
     AcquisitionRequest,
     AcquisitionStatus,
+    Exhaustiveness,
     Fetcher,
     HttpResponse,
     RecordingTransport,
@@ -29,11 +30,12 @@ INSTANT = datetime(2026, 10, 31, 22, 0, tzinfo=UTC)
 
 
 class MagasinMemoire:
-    """Magasin brut de test : conserve les octets et rend leur empreinte."""
+    """Magasin brut de test : conserve les octets et journalise les acquisitions."""
 
     def __init__(self) -> None:
         self.payloads: list[bytes] = []
         self.keys: list[str] = []
+        self.evenements: list[object] = []
 
     def put(
         self,
@@ -56,6 +58,9 @@ class MagasinMemoire:
             key=key,
         )
 
+    def record(self, outcome) -> None:
+        self.evenements.append(outcome)
+
 
 class Horloge:
     """Horloge de test : chaque appel avance d'une seconde."""
@@ -75,16 +80,29 @@ class AdapteurFixe:
     adaptateur signale que la pagination est épuisée.
     """
 
-    def __init__(self, source: Source, nb_pages: int = 1, max_pages: int | None = None) -> None:
+    def __init__(
+        self,
+        source: Source,
+        nb_pages: int = 1,
+        max_pages: int | None = None,
+        declares_exhaustion: bool = False,
+        erreur_adaptateur: Exception | None = None,
+    ) -> None:
         self._source = source
         self._nb_pages = nb_pages
         self._max_pages = max_pages if max_pages is not None else nb_pages
+        self._declares_exhaustion = declares_exhaustion
+        self._erreur_adaptateur = erreur_adaptateur
         self._emises = 0
         self.demandes: list[AcquisitionRequest] = []
 
     @property
     def source(self) -> Source:
         return self._source
+
+    @property
+    def declares_exhaustion(self) -> bool:
+        return self._declares_exhaustion
 
     def initial_request(self) -> AcquisitionRequest:
         self._emises = 1
@@ -103,6 +121,8 @@ class AdapteurFixe:
         request: AcquisitionRequest,
         response: HttpResponse,
     ) -> AcquisitionRequest | None:
+        if self._erreur_adaptateur is not None:
+            raise self._erreur_adaptateur
         if self._emises >= self._nb_pages:
             return None
         self._emises += 1
@@ -239,6 +259,105 @@ def test_la_source_epuisee_donne_un_succes_et_non_un_partiel():
 
     assert issue.status is AcquisitionStatus.SUCCESS
     assert issue.page_count == 1
+
+
+# --------------------------------------------------------------------------
+# Exhaustivité : ce que la source déclare, ou ne déclare pas
+# --------------------------------------------------------------------------
+
+
+def test_une_source_qui_declaire_son_epuisement_le_dit():
+    """Quand la source dit « il n'y a plus rien », l'issue le dit aussi."""
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(AdapteurFixe(SOURCE, declares_exhaustion=True))
+
+    assert issue.exhaustiveness is Exhaustiveness.DECLARED_EXHAUSTED
+
+
+def test_une_source_sans_pagination_ne_declaire_pas_l_exhaustivite():
+    """Une réponse réussie ne prouve pas que tout a été rendu.
+
+    C'est le cas le plus fréquent : une source qui renvoie tout d'un coup ne
+    dit rien de ce qu'elle aurait pu rendre. L'issue doit le dire, plutôt que
+    de laisser croire à un parcours complet.
+    """
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(AdapteurFixe(SOURCE, declares_exhaustion=False))
+
+    assert issue.status is AcquisitionStatus.SUCCESS
+    assert issue.exhaustiveness is Exhaustiveness.UNDECLARED
+
+
+def test_un_parcours_tronque_est_declare_tronque():
+    """Le budget qui arrête le parcours est une troncature, pas une fin."""
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, nb_pages=5, max_pages=1, declares_exhaustion=True)
+    )
+
+    assert issue.exhaustiveness is Exhaustiveness.TRUNCATED
+
+
+# --------------------------------------------------------------------------
+# Journalisation
+# --------------------------------------------------------------------------
+
+
+def test_l_acquisition_est_journalisee_avant_d_etre_rendue():
+    """Une acquisition non journalisée n'a pas eu lieu."""
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(AdapteurFixe(SOURCE))
+
+    assert len(magasin.evenements) == 1
+    evenement = magasin.evenements[0]
+    assert evenement is issue
+    assert evenement.status is AcquisitionStatus.SUCCESS
+
+
+def test_une_acquisition_echouee_est_elle_aussi_journalisee():
+    """L'échec est un résultat : il est journalisé comme le succès."""
+    transport = RecordingTransport([_reponse(b"{}", statut=404)])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(AdapteurFixe(SOURCE))
+
+    assert len(magasin.evenements) == 1
+    evenement = magasin.evenements[0]
+    assert evenement is issue
+    assert evenement.status is AcquisitionStatus.FAILED
+    assert evenement.error_kind is AcquisitionErrorKind.NOT_FOUND
+
+
+# --------------------------------------------------------------------------
+# Erreurs d'adaptateur : une réponse illisible est un échec structuré
+# --------------------------------------------------------------------------
+
+
+def test_une_reponse_illisible_devient_une_issue_structuree():
+    """Une réponse malformée ne doit pas faire sortir brutalement l'acquisition.
+
+    L'adaptateur lève en lisant la réponse : c'est un échec de la source, pas
+    une fuite. L'acquisition rend une issue, et elle est journalisée.
+    """
+    transport = RecordingTransport([_reponse(b"pas du json")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, erreur_adaptateur=ValueError("champ « data » absent"))
+    )
+
+    assert issue.status is AcquisitionStatus.PARTIAL
+    assert issue.error_kind is AcquisitionErrorKind.MALFORMED
+    assert "data" in (issue.error_detail or "")
+    assert len(magasin.evenements) == 1
 
 
 # --------------------------------------------------------------------------

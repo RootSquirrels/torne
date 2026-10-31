@@ -92,6 +92,18 @@ class CopernicusProductsAdapter:
             quality_status=None,
         )
 
+    @property
+    def declares_exhaustion(self) -> bool:
+        """Cette source **déclare** l'épuisement de son parcours.
+
+        Le catalogue indique lui-même la page suivante par `@odata.nextLink` :
+        quand ce lien disparaît, il dit qu'il n'a plus rien à donner. Une
+        réponse 200 signifie donc ici « le parcours est terminé », et non
+        « j'ai rendu tout ce que j'avais » : c'est une déclaration, et le
+        socle peut la consigner comme telle.
+        """
+        return True
+
     def initial_request(self) -> AcquisitionRequest:
         """La première question : la première page du catalogue filtré."""
         return AcquisitionRequest(

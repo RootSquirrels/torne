@@ -39,6 +39,7 @@ from torne.acquisition.adapters import (
     HubeauObservationsAdapter,
     UsgsInstantaneousValuesAdapter,
 )
+from torne.acquisition.store import NOM_MANIFESTE
 
 # Station de jauge du Rhin — le code de station est celui publié par Hub'EAU
 # pour la station de Maxé ; il est explicite ici pour que la démonstration soit
@@ -63,22 +64,35 @@ def _decrire(issue, magasin: FileRawStore) -> None:
     print(f"source       : {issue.request.source_id}")
     print(f"demande      : {issue.request.method} {issue.request.effective_url}")
     print(f"issue        : {issue.status.value}")
+    print(f"exhaustivité : {issue.exhaustiveness.value}")
     print(f"pages        : {issue.page_count}")
     for tentative in issue.attempts:
         code = tentative.status_code if tentative.status_code is not None else "—"
         cause = tentative.error_kind.value if tentative.error_kind else "ok"
-        print(f"  tentative  : page {tentative.page_index} · HTTP {code} · {cause}")
+        duree = f"{tentative.elapsed_ms} ms" if tentative.elapsed_ms else "—"
+        print(f"  tentative  : page {tentative.page_index} · HTTP {code} · {cause} · {duree}")
     if issue.error_kind is not None:
         print(f"erreur       : {issue.error_kind.value} — {issue.error_detail}")
     for preuve in issue.evidence:
         chemin = magasin.content_path(preuve.evidence_id)
         print(f"  preuve     : {preuve.evidence_id[:16]}… · {preuve.media_type}")
         print(f"               {chemin}")
-        print(f"               acquise le {preuve.acquired_at.isoformat()}")
+        print(f"               connue depuis le {preuve.acquired_at.isoformat()}")
 
 
 def _magasin(racine: Path) -> FileRawStore:
     return FileRawStore(racine)
+
+
+def _fichiers_de_contenu(racine: Path) -> list[Path]:
+    """Les fichiers de contenu conservés, journal mis à part.
+
+    C'est le nombre de **contenus distincts** : il ne bouge pas quand on
+    récupère deux fois la même chose.
+    """
+    return sorted(
+        chemin for chemin in racine.rglob("*") if chemin.is_file() and chemin.name != NOM_MANIFESTE
+    )
 
 
 def main(argv: list[str]) -> int:
@@ -150,20 +164,55 @@ def main(argv: list[str]) -> int:
     entrees = magasin.read_manifest()
     print(f"lignes       : {len(entrees)}")
     for entree in entrees:
+        empreintes = entree.get("content_sha256") or []
+        apercu = ", ".join(str(empreinte)[:12] for empreinte in empreintes[:2]) or "—"
         print(
             f"  {entree['acquired_at']} · {entree['source_id']} · "
-            f"{str(entree['content_sha256'])[:16]}… · {entree['media_type']} · "
-            f"{entree['size']} octets"
+            f"{entree['status']}/{entree['exhaustiveness']} · {len(empreintes)} page(s) · "
+            f"{apercu}… · {entree['media_type']} · {entree['size']} octets"
         )
 
     # ------------------------------------------------------------------
-    _titre(5, "Ce que cette démonstration prouve — et ce qu'elle ne prouve pas")
+    _titre(5, "Reprise de la même question — contenu dédupliqué, acquisition journalisée")
+    # ------------------------------------------------------------------
+    avant = len(_fichiers_de_contenu(sortie))
+    lignes_avant = len(magasin.read_manifest())
+    issue_reprise = fetcher.acquire(usgs)
+    apres = len(_fichiers_de_contenu(sortie))
+    lignes_apres = len(magasin.read_manifest())
+    memes_empreintes = [p.evidence_id for p in issue_usgs.evidence] == [
+        p.evidence_id for p in issue_reprise.evidence
+    ]
+    print(f"fichiers de contenu : {avant} -> {apres}")
+    print(f"lignes de journal   : {lignes_avant} -> {lignes_apres}")
+    print(f"contenu identique   : {'oui' if memes_empreintes else 'non'}")
+    if memes_empreintes:
+        print(
+            "-> le même contenu n'est pas réécrit : la même empreinte désigne le "
+            "même fichier. Ce qui est nouveau, c'est l'événement journalisé."
+        )
+    else:
+        print(
+            "-> la même question a rendu un contenu différent : le fournisseur a "
+            "publié des valeurs plus récentes. C'est exactement pourquoi chaque "
+            "acquisition est journalisée séparément, et pourquoi l'instant d'un "
+            "contenu est celui de sa première conservation."
+        )
+    for preuve in issue_reprise.evidence:
+        print(f"   contenu connu depuis le {preuve.acquired_at.isoformat()}")
+    print(f"exhaustivité        : {issue_reprise.exhaustiveness.value}")
+    print("   (cette source ne déclare pas l'épuisement de son parcours : UNDECLARED)")
+
+    # ------------------------------------------------------------------
+    _titre(6, "Ce que cette démonstration prouve — et ce qu'elle ne prouve pas")
     # ------------------------------------------------------------------
     acquis = sum(1 for issue in issues if issue.succeeded)
     print(f"sources acquises : {acquis}/{len(issues)}")
     print()
     print("Elle prouve : que le socle transversal sait récupérer, suivre la pagination,")
     print("conserver la réponse brute, l'empreinter, et consigner l'échec comme le succès.")
+    print("Elle prouve aussi : que le contenu est dédupliqué, que chaque acquisition est")
+    print("journalisée, et que l'exhaustivité du parcours est qualifiée plutôt que supposée.")
     print()
     print("Elle ne prouve pas : que les données sont comprises, qu'elles sont justes, ni")
     print("que quoi que ce soit de scientifique. Aucun objet de domaine n'a été construit :")

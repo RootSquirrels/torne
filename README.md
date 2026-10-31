@@ -287,6 +287,18 @@ observation de source a son propre objet et son propre statut de qualité.
 Non fait : aucun connecteur, aucun modèle économique ou financier, aucune application, aucun
 moteur par domaine, aucun registre. **Aucune performance sur le monde réel n'est démontrée.**
 
-En cours : le socle d'acquisition — intégrations de sources réelles, conservation des preuves
-brutes, et une démonstration d'acquisition réelle. Puis l'observatoire des sources, qui dira ce que
-les données permettent réellement de reconstruire et où elles sont lacunaires.
+**31 octobre 2026 — consolidation d'intégrité du socle d'acquisition (Sprint 2.1).** Quatre points
+ont été corrigés, **sans brique nouvelle**. Le **journal d'acquisition** est durable : le contenu
+brut reste dédupliqué par empreinte, mais chaque acquisition est journalisée séparément —
+tentatives échouées comprises — et l'instant d'un contenu est son instant de **première
+conservation** : le récupérer plus tard ne le change pas. Le **transport** fait désormais ce qu'il
+annonce : plafond de redirections appliqué, durée mesurée, URL finale consignée, et identifiants
+**retirés** lorsqu'une redirection change de serveur, de port ou de schéma. Une **réponse malformée**
+devient une issue structurée (`MALFORMED`), et non une exception qui sortirait de l'acquisition sans
+que rien ne soit consigné. L'**exhaustivité** est qualifiée par source — `DECLARED_EXHAUSTED`,
+`TRUNCATED`, `UNDECLARED` — au lieu d'être déduite du seul code HTTP : une source sans pagination
+ne déclare pas avoir rendu tout ce qu'elle avait. Aucun stockage distribué, aucune base de données,
+aucun framework supplémentaire.
+
+En cours : l’observatoire des sources (Sprint 3), qui dira ce que les données permettent réellement
+de reconstruire et où elles sont lacunaires.

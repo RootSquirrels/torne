@@ -107,6 +107,21 @@ class UsgsInstantaneousValuesAdapter:
             quality_status=None,
         )
 
+    @property
+    def declares_exhaustion(self) -> bool:
+        """Cette source **ne déclare rien** : elle ne se parcourt pas page par page.
+
+        Le fournisseur ne renvoie ni jeton de page suivante, ni en-tête de
+        lien : il n'a donc aucun moyen de dire « il n'y a plus rien ». Une
+        réponse 200 prouve que la requête a abouti, **pas** que toutes les
+        observations attendues ont été rendues.
+
+        L'exhaustivité reste donc indéclarée (`Exhaustiveness.UNDECLARED`) :
+        c'est le cas le plus fréquent, et il doit rester visible plutôt que
+        d'être déguisé en parcours complet.
+        """
+        return False
+
     def initial_request(self) -> AcquisitionRequest:
         """La première question : la fenêtre demandée, en une seule requête."""
         params: dict[str, str] = {

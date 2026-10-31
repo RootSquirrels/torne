@@ -20,6 +20,7 @@ Deux choix structurants :
 from __future__ import annotations
 
 import socket
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -29,6 +30,61 @@ from typing import Protocol
 from .contracts import AcquisitionErrorKind, AcquisitionRequest, HttpResponse
 
 USER_AGENT = "torne-acquisition/0.1 (+https://github.com/RootSquirrels/torne)"
+
+ENTETES_SECRETS = ("authorization", "proxy-authorization", "cookie")
+"""En-têtes qui portent un identifiant : ils ne franchissent pas un domaine."""
+
+
+def _port_effectif(scheme: str, port: int | None) -> int | None:
+    """Le port réellement utilisé, port implicite compris."""
+    if port is not None:
+        return port
+    return {"https": 443, "http": 80}.get(scheme)
+
+
+def _meme_origine(url_a: str, url_b: str) -> bool:
+    """Les deux URL sont-elles servies par la même origine, sans dégradation ?
+
+    Une redirection vers un autre **hôte** est un changement de serveur : les
+    identifiants ne le suivent pas. Un **port** différent est une autre
+    origine, même sur le même hôte. Et une redirection de `https` vers `http`
+    est une **dégradation** : les identifiants ne la suivent pas non plus.
+    """
+    a = urllib.parse.urlsplit(url_a)
+    b = urllib.parse.urlsplit(url_b)
+    if a.hostname != b.hostname:
+        return False
+    if a.scheme != b.scheme:
+        # Une montée de http vers https garde le secret ; toute autre
+        # changement de schéma — dont une descente vers http — ne le garde pas.
+        return a.scheme == "http" and b.scheme == "https"
+    return _port_effectif(a.scheme, a.port) == _port_effectif(b.scheme, b.port)
+
+
+class _RedirectionSecurisee(urllib.request.HTTPRedirectHandler):
+    """Suit les redirections, sans emporter les identifiants ailleurs.
+
+    Python suit les redirections en recopiant les en-têtes, identifiants
+    compris. C'est un défaut : une source qui redirige vers un autre serveur
+    ne doit pas recevoir nos secrets. Ce gestionnaire retire donc les
+    en-têtes d'authentification dès que l'origine change.
+    """
+
+    def __init__(self, max_redirections: int) -> None:
+        super().__init__()
+        self.max_redirections = max_redirections
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        """Construit la requête de redirection, en retirant les secrets si besoin."""
+        nouvelle = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if nouvelle is None:
+            return None
+        if _meme_origine(req.full_url, newurl):
+            return nouvelle
+        for nom in list(nouvelle.headers):
+            if nom.lower() in ENTETES_SECRETS:
+                nouvelle.remove_header(nom)
+        return nouvelle
 
 
 class TransportError(Exception):
@@ -80,9 +136,14 @@ class HttpTransport:
     ) -> None:
         if timeout <= 0:
             raise ValueError("le délai d'attente doit être strictement positif")
+        if max_redirects < 0:
+            raise ValueError("le nombre de redirections autorisées ne peut pas être négatif")
         self._timeout = timeout
         self._user_agent = user_agent
         self._max_redirects = max_redirects
+        self._opener = urllib.request.build_opener(
+            _RedirectionSecurisee(max_redirections=max_redirects)
+        )
 
     def send(
         self,
@@ -99,14 +160,16 @@ class HttpTransport:
         for nom, valeur in (credentials or {}).items():
             native.add_header(nom, valeur)
 
+        depart = time.monotonic()
         try:
-            with urllib.request.urlopen(native, timeout=self._timeout) as reponse:
+            with self._opener.open(native, timeout=self._timeout) as reponse:
                 corps = reponse.read()
                 return HttpResponse(
                     status_code=reponse.status,
                     headers=dict(reponse.headers),
                     body=corps,
-                    url=url,
+                    url=reponse.geturl(),
+                    elapsed_ms=int((time.monotonic() - depart) * 1000),
                 )
         except urllib.error.HTTPError as erreur:
             # Un code d'erreur HTTP est une réponse : elle porte un corps,
@@ -119,7 +182,8 @@ class HttpTransport:
                 status_code=erreur.code,
                 headers=dict(erreur.headers or {}),
                 body=corps,
-                url=url,
+                url=erreur.geturl() or url,
+                elapsed_ms=int((time.monotonic() - depart) * 1000),
             )
         except urllib.error.URLError as erreur:
             raison = getattr(erreur, "reason", erreur)

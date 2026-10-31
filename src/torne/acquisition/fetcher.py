@@ -36,6 +36,7 @@ from .contracts import (
     AcquisitionRequest,
     AcquisitionStatus,
     CredentialProvider,
+    Exhaustiveness,
     HttpResponse,
     SourceAdapter,
 )
@@ -119,6 +120,7 @@ class Fetcher:
         """Acquiert toutes les pages de la source et rend l'issue complète."""
         demande = adapter.initial_request()
         demande_initiale = demande
+        declare_exhaustion = bool(getattr(adapter, "declares_exhaustion", False))
         started_at = self._clock()
         tentatives: list[AcquisitionAttempt] = []
         preuves: list[RawEvidence] = []
@@ -146,7 +148,16 @@ class Fetcher:
             preuves.append(preuve)
             page += 1
 
-            suivante = adapter.next_request(demande, reponse_effective)
+            # La poursuite dépend de la réponse reçue : une réponse
+            # malformée est un **échec de la source**, pas une fuite. Elle
+            # devient une issue structurée, jamais une exception qui sort
+            # de l'acquisition sans que rien ne soit consigné.
+            try:
+                suivante = adapter.next_request(demande, reponse_effective)
+            except (ValueError, KeyError) as erreur_adaptateur:
+                erreur = AcquisitionErrorKind.MALFORMED
+                detail = f"la source a renvoyé une réponse illisible : {erreur_adaptateur}"
+                break
             if suivante is None:
                 break
             demande = suivante
@@ -160,7 +171,16 @@ class Fetcher:
         else:
             statut = AcquisitionStatus.SUCCESS
 
-        return AcquisitionOutcome(
+        if tronque:
+            exhaustivite = Exhaustiveness.TRUNCATED
+        elif erreur is not None:
+            exhaustivite = Exhaustiveness.UNDECLARED
+        elif declare_exhaustion:
+            exhaustivite = Exhaustiveness.DECLARED_EXHAUSTED
+        else:
+            exhaustivite = Exhaustiveness.UNDECLARED
+
+        issue = AcquisitionOutcome(
             request=demande_initiale,
             status=statut,
             started_at=started_at,
@@ -169,7 +189,15 @@ class Fetcher:
             evidence=tuple(preuves),
             error_kind=erreur,
             error_detail=detail,
+            exhaustiveness=exhaustivite,
         )
+
+        # L'événement d'acquisition est journalisé **avant** que l'issue ne
+        # soit rendue : une acquisition non journalisée n'a pas eu lieu.
+        # Si l'écriture du journal échoue, l'erreur remonte — une panne du
+        # magasin ne doit pas se déguiser en acquisition réussie.
+        self._store.record(issue)
+        return issue
 
     def _envoyer(
         self,

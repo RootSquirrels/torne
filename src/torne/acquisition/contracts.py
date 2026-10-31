@@ -100,6 +100,26 @@ class PaginationStrategy(StrEnum):
     """L'en-tête `Link` indique l'URL de la page suivante (RFC 8288)."""
 
 
+class Exhaustiveness(StrEnum):
+    """Ce que l'on sait de l'exhaustivité du parcours d'une source.
+
+    Une réponse HTTP réussie ne prouve **pas** que le fournisseur a rendu
+    toutes les observations attendues. Trois situations, à ne pas confondre :
+
+    - `DECLARED_EXHAUSTED` — la source **dit** qu'il n'y a plus rien : le lien
+      de page suivante a disparu. C'est une déclaration du fournisseur.
+    - `TRUNCATED` — le parcours a été arrêté par notre budget de pages. La
+      source avait encore à donner.
+    - `UNDECLARED` — la source ne le dit pas : elle a renvoyé ce qu'elle avait
+      en une réponse, sans déclarer ce qu'elle aurait pu rendre. C'est le cas
+      d'une source sans pagination, et c'est le cas le plus fréquent.
+    """
+
+    DECLARED_EXHAUSTED = "declared_exhausted"
+    TRUNCATED = "truncated"
+    UNDECLARED = "undeclared"
+
+
 @dataclass(frozen=True, slots=True)
 class AcquisitionRequest:
     """Une demande d'acquisition : à qui, quoi, comment.
@@ -197,6 +217,7 @@ class AcquisitionOutcome:
     evidence: tuple[RawEvidence, ...] = ()
     error_kind: AcquisitionErrorKind | None = None
     error_detail: str | None = None
+    exhaustiveness: Exhaustiveness = Exhaustiveness.UNDECLARED
 
     def __post_init__(self) -> None:
         if not isinstance(self.status, AcquisitionStatus):
@@ -240,6 +261,7 @@ class AcquisitionOutcome:
             "credential_ref": self.request.credential_ref,
             "pagination": self.request.pagination.value,
             "status": self.status.value,
+            "exhaustiveness": self.exhaustiveness.value,
             "started_at": self.started_at.isoformat(),
             "finished_at": self.finished_at.isoformat(),
             "error_kind": self.error_kind.value if self.error_kind else None,
@@ -297,6 +319,18 @@ class SourceAdapter(Protocol):
     @property
     def source(self) -> Source:
         """La source à laquelle cet adaptateur s'adresse."""
+        ...
+
+    @property
+    def declares_exhaustion(self) -> bool:
+        """La source **déclare-t-elle** l'épuisement de son parcours ?
+
+        Vrai pour une source paginée dont le lien de page suivante disparaît :
+        la source dit alors elle-même « il n'y a plus rien à prendre ». Faux
+        pour une source qui renvoie tout d'un coup : alors une réponse
+        réussie ne prouve pas que le fournisseur a rendu toutes les
+        observations attendues, et l'issue doit le dire.
+        """
         ...
 
     def initial_request(self) -> AcquisitionRequest:
@@ -364,6 +398,7 @@ __all__ = [
     "AcquisitionRequest",
     "AcquisitionStatus",
     "CredentialProvider",
+    "Exhaustiveness",
     "HttpResponse",
     "PaginationStrategy",
     "SourceAdapter",

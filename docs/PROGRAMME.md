@@ -319,10 +319,37 @@ pré-enregistré, et c'est ce qui lui vaut.
 
 ## 6. Ce qui est livré au 31 octobre 2026
 
-P0, P1 et P2 sont passés. Le socle d'acquisition (Sprint 2) est **commencé** : les contrats du socle
-transversal sont écrits et testés, et le transport, le fetcher et la conservation des preuves brutes
-sont implémentés. Les adaptateurs de source concrets et la démonstration d'acquisition réelle font
-partie du même sprint et sont en cours.
+P0, P1 et P2 sont passés. Le socle transversal d’acquisition (Sprint 2) est **livré** : les contrats
+du socle, le transport HTTP durci, le magasin brut adressé par le contenu, le fetcher, et **trois
+adaptateurs de source concrets** — Hub’EAU v2 (pagination par curseur), USGS NWIS (sans pagination),
+catalogue Copernicus Data Space (OData). Une démonstration d’acquisition **réelle** les interroge
+et conserve les réponses comme preuves brutes, avec leurs empreintes et leur manifeste.
 
-Aucun résultat scientifique n'est produit. Aucune performance sur le monde réel n'est démontrée. Le
-dépôt n'a toujours pas d'observation réelle : il a maintenant la capacité d'en obtenir.
+### Sprint 2.1 — Acquisition Integrity
+
+Consolidation ciblée, décidée par le propriétaire : quatre points, et pas de nouvelle brique.
+
+1. **Le journal d’acquisition doit être durable et complet.** Le contenu brut reste dédupliqué par
+   empreinte, mais l’**événement d’acquisition** est conservé à chaque récupération, et les
+   **tentatives** individuellement, y compris les échecs. L’instant d’un contenu est son instant de
+   **première conservation** : le récupérer le même contenu plus tard ne le change pas.
+2. **Le transport doit faire ce qu’il annonce** : plafond de redirections appliqué, durée
+   mesurée, URL finale après redirection consignée, et identifiants **retirés** quand une
+   redirection change de serveur, de port ou de schéma.
+3. **Les erreurs d’adaptateur doivent être des résultats.** Une réponse malformée produit une
+   issue structurée (FAILED ou PARTIAL), jamais une exception qui sort de l’acquisition sans que rien ne
+   soit consigné.
+4. **L’exhaustivité doit être qualifiée par source.** Une réponse HTTP réussie ne prouve pas que le
+   fournisseur a rendu toutes les observations attendues : une source sans pagination le **dit**
+   (UNDECLARED), une source paginée dont le lien de page suivante disparaît l’annonce (DECLARED_EXHAUSTED),
+   et un parcours arrêté par notre budget est une troncature (TRUNCATED).
+
+**Ce qui n’est pas fait, et pourquoi :** ni stockage distribué, ni base de données, ni framework
+supplémentaire. Le garage S3 du homelab reste une **copie** d’un second implémentant du même contrat
+RawStore, à décider après cette consolidation, et non à la place du magasin local : la règle
+**« local d’abord, copie après »** est celle du dépôt (docs/audit/LEGACY-BOREE.md §2.10 et
+§4.6) — une panne de Garage retarde la copie, elle ne perd rien.
+
+Aucun résultat scientifique n’est produit. Aucune performance sur le monde réel n’est démontrée. Le
+dépôt n’a toujours pas d’**observation** réelle : il a la capacité d’en obtenir, et le moyen de
+les tracer.
