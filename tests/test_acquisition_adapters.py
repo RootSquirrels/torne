@@ -512,11 +512,13 @@ def test_hubeau_le_predicat_accepte_les_lignes_de_la_station_demandee():
     assert verdict.criteres["code_station"].conforme is True
 
 
-def test_hubeau_le_critere_non_verifiable_est_consigne_comme_tel():
-    """Le cours d'eau n'est pas dans les lignes : il n'est pas déclaré conforme.
+def test_hubeau_le_critere_non_verifiable_empeche_la_conformite():
+    """Le cours d'eau n'est pas dans les lignes : la conformité n'est pas établie.
 
-    Une absence de vérification n'est jamais une vérification réussie : le
-    critère est consigné comme **non vérifiable**.
+    Une absence de vérification n'est jamais une vérification réussie. Le
+    critère est consigné comme **non vérifiable**, et surtout : il empêche le
+    verdict d'être favorable. Le socle ne peut pas certifier ce qu'il n'a pas
+    pu vérifier.
     """
     adaptateur = _adaptateur_hubeau(code_cours_eau=["O919"])
     reponse = _page_hubeau(
@@ -534,7 +536,40 @@ def test_hubeau_le_critere_non_verifiable_est_consigne_comme_tel():
 
     assert verdict.criteres["code_cours_eau"].verifie is False
     assert verdict.criteres["code_cours_eau"].conforme is None
-    assert verdict.conformite is Conformite.CONFORME
+    assert verdict.conformite is Conformite.NON_CONFORME
+    assert "conformité ne peut pas être établie" in (verdict.motif or "")
+
+
+def test_hubeau_les_interactions_entre_filtres_sont_verifiees():
+    """Un filtre qui neutralise les autres se voit : la grandeur est vérifiée.
+
+    Mesuré le 31 octobre 2026 : sur ce point d'accès, l'ajout d'un filtre de
+    dates fait retomber le `count` à celui du référentiel entier, et les
+    grandeurs se mélangent. La station demandée peut donc revenir sans la
+    grandeur demandée : c'est le critère de grandeur qui le voit.
+    """
+    adaptateur = _adaptateur_hubeau(
+        code_cours_eau=[],
+        grandeur_hydro="H",
+        date_debut=datetime(2026, 10, 1, tzinfo=UTC),
+        date_fin=datetime(2026, 10, 31, 23, 59, 59, tzinfo=UTC),
+    )
+    reponse = _page_hubeau(
+        donnees=[
+            {
+                "code_station": "O919001001",
+                "grandeur_hydro": "Q",
+                "date_obs": "2026-10-15T12:00:00Z",
+            }
+        ],
+        suivant=None,
+    )
+
+    verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
+
+    assert verdict.criteres["code_station"].conforme is True
+    assert verdict.criteres["grandeur_hydro"].conforme is False
+    assert verdict.conformite is Conformite.NON_CONFORME
 
 
 def test_hubeau_le_predicat_verifie_la_fenetre_temporelle():

@@ -258,25 +258,39 @@ class HubeauObservationsAdapter:
 
         if self._code_cours_eau:
             # Ce point d'accès n'expose pas le code de cours d'eau dans ses
-            # lignes : le critère demandé ne peut pas être vérifié. Il est
-            # consigné comme tel — une absence de vérification n'est jamais
-            # une vérification réussie.
+            # lignes : le critère demandé ne peut pas être vérifié. La
+            # conformité n'est donc **pas établie**, et c'est ce que dit le
+            # verdict : une absence de vérification n'est jamais une
+            # vérification réussie.
             criteres["code_cours_eau"] = CritereConformite(
                 demande=", ".join(self._code_cours_eau),
                 verifie=False,
+                recu="ce point d'accès n'expose pas ce champ dans ses lignes",
             )
 
         echecs = [nom for nom, critere in criteres.items() if critere.conforme is False]
-        if not echecs:
+        unverifiables = [nom for nom, critere in criteres.items() if not critere.verifie]
+        if not echecs and not unverifiables:
             return VerdictConformite(conformite=Conformite.CONFORME, criteres=criteres)
 
-        details = " ; ".join(
-            f"{nom} demandé « {criteres[nom].demande} », reçu « {criteres[nom].recu} »"
-            for nom in echecs
-        )
+        motifs: list[str] = []
+        if echecs:
+            details = " ; ".join(
+                f"{nom} demandé « {criteres[nom].demande} », reçu « {criteres[nom].recu} »"
+                for nom in echecs
+            )
+            motifs.append(
+                f"la source a renvoyé des lignes qui ne sont pas celles demandées : {details}"
+            )
+        if unverifiables:
+            details = " ; ".join(
+                f"{nom} demandé « {criteres[nom].demande} », non vérifiable ({criteres[nom].recu})"
+                for nom in unverifiables
+            )
+            motifs.append(f"la conformité ne peut pas être établie : {details}")
         return VerdictConformite(
             conformite=Conformite.NON_CONFORME,
-            motif=(f"la source a renvoyé des lignes qui ne sont pas celles demandées : {details}"),
+            motif=" ; ".join(motifs),
             criteres=criteres,
         )
 
@@ -293,7 +307,9 @@ class HubeauObservationsAdapter:
         pas être attribuée à la question posée : elle compte comme un écart.
         """
         if not lignes:
-            return CritereConformite(demande=demande, verifie=False)
+            return CritereConformite(
+                demande=demande, verifie=False, recu="(aucune ligne à vérifier)"
+            )
         recues, sans = _champ(lignes, champ)
         if not recues:
             return CritereConformite(
@@ -337,7 +353,7 @@ class HubeauObservationsAdapter:
             return CritereConformite(
                 demande=demande,
                 verifie=False,
-                recu=None,
+                recu="(aucune date lisible)",
             )
         if illisibles:
             return CritereConformite(

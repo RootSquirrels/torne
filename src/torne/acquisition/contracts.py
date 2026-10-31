@@ -145,11 +145,13 @@ class Conformite(StrEnum):
 
     - `CONFORME` — la page répond bien à la question posée, et cela a été
       **vérifié** sur ce qui a été reçu.
-    - `NON_CONFORME` — la page ne répond pas à la question posée. C'est un
-      verdict **bloquant** : elle ne produit aucune observation.
-    - `NON_APPLICABLE` — la source ne déclare aucun critère sémantique : il
-      n'y a rien à vérifier. Ce n'est **pas** une conformité : une absence
-      de critère n'est jamais un critère satisfait.
+    - `NON_CONFORME` — la conformité n'est **pas établie**. La page ne répond
+      pas à la question posée, ou bien la réponse ne permet pas de le montrer.
+      C'est un verdict **bloquant** : elle ne produit aucune observation.
+    - `NON_APPLICABLE` — la source ne fournit **aucun prédicat** : il n'y a
+      rien à vérifier. Ce n'est **pas** une conformité : une absence de
+      prédicat n'est jamais un prédicat satisfait, et elle ne vaut pas
+      davantage qu'une non-conformité pour ouvrir la porte.
     """
 
     CONFORME = "conforme"
@@ -402,15 +404,17 @@ class AcquisitionOutcome:
         """L'issue peut-elle être transformée en observations ?
 
         **C'est la porte**, et c'est la seule question à poser avant de
-        construire des observations. Elle est fausse dès que la réponse n'est
-        pas conforme : une source qui renvoie les lignes d'une autre station
-        ne crée aucune observation.
+        construire des observations. Elle n'ouvre que sur une **certification
+        positive** : `conformite` vaut `CONFORME`. Tant que la conformité
+        n'est pas établie — refusée, ou simplement absente — la porte reste
+        fermée. C'est le prix à payer pour être certain de ne pas attribuer à
+        une station les observations d'une autre.
 
         Elle est fausse **sans rien retirer à la preuve** : la réponse non
         conforme reste reçue, conservée, empreinte et journalisée. Ce qui ne
         se fait pas, c'est l'usage.
         """
-        return self.succeeded and self.conformite is not Conformite.NON_CONFORME
+        return self.conformite is Conformite.CONFORME
 
     @property
     def page_count(self) -> int:

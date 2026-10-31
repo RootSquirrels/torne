@@ -532,6 +532,24 @@ def test_une_demande_sans_reference_ne_recoit_aucun_identifiant():
 # --------------------------------------------------------------------------
 
 
+class AdaptateurQuiChangeDeVerdict(AdapteurFixe):
+    """Un adaptateur dont le verdict change de page en page."""
+
+    def __init__(self, source: Source, verdicts: list[VerdictConformite]) -> None:
+        super().__init__(source, nb_pages=len(verdicts))
+        self._verdicts = verdicts
+        self._appels = 0
+
+    def verdict_conformite(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> VerdictConformite:
+        verdict = self._verdicts[min(self._appels, len(self._verdicts) - 1)]
+        self._appels += 1
+        return verdict
+
+
 def _verdict_non_conforme() -> VerdictConformite:
     """Le verdict d'une source qui a renvoyé les lignes d'une autre station."""
     return VerdictConformite(
@@ -657,7 +675,12 @@ def test_une_exhaustivite_indeclaree_accompagne_un_verdict_non_conforme():
 
 
 def test_une_absence_de_verdict_n_est_pas_une_conformite():
-    """Pas de verdict, pas de conformité : l'absence de contrôle ne passe pas."""
+    """Pas de verdict, pas de conformité : l'absence de contrôle ne passe pas.
+
+    La porte n'ouvre que sur une certification **positive**. Une source qui
+    ne fournit aucun prédicat ne peut donc pas être exploitée : on ne peut
+    pas certifier ce qu'on n'a pas vérifié.
+    """
     transport = RecordingTransport([_reponse(b"{}")])
     magasin = MagasinMemoire()
 
@@ -666,6 +689,30 @@ def test_une_absence_de_verdict_n_est_pas_une_conformite():
     assert issue.conformite is Conformite.NON_APPLICABLE
     assert issue.verdict_conformite is not None
     assert issue.verdict_conformite.conforme is False
+    assert issue.exploitable is False
+
+
+def test_la_conformite_est_verifiee_page_par_page():
+    """Une page conforme n'autorise pas la suivante : chacune est vérifiée.
+
+    Le curseur de la source peut porter une population étrangère : c'est le
+    contrôle de **chaque** page, et non celui de la première, qui l'empêche.
+    """
+    transport = RecordingTransport([_reponse(b"{}"), _reponse(b"{}"), _reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdaptateurQuiChangeDeVerdict(
+            SOURCE,
+            [VerdictConformite(conformite=Conformite.CONFORME), _verdict_non_conforme()],
+        )
+    )
+
+    assert len(transport.requests) == 2
+    assert issue.conformite is Conformite.NON_CONFORME
+    assert issue.exploitable is False
+    assert len(issue.evidence) == 2
+    assert len(magasin.payloads) == 2
 
 
 def test_une_conformite_verifiee_laisse_l_issue_exploitable():
