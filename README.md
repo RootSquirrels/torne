@@ -56,10 +56,13 @@ de lui.
 | Point d'entrée console qui énonce l'état du paquet | Reconstruction d'états sur données réelles, assimilation |
 | **Les cinq objets du contrat, exécutables** : source, preuve brute, observation, grandeur dérivée, produit de connaissance | Règles temporelles propres à chaque source |
 | **Oracles indépendants** : `statsmodels` (dépendance de développement) confronte le filtre d'état, la variance HAC et les écarts-types groupés | D'autres oracles : SciPy pour les distributions, une base de référence pour l'hydrologie |
-| 256 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
-| Environnement verrouillé (`uv.lock` versionné) et gate de qualité exécuté sur Python 3.12 | Exécution de la CI : le workflow GitHub Actions est écrit, il n'a pas encore tourné |
+| 301 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
+| Environnement verrouillé (`uv.lock` versionné) et gate de qualité exécuté sur Python 3.12 | Exécution de la CI sur d'autres matrices (versions de Python, platforms) |
 | **Matrice de réutilisation consolidée** : trois audits d'archéologie, une décision par composant | Première application financière, edge démontré, capacité de déploiement |
 | **Proposition argumentée du premier vertical slice** (Mississippi) et ses conditions d'échec | — |
+| **Publication contrôlée** : la lignée est vérifiée au moment de la publication, pas seulement quand on le demande ; un enregistrement invalide ne peut pas produire de produit | — |
+| **Nature par sortie** : un produit publie une seule nature, et chaque sortie garde la sienne à travers la sérialisation | — |
+| **Absences respectées** : une absence reste une absence de la donnée à l'entrée jusqu'au rapport de métriques ; elle n'est jamais remplacée par un zéro | — |
 
 **Aucune performance n'est démontrée sur le monde réel.** Le dépôt contient désormais un modèle
 scientifique — un filtre de Kalman en espace d'état — dont **l'implémentation** est vérifiée :
@@ -102,7 +105,8 @@ garde-fou contre la dérive des dépendances.
 Le gate tient en cinq commandes. Elles ont toutes été exécutées et ont toutes passé le
 31 octobre 2026 sur Python 3.12. Les sorties réelles du **socle initial** sont dans
 `docs/P0-RAPPORT.md` ; après la mission 001, le gate est rejoué à l'identique et passe de nouveau,
-avec 256 tests au lieu de 2.
+avec 256 tests au lieu de 2 ; après la remédiation d'acceptation, il est rejoué encore, et passe
+avec **301 tests**.
 
 | Commande | Ce qu'elle garantit |
 |---|---|
@@ -113,8 +117,12 @@ avec 256 tests au lieu de 2.
 | `uv build` | La sdist et le wheel se construisent : le paquet est publiable. |
 
 `.github/workflows/ci.yml` (GitHub Actions) rejoue ce gate à l'identique, sur Python 3.12.
-**Ce workflow est écrit mais n'a pas encore été exécuté** : il ne tournera qu'à la première
-poussée.
+**Ce workflow a été exécuté et a réussi** : deux exécutions terminées avec succès sur `main`
+(`d852d23`, `ff11742`). Il rejoue le gate à chaque poussée.
+
+Le dépôt est **public** (`github.com/RootSquirrels/torne`) : le code y est lisible par
+quiconque. C'est un fait vérifiable par l'API GitHub, et il a une conséquence à trancher
+par le propriétaire — voir `docs/DECISIONS.md`, « Licence du dépôt TORNE ».
 
 ## Documents de référence
 
@@ -182,7 +190,18 @@ paquet Python sans code métier et un point d'entrée console provisoire.
 **31 octobre 2026 — socle d'ingénierie en place et vérifié.** L'environnement est verrouillé
 (`uv.lock` versionné), le paquet s'installe, se construit et s'importe, et le gate de qualité
 (synchronisation, tests, lint, format, construction) passe sur Python 3.12. Le workflow GitHub
-Actions qui rejoue ce gate est écrit, mais **n'a pas encore été exécuté**.
+Actions qui rejoue ce gate **a été exécuté et a réussi**.
+
+**31 octobre 2026 — remédiation d'acceptation.** Cinq défauts d'acceptation du socle scientifique
+ont été corrigés, chacun par un test qui échouait avant et passe après (47 tests rouge sur
+l'ancien code, 301 verts sur le nouveau) : la lignée est vérifiée au moment de la publication et
+un enregistrement invalide ne peut plus être publié ; un produit publie une seule nature et
+chaque sortie garde la sienne ; `ModelResult` refuse un horodatage naïf, un intervalle sans
+sortie correspondante, une longueur incohérente, des bornes non finies ou non ordonnées, et une
+nature de sortie non déclarée ; la méthode d'incertitude des métriques est celle que la
+référence V2.0 autorise (variance HAC de Newey-West, taille effective) — et non un bootstrap que
+le message du précédent commit décrivait à tort ; une absence reste une absence jusqu'au rapport
+de métriques, sans jamais devenir un zéro.
 
 En cours : consolidation de la matrice de réutilisation à partir des trois rapports
 d'archéologie, et choix du premier slice vertical.

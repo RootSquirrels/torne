@@ -203,13 +203,19 @@ def _record(*, variables: tuple[DerivedVariable, ...] = (VARIABLE,), observation
     )
 
 
-def _produit(record, *, product_id: str = "produit-niveau"):
+def _produit(record, *, product_id: str = "produit-niveau", outputs=("level",)):
+    """Publie l'état reconstruit : les sorties publiées partagent une nature.
+
+    Le modèle de test restitue un état **et** émet une prévision : ce sont deux
+    produits distincts, pas un produit étiqueté d'une seule nature.
+    """
     return record.to_product(
         product_id=product_id,
         version="1.0.0",
         status=ProductStatus.USABLE,
         domain_of_validity="stations du bassin moyen, campagne 2026",
         uncertainty="incertitude de l'état filtré, qualifiée en intervalle",
+        outputs=outputs,
     )
 
 
@@ -319,6 +325,29 @@ def test_un_calcul_anterieur_a_l_utilisabilite_de_ses_entrees_est_signale():
     """Une grandeur calculée avant que son entrée ne soit utilisable est impossible."""
     prematuree = _variable(computed_at=_instant("2026-10-17T00:00:00+00:00"))
     rapport = verify_lineage(_record(variables=(prematuree,)))
+
+    assert not rapport.ok
+    assert any("avant l'utilisabilité" in probleme for probleme in rapport.problems)
+
+
+def test_un_calcul_anterieur_a_l_utilisabilite_de_sa_grandeur_derivee_entree_est_signale():
+    """L'entrée d'une grandeur dérivée peut être une autre grandeur dérivée.
+
+    Ce qui compte est alors l'instant où cette entrée **devient utilisable**,
+    non celui où elle a été calculée : une grandeur acquise plus tard n'a pas
+    pu alimenter un calcul antérieur.
+    """
+    matricule = _variable(
+        variable_id="var-matrice",
+        computed_at=_instant("2026-10-19T10:00:00+00:00"),
+        ingested_at=_instant("2026-10-20T09:00:00+00:00"),
+    )
+    avale = _variable(
+        variable_id="var-avale",
+        computed_at=_instant("2026-10-20T08:00:00+00:00"),
+        inputs=(matricule,),
+    )
+    rapport = verify_lineage(_record(variables=(matricule, avale)))
 
     assert not rapport.ok
     assert any("avant l'utilisabilité" in probleme for probleme in rapport.problems)
@@ -447,6 +476,44 @@ def test_un_statut_inconnu_d_entree_reste_inconnu():
         quality_status=QualityStatus.UNKNOWN,
     )
     assert _variable(inputs=(inconnue,)).status is QualityStatus.UNKNOWN
+
+
+# --------------------------------------------------------------------------
+# Nature par sortie : deux natures, deux produits (SPEC-009 §3)
+# --------------------------------------------------------------------------
+
+
+def test_un_produit_ne_peut_pas_melanger_un_etat_reconstruit_et_une_prevision():
+    """SPEC-009 §3 : un état reconstruit et une prévision sont deux produits.
+
+    Un paquet de sorties de natures différentes ne peut pas être étiqueté d'une
+    seule nature : le refus nomme les natures en présence.
+    """
+    with pytest.raises(ValueError, match="une seule et même nature"):
+        _produit(_record(), outputs=("level", "forecast"))
+
+
+def test_un_produit_publie_la_nature_derivee_de_ses_sorties():
+    """La nature du produit vient des sorties publiées, jamais de l'appelant."""
+    etat = _produit(_record(), outputs=("level",))
+    prevision = _produit(_record(), product_id="produit-prevision", outputs=("forecast",))
+
+    assert etat.nature is ResultNature.RECONSTRUCTED
+    assert prevision.nature is ResultNature.PREDICTED
+
+
+def test_le_produit_dit_la_nature_de_chacune_de_ses_sorties():
+    """La nature se lit sortie par sortie, et pas seulement globalement."""
+    produit = _produit(_record(), outputs=("level",))
+
+    assert produit.summary["result"]["output_natures"] == {"level": "reconstructed"}
+
+
+def test_le_produit_ne_publie_que_les_sorties_selectionnees():
+    """Le produit décrit ce qu'il publie, pas ce que le calcul a produit d'autre."""
+    produit = _produit(_record(), outputs=("forecast",))
+
+    assert list(produit.summary["result"]["outputs"]) == ["forecast"]
 
 
 # --------------------------------------------------------------------------

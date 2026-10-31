@@ -202,8 +202,10 @@ Rapport complet : `docs/audit/LEGACY-BOREE.md`.
 
 Il reste deux points, de nature différente :
 
-- **La politique de propriété intellectuelle de TORNE** n'est pas choisie. Le dépôt est privé ; aucune licence n'est
-  ajoutée automatiquement. À traiter séparément, quand TORNE aura une existence propre à protéger.
+- **La politique de propriété intellectuelle de TORNE** n'est pas choisie. Le dépôt
+  `github.com/RootSquirrels/torne` est **public** (API GitHub : `private: false`) ; aucune licence n'est
+  ajoutée automatiquement. La question était jusque-là sans effet pratique parce que le dépôt était privé ;
+  elle redevient active sur un dépôt public, et revient au propriétaire.
 - **La frontière entre « code à moi » et « composant réutilisable » doit rester explicite.** `athanor` et l'ancien
   `boree` sont des dépôts privés du même propriétaire : les réemployer est un acte de réécriture interne, à tracer
   dans le journal de décisions de TORNE, pas une question de licence externe. C'est précisément pourquoi le §7

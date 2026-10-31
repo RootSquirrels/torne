@@ -55,6 +55,16 @@ def prevoir_pas(pas: int) -> Callable[[tuple[float, ...]], tuple[float, ...]]:
     return predicteur
 
 
+def prevoir_sans_absence(train: tuple[float | None, ...]) -> tuple[float, ...]:
+    """Prédicteur qui ajuste sur les seules valeurs observées du bloc.
+
+    Il montre ce que doit faire un modèle devant une série incomplète : ne
+    pas lire un zéro à la place d'une absence.
+    """
+    observees = [valeur for valeur in train if valeur is not None]
+    return (observees[-1],) * 2
+
+
 def pertes_autocorrelees(longueur: int) -> tuple[float, ...]:
     """Pertes autocorrélées, construites sans hasard.
 
@@ -62,6 +72,27 @@ def pertes_autocorrelees(longueur: int) -> tuple[float, ...]:
     corrélées, comme le sont les erreurs de marche avant.
     """
     return tuple(math.sin(0.2 * index) for index in range(longueur))
+
+
+def variance_hac(pertes: tuple[float, ...], lag: int) -> float:
+    """Variance de long terme HAC, recalculée ici sans l'implémentation du dépôt.
+
+    `gamma_0 + 2 * somme_{k=1..lag} (1 - k/(lag+1)) * gamma_k`, avec les
+    covariances estimées en 1/n (Newey & West 1987, noyau de Bartlett).
+    """
+    n = len(pertes)
+    moyenne = math.fsum(pertes) / n
+    ecarts = tuple(perte - moyenne for perte in pertes)
+    total = math.fsum(ecart * ecart for ecart in ecarts) / n
+    for k in range(1, min(lag, n - 1) + 1):
+        covariance = math.fsum(ecarts[index] * ecarts[index - k] for index in range(k, n)) / n
+        total += 2.0 * (1.0 - k / (lag + 1.0)) * covariance
+    return total
+
+
+def fenetre_bartlett(n: int) -> int:
+    """Fenêtre de Newey & West (1994) : `floor(4 (n / 100)^(2/9))`."""
+    return math.floor(4.0 * (n / 100.0) ** (2.0 / 9.0))
 
 
 # --- Découpages -------------------------------------------------------------
@@ -270,7 +301,7 @@ def test_exclusions_comptees_qualifient_chaque_point_ecarte():
         PointValidity.OUT_OF_DOMAIN,
         PointValidity.VALID,
     ]
-    rapport = rmse((1, 2, 3, 4, 5), (1, 2, 0, 0, 5), validite)
+    rapport = rmse((1, None, 3, 4, 5), (1, None, 0, 0, 5), validite)
     assert rapport.n_total == 5
     assert rapport.n_used == 2
     assert rapport.n_missing == 1
@@ -284,7 +315,7 @@ def test_exclusions_comptees_qualifient_chaque_point_ecarte():
 
 def test_une_absence_n_est_pas_un_zero():
     validite = [PointValidity.VALID, PointValidity.MISSING, PointValidity.VALID]
-    rapport = rmse((1, 2, 3), (1, 2, 5), validite)
+    rapport = rmse((1, None, 3), (1, None, 5), validite)
     # seuls (1, 1) et (3, 5) entrent : erreurs (0, -2) → RMSE = sqrt(4/2)
     assert rapport.value == pytest.approx(math.sqrt(4 / 2))
     # si le point manquant était traité comme un zéro, l'erreur serait nulle
@@ -296,7 +327,7 @@ def test_une_absence_n_est_pas_un_zero():
 
 def test_une_metrique_sans_point_valide_vaut_nan_et_non_zero():
     validite = [PointValidity.MISSING, PointValidity.INVALID]
-    rapport = rmse((1, 2), (1, 2), validite)
+    rapport = rmse((None, 2), (None, 2), validite)
     assert math.isnan(rapport.value)
     assert rapport.n_used == 0
     assert rapport.n_total == 2
@@ -315,6 +346,136 @@ def test_les_sequences_de_longueurs_differentes_sont_refusees():
 def test_une_validite_de_longueur_incoherente_est_refusee():
     with pytest.raises(ValueError, match="un état par point"):
         rmse((1, 2, 3), (1, 2, 3), [PointValidity.VALID])
+
+
+# --- Absences : l'interface, la cohérence, le comptage ----------------------
+
+
+def test_une_serie_comportant_une_absence_est_acceptee_par_les_metriques():
+    """Une absence est `None` : la métrique l'accepte, la compte, l'ignore."""
+    rapport = rmse((1.0, None, 3.0), (1.0, 2.0, 5.0))
+
+    assert rapport.n_total == 3
+    assert rapport.n_used == 2
+    assert rapport.n_missing == 1
+    # seuls (1, 1) et (3, 5) entrent : erreurs (0, -2) → RMSE = sqrt(4/2)
+    assert rapport.value == pytest.approx(math.sqrt(4 / 2))
+
+
+def test_une_absence_n_est_jamais_remplacee_par_un_zero():
+    """La valeur observée 0,0 et l'absence donnent des résultats distincts.
+
+    Si l'absence était convertie en zéro, les deux appels seraient
+    confondus. Ici, ils ne le sont pas : c'est le point manquant qui les
+    sépare, et lui seul.
+    """
+    observee = rmse((1.0, 0.0, 3.0), (1.0, 2.0, 5.0))
+    absente = rmse((1.0, None, 3.0), (1.0, 2.0, 5.0))
+
+    assert observee.n_missing == 0
+    assert observee.n_used == 3
+    assert absente.n_missing == 1
+    assert absente.n_used == 2
+    # recalculs à la main : erreurs (0, -2, -2) → RMSE sqrt(8/3) ; (0, -2) → sqrt(2)
+    assert observee.value == pytest.approx(math.sqrt(8 / 3))
+    assert absente.value == pytest.approx(math.sqrt(4 / 2))
+    assert observee.value != pytest.approx(absente.value)
+
+
+def test_l_absence_et_le_zero_ne_se_confondent_dans_chaque_metrique():
+    """Le contrôle vaut pour le RMSE, le MAE et le biais."""
+    for calcul in (rmse, mae, bias):
+        observee = calcul((1.0, 0.0, 3.0), (1.0, 2.0, 5.0))
+        absente = calcul((1.0, None, 3.0), (1.0, 2.0, 5.0))
+        assert observee.value != pytest.approx(absente.value)
+        assert observee.n_missing == 0
+        assert absente.n_missing == 1
+
+
+def test_une_absence_declaree_valide_est_refusee():
+    """Absent et valide à la fois : l'incohérence est refusée, pas écartée."""
+    with pytest.raises(ValueError, match="incohérence"):
+        rmse((1.0, None, 3.0), (1.0, 2.0, 5.0), [PointValidity.VALID] * 3)
+
+
+def test_une_absence_placee_par_une_valeur_inventee_est_refusee():
+    """L'absence se déclare par `None`, jamais par un nombre de remplacement."""
+    validite = [PointValidity.VALID, PointValidity.MISSING, PointValidity.VALID]
+    with pytest.raises(ValueError, match="jamais par une valeur inventée"):
+        rmse((1.0, 2.0, 3.0), (1.0, 2.0, 5.0), validite)
+
+
+def test_l_invariant_des_compteurs_tient_avec_des_absences():
+    """Les quatre compteurs se partagent tous les points, absences comprises."""
+    validite = [
+        PointValidity.VALID,
+        PointValidity.MISSING,
+        PointValidity.INVALID,
+        PointValidity.OUT_OF_DOMAIN,
+        PointValidity.VALID,
+    ]
+    rapport = rmse((1.0, None, 3.0, 4.0, 5.0), (1.0, None, 0.0, 0.0, 5.0), validite)
+
+    assert rapport.n_total == 5
+    assert rapport.n_used == 2
+    assert rapport.n_missing == 1
+    assert rapport.n_invalid == 1
+    assert rapport.n_out_of_domain == 1
+    total = rapport.n_used + rapport.n_missing + rapport.n_invalid + rapport.n_out_of_domain
+    assert total == rapport.n_total
+
+
+def test_un_point_sans_intervalle_annonce_est_compte_comme_absent():
+    """Pas d'intervalle, pas de couverture à vérifier : le point est absent."""
+    rapport = coverage((1.0, None, 3.0), ((0.0, 2.0), None, (0.0, 4.0)))
+
+    assert rapport.n_total == 3
+    assert rapport.n_used == 2
+    assert rapport.n_missing == 1
+    assert rapport.value == pytest.approx(1.0)
+
+
+def test_un_appel_sans_absence_rend_les_memes_resultats_qu_avant():
+    """Compatibilité : une série finie donne exactement les mêmes résultats.
+
+    Les valeurs, les compteurs et les bornes d'incertitude sont épinglés :
+    ils viennent de l'implémentation antérieure à l'interface des absences.
+    """
+    actual = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
+    predicted = (1.5, 2.0, 3.5, 3.0, 6.0, 4.5)
+    intervalles = ((0.0, 2.0), (1.0, 3.0), (0.0, 4.0), (3.0, 5.0), (5.0, 7.0), (4.0, 6.0))
+    rapports = evaluate_all(actual, predicted, intervals=intervalles)
+
+    rapport_rmse = rapports["rmse"]
+    assert rapport_rmse.value == pytest.approx(0.8897565210026093)
+    assert (rapport_rmse.n_total, rapport_rmse.n_used, rapport_rmse.n_missing) == (6, 6, 0)
+    assert rapport_rmse.uncertainty is not None
+    assert rapport_rmse.uncertainty.interval is not None
+    bas, haut = rapport_rmse.uncertainty.interval
+    assert bas == pytest.approx(0.23291132550425797)
+    assert haut == pytest.approx(1.2365620274718057)
+    assert rapport_rmse.n_effective == pytest.approx(4.03497615262321)
+
+    assert rapports["mae"].value == pytest.approx(0.75)
+    assert rapports["bias"].value == pytest.approx(1 / 12)
+    assert rapports["coverage"].value == pytest.approx(1.0)
+    assert rapports["coverage"].n_used == 6
+
+
+def test_le_walk_forward_sans_absence_rend_les_memes_resultats_qu_avant():
+    """Compatibilité du rapport lui-même : mêmes plis, mêmes métriques."""
+    actual = (1.0, 2.0, 3.0, 4.0, 5.0, 6.0)
+    rapport = evaluate_walk_forward(actual, prevoir, initial_size=3, step=2, now=INSTANT)
+
+    assert rapport.metrics["rmse"].value == pytest.approx(1.5811388300841898)
+    assert rapport.metrics["mae"].value == pytest.approx(1.5)
+    assert rapport.metrics["bias"].value == pytest.approx(1.5)
+    assert rapport.metrics["rmse"].n_used == 2
+    assert rapport.baseline_metrics["mean"]["rmse"].value == pytest.approx(2.5495097567963922)
+    assert rapport.baseline_metrics["drift"]["rmse"].value == pytest.approx(0.0)
+    assert rapport.n_excluded == 1
+    assert rapport.split.train_end == 3
+    assert rapport.split.test_end == 5
 
 
 # --- Rapport ----------------------------------------------------------------
@@ -366,13 +527,79 @@ def test_les_metriques_des_references_se_recalculent_a_la_main():
 def test_les_points_ecartes_sont_comptes_dans_le_rapport():
     validite = [PointValidity.VALID] * 10
     validite[5] = PointValidity.MISSING
+    # le point absent est absent dans la série : il n'est pas un zéro déguisé
+    valeurs = (*serie_anti_fuite(5), None, *serie_anti_fuite(10)[6:])
     rapport = evaluate_walk_forward(
-        serie_anti_fuite(10), prevoir, initial_size=4, step=2, validity=validite, now=INSTANT
+        valeurs, prevoir_sans_absence, initial_size=4, step=2, validity=validite, now=INSTANT
     )
     # trois plis de deux points test : six points, dont un écarté
     assert rapport.metrics["rmse"].n_total == 6
     assert rapport.metrics["rmse"].n_used == 5
     assert rapport.metrics["rmse"].n_missing == 1
+
+
+def test_le_walk_forward_accepte_une_serie_avec_absence():
+    """La série porte une absence : elle est comptée, pas comblée."""
+    serie = (1.0, 2.0, None, 4.0, 5.0, 6.0)
+    rapport = evaluate_walk_forward(
+        serie, prevoir_sans_absence, initial_size=2, step=2, now=INSTANT
+    )
+
+    # plis : test = indices 2-3 puis 4-5 ; l'absence est dans le premier test
+    assert rapport.metrics["rmse"].n_total == 4
+    assert rapport.metrics["rmse"].n_used == 3
+    assert rapport.metrics["rmse"].n_missing == 1
+    total = rapport.metrics["rmse"].n_used + rapport.metrics["rmse"].n_missing
+    assert total == rapport.metrics["rmse"].n_total
+
+
+def test_le_bloc_d_entrainement_montre_les_absences_au_predicteur():
+    """Le prédicteur voit le trou : aucun zéro ne le remplace."""
+    blocs: list[tuple[float | None, ...]] = []
+
+    def predicteur(train: tuple[float | None, ...]) -> tuple[float, ...]:
+        blocs.append(train)
+        return prevoir_sans_absence(train)
+
+    serie = (1.0, 2.0, None, 4.0, 5.0, 6.0)
+    evaluate_walk_forward(serie, predicteur, initial_size=2, step=2, now=INSTANT)
+
+    assert blocs[0] == (1.0, 2.0)
+    assert blocs[1] == (1.0, 2.0, None, 4.0)
+    # l'absence est restée une absence : aucun zéro ne l'a remplacée
+    assert 0.0 not in blocs[1]
+
+
+def test_le_walk_forward_refuse_une_absence_declaree_valide():
+    """La cohérence entre la série et l'état déclaré est exigée d'emblée."""
+    with pytest.raises(ValueError, match="incohérence"):
+        evaluate_walk_forward(
+            (1.0, None, 3.0, 4.0),
+            prevoir_sans_absence,
+            initial_size=2,
+            step=2,
+            validity=[PointValidity.VALID] * 4,
+            now=INSTANT,
+        )
+
+
+def test_les_references_sajustent_sur_les_valeurs_observees():
+    """Une absence dans l'historique n'entre pas dans l'ajustement."""
+    historique = (2.0, None, 6.0)
+
+    # persistance : la dernière valeur observée (6,0)
+    assert persistence_forecast(historique, 1) == (6.0,)
+    # moyenne : (2 + 6) / 2 = 4,0 — l'absence n'entre pas comme un zéro
+    assert mean_forecast(historique, 1) == (4.0,)
+    assert mean_forecast(historique, 1) != mean_forecast((2.0, 0.0, 6.0), 1)
+    # dérive : pente (6 - 2) / 2 = 2,0 sur l'écart d'indice, non de nombre
+    assert drift_forecast(historique, 1) == (8.0,)
+
+
+def test_une_reference_refuse_un_bloc_sans_valeur_observee():
+    """Un historique entièrement absent n'est pas un historique vide de mesure."""
+    with pytest.raises(ValueError, match="sans valeur observée"):
+        mean_forecast((None, None), 1)
 
 
 def test_un_predicteur_qui_renvoie_trop_de_valeurs_est_refuse():
@@ -561,6 +788,68 @@ def test_la_dependance_temporelle_elargit_l_intervalle_et_reduit_la_taille_effec
     assert (haut - bas) / 2 > demi_largeur_iid
     assert rapport.n_effective is not None
     assert rapport.n_effective < rapport.n_used
+
+
+def test_l_intervalle_de_confiance_est_celui_de_la_variance_hac():
+    """La méthode annoncée est la variance HAC : ce test la recalcule.
+
+    Le recalcul est écrit ici, à la main, sans réutiliser
+    `newey_west_variance` ni `bartlett_lags` : un intervalle de bootstrap, ou
+    une variance IID, donnerait d'autres bornes.
+    """
+    pertes = pertes_autocorrelees(60)
+    rapport = bias(pertes, (0.0,) * len(pertes))
+
+    n = len(pertes)
+    moyenne = math.fsum(pertes) / n
+    variance = variance_hac(pertes, fenetre_bartlett(n))
+    demi_largeur = 1.959963984540054 * math.sqrt(variance / n)
+
+    assert rapport.uncertainty is not None
+    assert rapport.uncertainty.interval is not None
+    bas, haut = rapport.uncertainty.interval
+    assert bas == pytest.approx(moyenne - demi_largeur, rel=1e-9)
+    assert haut == pytest.approx(moyenne + demi_largeur, rel=1e-9)
+    # la variance IID, elle, donnerait un intervalle plus serré
+    variance_iid = variance_hac(pertes, 0)
+    assert (haut - bas) / 2 > 1.959963984540054 * math.sqrt(variance_iid / n)
+
+
+def test_la_taille_effective_est_n_sur_le_facteur_d_inflation():
+    """La taille effective dit le nombre de points indépendants équivalents."""
+    pertes = pertes_autocorrelees(60)
+    rapport = bias(pertes, (0.0,) * len(pertes))
+
+    n = len(pertes)
+    variance = variance_hac(pertes, fenetre_bartlett(n))
+    variance_iid = variance_hac(pertes, 0)
+
+    assert rapport.n_effective is not None
+    assert rapport.n_effective == pytest.approx(n * variance_iid / variance, rel=1e-9)
+    assert rapport.n_effective < n
+
+
+def test_une_serie_sans_dispersion_donne_un_intervalle_degenere():
+    """Aucune dispersion observée, aucune largeur : l'intervalle le dit."""
+    rapport = bias((5.0, 5.0, 5.0), (0.0, 0.0, 0.0))
+
+    assert rapport.uncertainty is not None
+    assert rapport.uncertainty.interval is not None
+    bas, haut = rapport.uncertainty.interval
+    assert bas == pytest.approx(5.0)
+    assert haut == pytest.approx(5.0)
+    assert rapport.n_effective == pytest.approx(3.0)
+
+
+def test_le_calcul_de_l_incertitude_est_deterministe():
+    """Aucune graine n'est employée : deux appels rendent le même intervalle."""
+    pertes = pertes_autocorrelees(40)
+    premier = bias(pertes, (0.0,) * len(pertes))
+    second = bias(pertes, (0.0,) * len(pertes))
+
+    assert premier.uncertainty == second.uncertainty
+    assert premier.n_effective == second.n_effective
+    assert "HAC" in premier.uncertainty.statement
 
 
 def test_une_valeur_non_finite_est_refusee_par_la_metrique():

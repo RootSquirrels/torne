@@ -194,19 +194,39 @@ def test_la_chaine_complete_parcourt_chaque_maillon(serie, rapport):
     assert lignee.ok, f"lignée incohérente : {lignee.problems}"
 
     # 5. Produit de connaissance : il dit ce qu'il est, et n'est pas une observation.
+    #    L'état reconstruit et la prévision sont deux produits distincts
+    #    (SPEC-009 §3) : ils se publient séparément, chacun avec sa nature.
     produit = enregistrement.to_product(
         product_id="produit-0001",
         version="1.0.0",
         status=ProductStatus.USABLE,
         domain_of_validity="séquence régulière, bruit de mesure gaussien de variance connue",
         uncertainty="variance d'observation déclarée ; incertitude de l'état filtré non calibrée",
+        outputs=["level", "slope"],
     )
-    # La nature du produit est celle du résultat de l'exécution : un état
+    # La nature du produit est celle des sorties publiées : un état
     # reconstruit n'est pas une estimation, et n'est jamais une observation.
     assert produit.nature is issue.result.nature
     assert produit.nature is ResultNature.RECONSTRUCTED
     assert produit.version == "1.0.0"
     assert produit.produced_at == issue.result.produced_at
+    # La nature de chaque sortie survit à la sérialisation du produit.
+    assert produit.summary["result"]["output_natures"] == {
+        "level": "reconstructed",
+        "slope": "reconstructed",
+    }
+
+    # 5 bis. La prévision se publie sous sa propre nature : un paquet qui
+    #      mêle un état reconstruit et une prévision n'est pas un produit.
+    prevision = enregistrement.to_product(
+        product_id="produit-0002",
+        version="1.0.0",
+        status=ProductStatus.USABLE,
+        domain_of_validity="séquence régulière, bruit de mesure gaussien de variance connue",
+        uncertainty="variance d'observation déclarée ; incertitude de l'état filtré non calibrée",
+        outputs=["forecast_level"],
+    )
+    assert prevision.nature is ResultNature.PREDICTED
 
     # 6. La lignée permet de remonter du produit jusqu'aux preuves brutes.
     genres = {ref.kind.value for ref in produit.lineage}
@@ -340,3 +360,15 @@ def test_le_produit_ne_publie_pas_une_observation_absente(serie):
 
     assert not lignee.ok
     assert lignee.problems
+
+    # Et la publication elle-même refuse : l'appel à `verify_lineage` n'est
+    # pas une formalité que l'appelant peut omettre pour publier quand même.
+    with pytest.raises(ValueError, match="lignée"):
+        enregistrement.to_product(
+            product_id="produit-0003",
+            version="1.0.0",
+            status=ProductStatus.USABLE,
+            domain_of_validity="séquence régulière, bruit de mesure gaussien de variance connue",
+            uncertainty="variance d'observation déclarée",
+            outputs=["level", "slope"],
+        )

@@ -86,8 +86,11 @@ Ce n'est pas encore le métier scientifique.
    installer `uv`, synchroniser depuis le verrou, exécuter ruff, exécuter pytest, vérifier la construction du
    paquet. Pas de matrice de versions Python. Pas de seuil de couverture artificiel.
 5. **Hygiène** : absence de secrets, de données expérimentales, d'artefacts Python, de dépendances inutilisées ;
-   cohérence du nom de package `torne`. **Ne pas ajouter de LICENSE** : le dépôt est privé et la politique de
-   propriété intellectuelle est gérée séparément.
+   cohérence du nom de package `torne`. **Ne pas ajouter de LICENSE** : la politique de propriété
+   intellectuelle est gérée séparément, par le propriétaire. *(Correction du 31 octobre 2026 : le dépôt
+   `github.com/RootSquirrels/torne` est en réalité **public** — l'API GitHub renvoie `private: false` ; la
+   justification « le dépôt est privé » était fausse. Le point licence redevient donc une décision ouverte,
+   il n'est pas tranché ici.)*
 6. **README** : mettre à jour avec les commandes **réellement opérationnelles**, et dire plainly ce qui n'a pas pu
    être vérifié.
 

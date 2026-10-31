@@ -12,6 +12,7 @@ from __future__ import annotations
 import random
 from dataclasses import replace
 from datetime import UTC, datetime
+from types import MappingProxyType
 
 import numpy as np
 import pytest
@@ -163,7 +164,13 @@ class ModelAvecSortieNonFinie(StubModel):
 
 
 class ModelAvecIntervalleNonFini(StubModel):
-    """Modèle qui rend un intervalle dont une borne n'est pas finie."""
+    """Modèle qui rend un intervalle dont une borne n'est pas finie.
+
+    Le refus est désormais porté par le **contrat** : `ModelResult` refuse de
+    se construire avec une borne non finie. Le modèle est donc un modèle qui
+    échoue à rendre un résultat, et non un modèle qui rend un mauvais
+    résultat.
+    """
 
     def run(
         self,
@@ -180,6 +187,44 @@ class ModelAvecIntervalleNonFini(StubModel):
             outputs={"moyenne": (1.0,)},
             intervals={"moyenne": ((0.0, float("inf")),)},
         )
+
+
+class ModelAvecIntervalleNonFiniContourne(StubModel):
+    """Modèle qui rend un intervalle non fini **en contournant le contrat**.
+
+    Le contrat refuse une borne non finie à la construction ; ce stub
+    fabrique un `ModelResult` valide puis en corrompt l'intervalle, pour
+    vérifier que le runner garde sa propre défense en profondeur.
+    """
+
+    def run(
+        self,
+        inputs: ModelInputs,
+        params: ModelParameters,
+        *,
+        seed: int | None = None,
+    ) -> ModelResult:
+        resultat = ModelResult(
+            spec=self.spec,
+            nature=ResultNature.ESTIMATED,
+            parameters=params,
+            produced_at=datetime.now(UTC),
+            outputs={"moyenne": (1.0,)},
+            intervals={"moyenne": ((0.0, 1.0),)},
+        )
+        corrompu = object.__new__(ModelResult)
+        for champ, valeur in (
+            ("spec", resultat.spec),
+            ("nature", resultat.nature),
+            ("parameters", resultat.parameters),
+            ("produced_at", resultat.produced_at),
+            ("outputs", resultat.outputs),
+            ("intervals", MappingProxyType({"moyenne": ((0.0, float("inf")),)})),
+            ("diagnostics", resultat.diagnostics),
+            ("output_natures", resultat.output_natures),
+        ):
+            object.__setattr__(corrompu, champ, valeur)
+        return corrompu
 
 
 class ModelAvecResultatEtranger(StubModel):
@@ -517,9 +562,26 @@ def test_une_sortie_non_finite_est_refusee_et_non_rendue_comme_un_resultat():
 
 
 def test_un_intervalle_non_fini_est_refuse():
-    """Une borne infinie n'est pas une borne : le runner refuse de la rendre."""
-    with pytest.raises(InvalidResultError, match="n'est pas finie"):
+    """Une borne infinie n'est pas une borne : le contrat refuse le résultat.
+
+    Le refus est désormais porté par `ModelResult` lui-même : un intervalle
+    dont une borne n'est pas finie ne peut pas être construit. Le runner
+    n'a plus à le rattraper — et l'exécution ne rend rien qui pourrait passer
+    pour une mesure.
+    """
+    with pytest.raises(ValueError, match="ne sont pas finies"):
         execute(ModelAvecIntervalleNonFini(), _entrees(), _parametres(), seed=7)
+
+
+def test_le_runner_refuse_un_intervalle_non_fini_qui_a_contourne_le_contrat():
+    """Défense en profondeur : le runner refuse un intervalle non fini.
+
+    Le contrat refuse déjà une borne non finie à la construction ; ce test
+    vérifie que le runner ne se fie pas à ce seul garde-fou, pour un objet
+    qui lui arriverait avec un intervalle corrompu.
+    """
+    with pytest.raises(InvalidResultError, match="n'est pas finie"):
+        execute(ModelAvecIntervalleNonFiniContourne(), _entrees(), _parametres(), seed=7)
 
 
 def test_un_resultat_qui_n_est_pas_celui_du_modele_execute_est_refuse():

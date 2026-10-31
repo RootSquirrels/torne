@@ -148,6 +148,61 @@ def _issue():
     )
 
 
+SPEC_ETAT = ModelSpec(
+    model_id="etat",
+    version="1.0.0",
+    question="Quel est l'état latent de la série, et que peut-on prévoir ?",
+    method="Filtre d'état en espace d'état",
+    natures=(ResultNature.RECONSTRUCTED, ResultNature.PREDICTED),
+)
+
+
+class ModeleEtatEtPrevision:
+    """Modèle de test : restitue un état reconstruit et émet une prévision.
+
+    Les deux natures sont **déclarées par le modèle** : le résultat est valide.
+    C'est leur réunion dans un même paquet publié qui est interdite.
+    """
+
+    spec = SPEC_ETAT
+
+    def run(
+        self,
+        inputs: ModelInputs,
+        params: ModelParameters,
+        *,
+        seed: int | None = None,
+    ) -> ModelResult:
+        return ModelResult(
+            spec=self.spec,
+            nature=ResultNature.RECONSTRUCTED,
+            parameters=params,
+            produced_at=_instant(EXECUTION),
+            outputs={"level": (3.25,), "forecast": (3.40,)},
+            output_natures={
+                "level": ResultNature.RECONSTRUCTED,
+                "forecast": ResultNature.PREDICTED,
+            },
+        )
+
+
+def _record_etat():
+    return build_record(
+        execute(
+            ModeleEtatEtPrevision(),
+            ENTREES,
+            PARAMETRES,
+            seed=7,
+            now=_instant(EXECUTION),
+        ),
+        record_id="enr-etat",
+        input_observations=(_observation(),),
+        evidence=(PREUVE,),
+        sources=(SOURCE,),
+        inputs=ENTREES,
+    )
+
+
 def _evaluation() -> dict[str, object]:
     """Une évaluation réelle, sérialisée, produite par le module d'évaluation."""
     rapport = evaluate_walk_forward(
@@ -189,6 +244,17 @@ def _produit(record, *, version: str = "1.0.0", status: ProductStatus = ProductS
         status=status,
         domain_of_validity="stations du bassin moyen, campagne 2026",
         uncertainty="incertitude de mesure déclarée par la source, de l'ordre de deux centimètres",
+    )
+
+
+def _produit_etat(record, *, outputs=None, product_id: str = "produit-etat"):
+    return record.to_product(
+        product_id=product_id,
+        version="1.0.0",
+        status=ProductStatus.USABLE,
+        domain_of_validity="stations du bassin moyen, campagne 2026",
+        uncertainty="incertitude de mesure déclarée par la source",
+        outputs=outputs,
     )
 
 
@@ -498,6 +564,133 @@ def test_la_nature_du_produit_vient_du_resultat_du_modele():
     """La nature du produit est celle du résultat, jamais celle de l'appelant."""
     produit = _produit(_record())
     assert produit.nature is ResultNature.ESTIMATED
+
+
+# --------------------------------------------------------------------------
+# Publication contrôlée : la lignée est vérifiée au moment de publier
+# --------------------------------------------------------------------------
+
+
+def test_un_enregistrement_invalide_ne_peut_pas_etre_publie():
+    """Omettre l'appel à `verify_lineage` ne peut pas publier un enregistrement faux.
+
+    La vérification manuelle est une commodité, pas une garantie : c'est
+    `to_product` qui refuse, et qui nomme les écarts.
+    """
+    orpheline = _observation(evidence_id="b" * 64)
+    record = _record(observations=(orpheline,))
+
+    with pytest.raises(ValueError, match="preuve brute inconnue"):
+        _produit(record)
+
+
+def test_une_observation_a_publication_inconnue_empeche_la_publication():
+    """INV-10, INV-30 : une publication inconnue n'est jamais admise."""
+    obs = _observation(
+        temporal=TemporalStamp(
+            valid_time=_instant(EXPRESSION),
+            ingested_at=_instant(INGESTION),
+            publication=PublicationState.UNKNOWN,
+        )
+    )
+
+    with pytest.raises(ValueError, match="publication inconnue"):
+        _produit(_record(observations=(obs,)))
+
+
+def test_une_observation_posterieure_a_l_instant_de_publication_empeche_la_publication():
+    """INV-30 : le produit ne cite aucune observation qui n'était pas admissible."""
+    obs = _observation(
+        temporal=_stamp(
+            publication="2026-10-20T08:00:00+00:00", ingestion="2026-10-21T09:00:00+00:00"
+        )
+    )
+
+    with pytest.raises(ValueError, match="n'était pas admissible"):
+        _produit(_record(observations=(obs,)))
+
+
+def test_la_publication_juge_l_admissibilite_a_l_instant_effectif_de_publication():
+    """L'instant `produced_at` fourni est celui où l'admissibilité se joue.
+
+    L'observation est admissible à l'instant de l'enregistrement, mais pas à
+    l'instant de publication demandé : elle n'y entre pas.
+    """
+    with pytest.raises(ValueError, match="n'était pas admissible"):
+        _record().to_product(
+            product_id="produit-niveau",
+            version="1.0.0",
+            status=ProductStatus.USABLE,
+            domain_of_validity="stations du bassin moyen, campagne 2026",
+            uncertainty="incertitude de mesure déclarée par la source",
+            produced_at=_instant("2026-10-06T00:00:00+00:00"),
+        )
+
+
+def test_une_grandeur_derivee_calculee_avant_l_utilisabilite_de_ses_entrees_empeche_la_publication():
+    """Une grandeur calculée avant que ses entrées ne soient utilisables ne publie rien."""
+    matricule = _variable(
+        variable_id="var-matrice",
+        computed_at=_instant("2026-10-06T10:00:00+00:00"),
+        ingested_at=_instant("2026-10-07T06:00:00+00:00"),
+    )
+    avale = _variable(
+        variable_id="var-avale",
+        computed_at=_instant("2026-10-07T05:00:00+00:00"),
+        inputs=(matricule,),
+    )
+
+    with pytest.raises(ValueError, match="avant l'utilisabilité"):
+        _produit(_record(variables=(matricule, avale)))
+
+
+# --------------------------------------------------------------------------
+# Une seule nature par produit (SPEC-009 §3)
+# --------------------------------------------------------------------------
+
+
+def test_une_selection_de_sorties_de_natures_differentes_est_refusee():
+    """SPEC-009 §3 : un état reconstruit et une prévision sont deux produits."""
+    with pytest.raises(ValueError, match="une seule et même nature") as refus:
+        _produit_etat(_record_etat(), outputs=("level", "forecast"))
+
+    message = str(refus.value)
+    assert "reconstructed" in message
+    assert "predicted" in message
+    assert "SPEC-009" in message
+
+
+def test_le_paquet_complet_de_sorties_de_natures_differentes_est_refuse():
+    """Le défaut : toutes les sorties par défaut, deux natures, un seul produit."""
+    with pytest.raises(ValueError, match="une seule et même nature"):
+        _produit_etat(_record_etat())
+
+
+def test_une_selection_de_sorties_de_meme_nature_est_acceptee():
+    """Une sélection homogène se publie, et sa nature est celle des sorties."""
+    produit = _produit_etat(_record_etat(), outputs=("level",))
+    assert produit.nature is ResultNature.RECONSTRUCTED
+
+
+def test_le_produit_publie_la_nature_derivee_des_sorties_publiees():
+    """La nature du produit vient des sorties publiées, jamais de l'appelant."""
+    prevision = _produit_etat(_record_etat(), outputs=("forecast",), product_id="produit-prevision")
+    assert prevision.nature is ResultNature.PREDICTED
+
+
+def test_la_nature_par_sortie_est_dans_la_serialisation_du_produit():
+    """Le produit dit la nature de chacune de ses sorties."""
+    produit = _produit_etat(_record_etat(), outputs=("level",))
+
+    assert produit.summary["result"]["output_natures"] == {"level": "reconstructed"}
+
+
+def test_la_nature_par_sortie_est_dans_la_serialisation_du_resultat():
+    """Le résultat dit la nature de chacune de ses sorties."""
+    vue = _record_etat().result.as_dict()
+
+    assert vue["output_natures"] == {"level": "reconstructed", "forecast": "predicted"}
+    assert vue["nature"] == "reconstructed"
 
 
 # --------------------------------------------------------------------------

@@ -12,6 +12,11 @@ test.
 
 Ces découpages sont posés ici, et nulle part ailleurs : aucun service, aucun
 registre, aucun moteur. Une fonction suffit.
+
+**Une absence reste une absence dans les blocs.** Une série peut porter des
+absences (`None`) : elles sont découpées comme les autres points, à leur
+place, et ne sont jamais remplacées par un zéro ni par une valeur inventée.
+Un bloc d'entraînement montre donc au modèle les trous qu'il doit traiter.
 """
 
 from __future__ import annotations
@@ -28,10 +33,13 @@ class Split:
     `[test_start, test_end)`. L'invariant `train_end == test_start` garantit
     qu'aucun point n'appartient aux deux blocs, et qu'aucun point du test
     n'est antérieur au train.
+
+    Les blocs portent les absences telles quelles (`None`) : un bloc n'invente
+    aucune valeur, et son découpage reste rejouable.
     """
 
-    train: tuple[float, ...]
-    test: tuple[float, ...]
+    train: tuple[float | None, ...]
+    test: tuple[float | None, ...]
     train_end: int
     test_start: int
     test_end: int
@@ -52,11 +60,11 @@ class Fold:
     split: Split
 
     @property
-    def train(self) -> tuple[float, ...]:
+    def train(self) -> tuple[float | None, ...]:
         return self.split.train
 
     @property
-    def test(self) -> tuple[float, ...]:
+    def test(self) -> tuple[float | None, ...]:
         return self.split.test
 
     @property
@@ -73,7 +81,7 @@ class Fold:
 
 
 def temporal_split(
-    values: Sequence[float],
+    values: Sequence[float | None],
     *,
     train_size: int | None = None,
     train_fraction: float | None = None,
@@ -121,7 +129,9 @@ def temporal_split(
     )
 
 
-def walk_forward(values: Sequence[float], *, initial_size: int, step: int) -> tuple[Fold, ...]:
+def walk_forward(
+    values: Sequence[float | None], *, initial_size: int, step: int
+) -> tuple[Fold, ...]:
     """Construit des pli cumulatifs strictement chronologiques.
 
     Le pli `i` s'entraîne sur `values[:initial_size + i * step]` et se teste

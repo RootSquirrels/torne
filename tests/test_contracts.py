@@ -10,6 +10,7 @@ ou par non. Aucun test ne vérifie une valeur au hasard.
 from __future__ import annotations
 
 import dataclasses
+import json
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -322,3 +323,105 @@ def test_les_sorties_et_intervalles_sont_immuables():
         result.outputs["level"] = (9.0,)  # type: ignore[index]
     assert result.output("level") == (1.0, 2.0)
     assert result.interval("level")[1] == (1.0, 3.0)
+
+
+# --------------------------------------------------------------------------
+# Frontière « Modèles » — validation du résultat à la construction
+# --------------------------------------------------------------------------
+
+
+def _resultat(**champs: object) -> ModelResult:
+    defauts: dict[str, object] = {
+        "spec": _spec(ResultNature.ESTIMATED),
+        "nature": ResultNature.ESTIMATED,
+        "parameters": ModelParameters({}),
+        "produced_at": _instant("2026-10-05T08:00:00+00:00"),
+        "outputs": {"niveau": (1.0, 2.0)},
+    }
+    defauts.update(champs)
+    return ModelResult(**defauts)  # type: ignore[arg-type]
+
+
+def test_un_resultat_sans_fuseau_est_refuse():
+    """INV-15 : le refus est à l'entrée, pas un correctif a posteriori."""
+    with pytest.raises(ValueError, match="fuseau"):
+        _resultat(produced_at=datetime(2026, 10, 5, 8, 0, 0))
+
+
+def test_un_resultat_non_normalise_est_normalise_en_utc():
+    """INV-16 : le même instant, exprimé dans un autre fuseau, est le même instant."""
+    resultat = _resultat(produced_at=_instant("2026-10-05T10:00:00+02:00"))
+
+    assert resultat.produced_at == _instant("2026-10-05T08:00:00+00:00")
+    assert resultat.produced_at.utcoffset() == timedelta(0)
+
+
+def test_un_intervalle_sans_sortie_correspondante_est_refuse():
+    """Un intervalle qui ne porte aucun nom de sortie ne décrit rien."""
+    with pytest.raises(ValueError, match="aucune sortie de ce nom"):
+        _resultat(intervals={"pression": ((0.0, 1.0), (1.0, 2.0))})
+
+
+def test_un_intervalle_de_longueur_incoherente_est_refuse():
+    """Un intervalle compte autant de couples que la sortie a de valeurs."""
+    with pytest.raises(ValueError, match="intervalle"):
+        _resultat(intervals={"niveau": ((0.0, 1.0),)})
+
+
+def test_un_intervalle_a_borne_non_finie_est_refuse():
+    """Une borne infinie n'est pas une borne."""
+    with pytest.raises(ValueError, match="ne sont pas finies"):
+        _resultat(intervals={"niveau": ((0.0, float("inf")), (1.0, 2.0))})
+
+
+def test_un_intervalle_non_ordonne_est_refuse():
+    """Un intervalle inversé n'est pas un intervalle."""
+    with pytest.raises(ValueError, match="n'est pas ordonné"):
+        _resultat(intervals={"niveau": ((2.0, 1.0), (1.0, 2.0))})
+
+
+def test_une_nature_de_sortie_non_declaree_est_refusee():
+    """Une nature que le modèle ne déclare pas n'est pas une nature de sortie."""
+    with pytest.raises(ValueError, match="n'est pas déclarée par le modèle"):
+        _resultat(output_natures={"niveau": ResultNature.PREDICTED})
+
+
+def test_les_natures_de_sortie_doivent_corrpondre_aux_sorties():
+    """Les natures déclarées portent exactement les noms des sorties."""
+    with pytest.raises(ValueError, match="ne correspondent pas aux sorties"):
+        _resultat(output_natures={"autre": ResultNature.ESTIMATED})
+
+
+def test_un_modele_qui_reconstruit_et_prevoit_est_valide():
+    """Un filtre d'état restitue un état et émet une prévision : les deux sont valides."""
+    resultat = _resultat(
+        spec=_spec(ResultNature.RECONSTRUCTED, ResultNature.PREDICTED),
+        nature=ResultNature.RECONSTRUCTED,
+        outputs={"level": (1.0,), "forecast": (1.2,)},
+        output_natures={
+            "level": ResultNature.RECONSTRUCTED,
+            "forecast": ResultNature.PREDICTED,
+        },
+    )
+
+    assert resultat.output_nature("level") is ResultNature.RECONSTRUCTED
+    assert resultat.output_nature("forecast") is ResultNature.PREDICTED
+
+
+def test_la_vue_serialisable_du_resultat_porte_les_natures_par_sortie():
+    """La nature se lit sortie par sortie dans la vue sérialisable du résultat."""
+    resultat = _resultat(
+        spec=_spec(ResultNature.RECONSTRUCTED, ResultNature.PREDICTED),
+        nature=ResultNature.RECONSTRUCTED,
+        outputs={"level": (1.0,), "forecast": (1.2,)},
+        output_natures={
+            "level": ResultNature.RECONSTRUCTED,
+            "forecast": ResultNature.PREDICTED,
+        },
+    )
+    vue = resultat.as_dict()
+
+    assert vue["nature"] == "reconstructed"
+    assert vue["outputs"] == {"level": [1.0], "forecast": [1.2]}
+    assert vue["output_natures"] == {"level": "reconstructed", "forecast": "predicted"}
+    json.dumps(vue, ensure_ascii=False)

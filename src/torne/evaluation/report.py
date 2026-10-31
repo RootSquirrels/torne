@@ -8,6 +8,12 @@ et l'instant d'évaluation.
 Aucune dépendance n'est cachée : l'horodatage est injectable, le prédicteur
 est un argument explicite, et le contenu du rapport ne provient que des
 modules `splits`, `metrics`, `baselines` et `uncertainty`.
+
+**Les absences traversent l'évaluation entières.** Une série peut porter des
+absences (`None`) : elles sont visibles dans la découpe, elles sont montrées
+au prédicteur dans le bloc d'entraînement, elles ne sont ni comblées ni
+converties en zéro, et elles sont comptées dans le rapport comme des points
+absents. Le rapport ne dit jamais « 0,0 » là où la donnée manque.
 """
 
 from __future__ import annotations
@@ -20,7 +26,7 @@ from types import MappingProxyType
 from ..contracts.time import to_utc
 from ..contracts.validity import PointValidity
 from .baselines import drift_forecast, mean_forecast, persistence_forecast
-from .metrics import MetricReport, evaluate_all
+from .metrics import MetricReport, evaluate_all, exiger_coherence
 from .splits import Split, walk_forward
 
 
@@ -126,8 +132,8 @@ def _metric_as_dict(report: MetricReport) -> dict[str, object]:
 
 
 def evaluate_walk_forward(
-    values: Sequence[float],
-    predictor: Callable[[tuple[float, ...]], Sequence[float]],
+    values: Sequence[float | None],
+    predictor: Callable[[tuple[float | None, ...]], Sequence[float | None]],
     *,
     initial_size: int,
     step: int,
@@ -144,11 +150,21 @@ def evaluate_walk_forward(
 
     Les trois références (persistance, moyenne, dérive) sont ajustées
     **uniquement** sur le bloc `train` de chaque pli, puis évaluées sur le même
-    bloc `test` que le modèle : les compteurs `n_total` et `n_used` sont donc
-    identiques pour le modèle et pour toutes les références.
+    bloc `test` que le modèle : quand le modèle prédit une valeur pour chaque
+    point, les compteurs `n_total` et `n_used` sont donc identiques pour le
+    modèle et pour toutes les références. Un modèle qui s'abstient sur un
+    point le voit compté comme absent, et les références ne le sont pas.
 
     Les métriques sont calculées sur les points test de tous les plis réunis,
     dans l'ordre chronologique. `now` injectable rend le rapport déterministe.
+
+    **Les absences sont réelles.** `values` peut porter des `None` : le bloc
+    d'entraînement les montre au prédicteur à leur place (jamais un zéro),
+    les références s'ajustent sur leurs seules valeurs observées, et les
+    points test sans observation ou sans prévision sont comptés comme absents
+    par les métriques. Quand `validity` est fourni, il doit dire la même
+    chose que la série : une valeur absente ne peut pas être déclarée valide,
+    et une valeur présente ne peut pas être déclarée absente.
 
     Le rapport retient le `step` du walk-forward et le nombre de points de la
     série qui ne tombent dans aucun pli : les plis sont rejouables à partir du
@@ -160,11 +176,12 @@ def evaluate_walk_forward(
             f"validity doit porter un état par point de la série : "
             f"{len(validity)} pour {len(series)}"
         )
+    exiger_coherence(series, validity)
 
     folds = walk_forward(series, initial_size=initial_size, step=step)
 
-    actuals: list[float] = []
-    predictions: list[float] = []
+    actuals: list[float | None] = []
+    predictions: list[float | None] = []
     states: list[PointValidity] = []
     baselines = {
         "persistence": persistence_forecast,

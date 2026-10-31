@@ -13,7 +13,8 @@ Ce qu'il montre, dans l'ordre :
 2. l'exécution d'un modèle — filtre de Kalman, tendance linéaire locale ;
 3. l'évaluation hors échantillon, contre trois références ;
 4. la comparaison appariée du modèle et d'une référence (Diebold-Mariano) ;
-5. l'enregistrement de l'exécution et son produit de connaissance ;
+5. l'enregistrement de l'exécution et ses produits de connaissance — l'état
+   reconstruit d'un côté, la prévision de l'autre ;
 6. la rejouabilité depuis la configuration conservée.
 """
 
@@ -224,13 +225,28 @@ def main() -> None:
         status=ProductStatus.USABLE,
         domain_of_validity="séquence régulière, bruit de mesure gaussien de variance connue",
         uncertainty="variance d'observation déclarée ; incertitude de l'état filtré non calibrée",
+        outputs=["level", "slope"],
     )
     print(f"produit     : {produit.product_id} v{produit.version}")
     print(f"nature      : {produit.nature} — ce n'est pas une observation")
+    print(f"sorties     : {', '.join(produit.summary['result']['outputs'])}")
     print(f"statut      : {produit.status}")
     print(f"lignée      : {len(produit.lineage)} références")
     for reference in produit.lineage[:6]:
         print(f"  {reference.kind.value:<12} {reference.identifier}")
+
+    # La prévision n'est pas l'état reconstruit : elle se publie séparément
+    # (SPEC-009 §3 — deux types de produits, pas un produit étiqueté).
+    prevision = enregistrement.to_product(
+        product_id="produit-0002",
+        version="1.0.0",
+        status=ProductStatus.USABLE,
+        domain_of_validity="séquence régulière, bruit de mesure gaussien de variance connue",
+        uncertainty="variance d'observation déclarée ; incertitude de l'état filtré non calibrée",
+        outputs=["forecast_level"],
+    )
+    print(f"produit     : {prevision.product_id} v{prevision.version}")
+    print(f"nature      : {prevision.nature} — la prévision, pas l'état reconstruit")
 
     _titre("6.", "Rejouabilité")
     rejoue = reproduce(MODELE, entree, PARAMETRES, issue.config)

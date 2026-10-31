@@ -16,6 +16,7 @@ graine et l'empreinte de la configuration sont des **arguments explicites**.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -24,6 +25,7 @@ from types import MappingProxyType
 from typing import Protocol
 
 from .fingerprint import fingerprint
+from .time import to_utc
 
 ParameterValue = float | int | str | bool | None
 
@@ -129,6 +131,17 @@ class ModelResult:
     sorties sont de même nature, et ne convient plus dès qu'elles diffèrent :
     dans ce cas, les natures doivent être déclarées une à une. C'est ce qui
     empêche d'exposer une prévision sous la nature d'un état reconstruit.
+
+    Les invariants appliqués à la construction :
+
+    - `produced_at` est un instant **avec fuseau**, normalisé en UTC
+      (INV-15, INV-16) ;
+    - chaque intervalle porte le nom d'une **sortie** du résultat, et compte
+      autant de couples que la sortie a de valeurs ;
+    - les bornes d'un intervalle sont **finies** et **ordonnées** (bas ≤ haut) ;
+    - chaque nature déclarée par sortie est une nature **déclarée par le
+      modèle** (`ModelSpec.natures`), et les natures déclarées portent
+      exactement les noms des sorties.
     """
 
     spec: ModelSpec
@@ -143,6 +156,11 @@ class ModelResult:
     def __post_init__(self) -> None:
         object.__setattr__(
             self,
+            "produced_at",
+            to_utc(self.produced_at, name="ModelResult.produced_at"),
+        )
+        object.__setattr__(
+            self,
             "outputs",
             MappingProxyType({name: tuple(values) for name, values in self.outputs.items()}),
         )
@@ -152,12 +170,14 @@ class ModelResult:
             MappingProxyType({name: tuple(pairs) for name, pairs in self.intervals.items()}),
         )
         object.__setattr__(self, "diagnostics", MappingProxyType(dict(self.diagnostics)))
+        self._verifier_intervalles()
         if self.output_natures:
             if set(self.output_natures) != set(self.outputs):
                 raise ValueError(
                     "les natures déclarées ne correspondent pas aux sorties : "
                     f"sorties {sorted(self.outputs)}, natures {sorted(self.output_natures)}"
                 )
+            self._verifier_natures_de_sortie()
             object.__setattr__(
                 self,
                 "output_natures",
@@ -174,6 +194,87 @@ class ModelResult:
                 f"nature de résultat « {self.nature} » absente des natures déclarées "
                 f"par le modèle {self.spec.model_id}"
             )
+
+    def _verifier_intervalles(self) -> None:
+        """Vérifie que chaque intervalle décrit une sortie existante.
+
+        Un intervalle qui ne porte aucun nom de sortie ne décrit rien ; un
+        intervalle dont le nombre de couples ne correspond pas à la sortie
+        qu'il accompagne ne la décrit pas non plus. Les bornes, enfin, sont
+        finies et ordonnées : un intervalle inversé n'est pas un intervalle.
+        """
+        for nom, paires in self.intervals.items():
+            if nom not in self.outputs:
+                raise ValueError(
+                    f"intervalle « {nom} » : aucune sortie de ce nom dans le résultat "
+                    f"(sorties : {sorted(self.outputs)})"
+                )
+            longueur = len(self.outputs[nom])
+            if len(paires) != longueur:
+                raise ValueError(
+                    f"intervalle « {nom} » : {len(paires)} intervalle(s) pour une sortie "
+                    f"de {longueur} valeur(s)"
+                )
+            for indice, paire in enumerate(paires):
+                if len(paire) != 2:
+                    raise ValueError(
+                        f"intervalle « {nom} » : l'intervalle {indice} ne porte pas deux bornes"
+                    )
+                bas, haut = paire
+                try:
+                    finies = math.isfinite(bas) and math.isfinite(haut)
+                except TypeError as exc:
+                    raise ValueError(
+                        f"intervalle « {nom} » : les bornes de l'intervalle {indice} "
+                        "ne sont pas des nombres"
+                    ) from exc
+                if not finies:
+                    raise ValueError(
+                        f"intervalle « {nom} » : les bornes de l'intervalle {indice} "
+                        "ne sont pas finies"
+                    )
+                if bas > haut:
+                    raise ValueError(
+                        f"intervalle « {nom} » : l'intervalle {indice} n'est pas ordonné "
+                        f"({bas} > {haut})"
+                    )
+
+    def _verifier_natures_de_sortie(self) -> None:
+        """Vérifie que chaque nature déclarée par sortie est une nature connue.
+
+        Une nature que le modèle ne déclare pas n'est pas une nature de sortie :
+        elle est refusée, et non ajoutée au vocabulaire.
+        """
+        for nom, nature in self.output_natures.items():
+            if not isinstance(nature, ResultNature):
+                raise TypeError(
+                    f"ModelResult.output_natures : « {nom} » porte "
+                    f"« {type(nature).__name__} », pas une ResultNature"
+                )
+            if nature not in self.spec.natures:
+                raise ValueError(
+                    f"nature de sortie « {nom} » : « {nature.value} » n'est pas déclarée "
+                    f"par le modèle {self.spec.model_id} (natures déclarées : "
+                    f"{', '.join(declaree.value for declaree in self.spec.natures)})"
+                )
+
+    def as_dict(self) -> dict[str, object]:
+        """Vue sérialisable du résultat : sorties, intervalles et natures.
+
+        La nature y est portée **par sortie** : un résultat qui restitue un
+        état reconstruit et qui émet une prévision le dit sortie par sortie, et
+        jamais sous une nature unique qui masquerait l'une des deux.
+        """
+        return {
+            "nature": self.nature.value,
+            "outputs": {nom: list(valeurs) for nom, valeurs in self.outputs.items()},
+            "intervals": {
+                nom: [list(paire) for paire in paires] for nom, paires in self.intervals.items()
+            },
+            "output_natures": {
+                nom: nature.value for nom, nature in sorted(self.output_natures.items())
+            },
+        }
 
     def output(self, name: str) -> tuple[float, ...]:
         """Renvoie une sortie nommée. Lève `KeyError` si elle n'existe pas."""

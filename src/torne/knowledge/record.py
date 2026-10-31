@@ -8,19 +8,26 @@ Il ne crée ni registre, ni service, ni moteur, ni format de stockage : ce sont
 des fonctions et deux dataclasses. L'enregistrement est **figé** : il porte
 ce qui a été fait, pas ce qu'il reste à faire.
 
-Trois règles structurantes :
+Quatre règles structurantes :
 
-1. **La nature du produit vient du résultat du modèle, jamais de l'appelant.**
-   Une sortie de modèle ne peut pas être présentée comme une observation
-   directe (`docs/ARCHITECTURE.md` §3). Le refus est explicite.
-2. **Aucune observation non admissible n'est admise dans la lignée**
+1. **La nature du produit est dérivée des sorties publiées, jamais de
+   l'appelant.** Une sortie de modèle ne peut pas être présentée comme une
+   observation directe (`docs/ARCHITECTURE.md` §3), et les sorties publiées
+   doivent partager une seule et même nature : un état reconstruit et une
+   prévision sont deux produits distincts, pas un produit étiqueté
+   (SPEC-009 §3). Le refus est explicite.
+2. **Une publication est contrôlée, pas déclarée.** `to_product` vérifie la
+   lignée à l'instant effectif de publication et **refuse** de publier un
+   enregistrement inadmissible : omettre l'appel à `verify_lineage` ne peut
+   pas produire un produit qui ment sur sa provenance.
+3. **Aucune observation non admissible n'est admise dans la lignée**
    (INV-30). `verify_lineage` contrôle, à l'instant d'établissement du
    produit, que chaque observation citée était admissible : une publication
    inconnue la rend non admissible, et une observation postérieure au produit
    n'a pas pu l'alimenter. Le même contrôle s'applique aux grandeurs
    dérivées : une grandeur calculée avant que ses entrées ne soient
    utilisables, ou après l'instant du produit, est signalée (INV-17).
-3. **Rien n'est réécrit** (INV-31). Une correction produit une version
+4. **Rien n'est réécrit** (INV-31). Une correction produit une version
    nouvelle ; l'ancienne reste consultable. C'est le champ `version` du
    produit qui l'exprime.
 
@@ -194,15 +201,26 @@ class ExecutionRecord:
         domain_of_validity: str,
         uncertainty: str,
         produced_at: datetime | None = None,
+        outputs: Sequence[str] | None = None,
         **extras: object,
     ) -> KnowledgeProduct:
         """Publie l'enregistrement sous forme de produit de connaissance.
 
-        La **nature** du produit est celle du **résultat du modèle** : elle
-        n'est pas un argument de l'appelant. Un résultat estimé ne peut donc
-        pas être publié comme une observation ; tenter de le déclarer est
-        **refusé explicitement**, avec la nature réelle du résultat dans le
-        message.
+        La publication est **contrôlée**, pas déclarée : `to_product` ne se
+        contente pas de fabriquer un produit, il vérifie d'abord que la lignée
+        est admissible **à l'instant effectif de publication** — l'instant
+        `produced_at` fourni s'il y en a un, sinon celui de l'enregistrement.
+        Une lignée invalide **refuse** la publication, et le refus nomme les
+        écarts : omettre l'appel à `verify_lineage` ne peut pas publier un
+        enregistrement incohérent.
+
+        La **nature** du produit est **dérivée des sorties publiées** : elle
+        n'est pas un argument de l'appelant, et `nature=...` reste refusé. Les
+        sorties publiées doivent en outre partager **une seule et même nature** :
+        un paquet de sorties de natures différentes n'est pas un produit, ce sont
+        deux produits distincts (SPEC-009 §3 : `state_estimate_product` et
+        `forecast_product` sont deux types de produits, pas un produit étiqueté).
+        `outputs` désigne les sorties publiées — toutes par défaut.
 
         Le produit est **nouveau** : il ne modifie ni l'enregistrement ni son
         résultat. Une correction se publie sous une `version` nouvelle, et
@@ -218,27 +236,72 @@ class ExecutionRecord:
             refuse = extras.pop("nature")
             nature_refusee = refuse.value if isinstance(refuse, ResultNature) else str(refuse)
             raise ValueError(
-                "la nature d'un produit est celle du résultat du modèle "
-                f"(« {self.result.nature.value} ») : elle ne peut pas être déclarée "
-                f"« {nature_refusee} »"
+                "la nature d'un produit n'est jamais déclarée par l'appelant : elle est "
+                f"dérivée des sorties publiées ; « {nature_refusee} » est refusé"
             )
         if extras:
             raise TypeError(f"argument(s) inconnu(s) : {', '.join(sorted(extras))}")
 
+        instant = (
+            self.produced_at if produced_at is None else to_utc(produced_at, name="produced_at")
+        )
+
+        rapport = verify_lineage(self, asof=instant)
+        if not rapport.ok:
+            raise ValueError(
+                f"l'enregistrement « {self.record_id} » n'a pas une lignée admissible à "
+                f"l'instant de publication « {instant.isoformat()} » : "
+                + " ; ".join(rapport.problems)
+            )
+
+        publiees, nature = self._sorties_publiees(outputs)
+
         return KnowledgeProduct(
             product_id=product_id,
             version=version,
-            nature=self.result.nature,
-            produced_at=self.produced_at
-            if produced_at is None
-            else to_utc(produced_at, name="produced_at"),
+            nature=nature,
+            produced_at=instant,
             status=status,
             domain_of_validity=domain_of_validity,
             uncertainty=uncertainty,
             lineage=self.lineage(),
-            summary=self._summary(),
+            summary=self._summary(publiees, nature),
             input_statuses=self._input_statuses(),
         )
+
+    def _sorties_publiees(
+        self,
+        outputs: Sequence[str] | None,
+    ) -> tuple[tuple[str, ...], ResultNature]:
+        """Les sorties publiées, et la nature qu'elles portent.
+
+        Les sorties publiées doivent partager **une seule et même nature**. Un
+        paquet qui mêle un état reconstruit et une prévision ne peut pas être
+        étiqueté d'une nature unique : il faut deux produits (SPEC-009 §3).
+        La nature retenue est donc **dérivée** des sorties publiées.
+
+        `outputs` absent signifie « toutes les sorties ». À défaut de sortie
+        publiée — un résultat sans sortie — la nature du résultat est reprise :
+        il n'y a rien à dériver.
+        """
+        noms = tuple(self.result.outputs) if outputs is None else tuple(outputs)
+        inconnues = [nom for nom in noms if nom not in self.result.outputs]
+        if inconnues:
+            raise ValueError(
+                f"sortie(s) inconnue(s) du résultat : {', '.join(inconnues)} "
+                f"(sorties disponibles : {', '.join(self.result.outputs)})"
+            )
+        natures = {self.result.output_nature(nom) for nom in noms}
+        if len(natures) > 1:
+            detail = ", ".join(f"{nom} : {self.result.output_nature(nom).value}" for nom in noms)
+            raise ValueError(
+                "les sorties publiées doivent partager une seule et même nature ; natures en "
+                f"présence : {detail}. Un état reconstruit et une prévision sont deux produits "
+                "distincts (SPEC-009 §3), pas un produit étiqueté d'une seule nature"
+            )
+        if not natures:
+            return noms, self.result.nature
+        return noms, next(iter(natures))
 
     def _input_statuses(self) -> dict[str, QualityStatus]:
         """Statut de qualité de chaque entrée citée par le produit (§3.7).
@@ -255,8 +318,13 @@ class ExecutionRecord:
             statuts[variable.variable_id] = variable.status
         return statuts
 
-    def _summary(self) -> dict[str, object]:
-        """Contenu du produit : ce que le produit dit, hors lignée."""
+    def _summary(self, publiees: tuple[str, ...], nature: ResultNature) -> dict[str, object]:
+        """Contenu du produit : ce que le produit dit, hors lignée.
+
+        Le résumé décrit **ce qui est publié** : les sorties retenues, leurs
+        intervalles, et la nature de **chacune** d'elles. La nature globale du
+        produit n'y remplace pas la nature par sortie — c'est l'inverse.
+        """
         return {
             "record_id": self.record_id,
             "model_id": self.spec.model_id,
@@ -265,13 +333,15 @@ class ExecutionRecord:
             "inputs_fingerprint": self.inputs.fingerprint(),
             "parameters_fingerprint": self.parameters.fingerprint(),
             "result": {
-                "nature": self.result.nature.value,
+                "nature": nature.value,
                 "produced_at": self.result.produced_at.isoformat(),
-                "outputs": {nom: list(valeurs) for nom, valeurs in self.result.outputs.items()},
+                "outputs": {nom: list(self.result.outputs[nom]) for nom in publiees},
                 "intervals": {
-                    nom: [list(paire) for paire in paires]
-                    for nom, paires in self.result.intervals.items()
+                    nom: [list(paire) for paire in self.result.intervals[nom]]
+                    for nom in publiees
+                    if nom in self.result.intervals
                 },
+                "output_natures": {nom: self.result.output_nature(nom).value for nom in publiees},
                 "diagnostics": dict(self.result.diagnostics),
             },
             "derived_variables": [variable.as_dict() for variable in self.derived_variables],
@@ -605,11 +675,19 @@ def _problemes_grandeurs_derivees(record: ExecutionRecord, moment: datetime) -> 
                         f"l'observation « {item.observation_id} » "
                         f"(« {usable.isoformat()} »)"
                     )
-            elif variable.computed_at < item.computed_at:
-                problems.append(
-                    f"grandeur dérivée « {variable.variable_id} » est calculée avant la "
-                    f"grandeur dérivée « {item.variable_id} » qu'elle consomme"
-                )
+            else:
+                # L'entrée est une autre grandeur dérivée : ce qui compte est
+                # l'instant où elle **devient utilisable**, pas celui où elle a
+                # été calculée — une grandeur acquise plus tard n'a pas pu
+                # alimenter un calcul antérieur.
+                usable = item.temporal.usable_at
+                if usable is not None and variable.computed_at < usable:
+                    problems.append(
+                        f"grandeur dérivée « {variable.variable_id} » est calculée le "
+                        f"« {variable.computed_at.isoformat()} », avant l'utilisabilité de "
+                        f"la grandeur dérivée « {item.variable_id} » qu'elle consomme "
+                        f"(« {usable.isoformat()} »)"
+                    )
 
         if variable.computed_at > moment:
             problems.append(
