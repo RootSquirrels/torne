@@ -41,7 +41,17 @@ from ..contracts.time import to_utc
 
 
 class AcquisitionStatus(StrEnum):
-    """Issue d'une acquisition. Vocabulaire fermé."""
+    """Issue d'une acquisition. Vocabulaire fermé.
+
+    Cet axe porte sur **l'acquisition** : la réponse est-elle arrivée, la page
+    a-t-elle été conservée ? Il ne dit **rien** de la conformité de la réponse
+    à la question posée — celle-ci a son propre axe (`Conformite`), et son
+    propre verdict (`VerdictConformite`).
+
+    Une réponse peut avoir été correctement téléchargée et conservée tout en
+    étant non conforme à la requête : les deux faits sont vrais, et ils ne se
+    confondent pas.
+    """
 
     SUCCESS = "success"
     """Toutes les pages attendues ont été acquises."""
@@ -53,12 +63,6 @@ class AcquisitionStatus(StrEnum):
     FAILED = "failed"
     """Aucune page n'a pu être acquise."""
 
-    NON_CONFORME = "non_conforme"
-    """La réponse a été reçue et conservée, mais elle ne répond pas à la question
-    posée. L'acquisition a eu lieu ; son contenu ne peut pas être traité
-    comme une réponse. C'est le statut **bloquant** de la porte de conformité :
-    une acquisition non conforme ne produit aucune observation."""
-
 
 class AcquisitionErrorKind(StrEnum):
     """Pourquoi une acquisition a échoué. Vocabulaire fermé.
@@ -66,6 +70,12 @@ class AcquisitionErrorKind(StrEnum):
     `TRANSPORT` est le seul cas où l'on ne sait pas si le fournisseur a reçu
     la demande : la distinction importe, parce qu'une reprise n'a pas le même
     sens sur une erreur de transport que sur un refus explicite.
+
+    **La non-conformité n'est pas dans ce vocabulaire, et c'est délibéré.** Une
+    réponse non conforme est une réponse **acquise** : elle est arrivée, elle
+    est conservée, elle est empreinte. Présenter la non-conformité comme un
+    échec d'acquisition rendrait la réussite du transport ambiguë. Elle est
+    portée par son propre axe : `Conformite` et `VerdictConformite`.
     """
 
     TRANSPORT = "transport"
@@ -85,15 +95,6 @@ class AcquisitionErrorKind(StrEnum):
 
     MALFORMED = "malformed"
     """La réponse a été reçue mais n'a pas pu être comprise par l'adaptateur."""
-
-    NON_CONFORMITE = "non_conformite"
-    """La réponse a été comprise, mais elle ne répond pas à la question posée.
-
-    C'est la cause propre de la non-conformité sémantique : elle se distingue
-    de `MALFORMED` (la réponse n'a pas pu être lue) et de `NOT_FOUND` (le
-    fournisseur a refusé). La réponse brute est **conservée** malgré tout :
-    une réponse non conforme est une preuve, et le motif de non-conformité
-    est consigné avec elle."""
 
     UNKNOWN = "unknown"
     """Cause non determined. Elle est signalée, jamais masquée."""
@@ -321,6 +322,16 @@ class AcquisitionOutcome:
     Il porte **les pages acquises** (chacune une preuve brute identifiable),
     **les tentatives** (y compris celles qui ont échoué), et **la demande**
     qui a produit le tout.
+
+    **Deux axes, une porte.** L'axe de l'**acquisition** — `status`,
+    `succeeded`, `error_kind` — dit si la réponse est arrivée et conservée.
+    L'axe de la **conformité** — `conformite`, `verdict_conformite` — dit si
+    elle répond à la question posée. Les deux sont vrais indépendamment : une
+    réponse peut avoir été correctement téléchargée et conservée tout en
+    étant non conforme à la requête.
+
+    Pour savoir si l'on peut **traiter** le contenu, il n'y a qu'une
+    question à poser : `exploitable`. C'est la porte.
     """
 
     request: AcquisitionRequest
@@ -362,11 +373,16 @@ class AcquisitionOutcome:
 
     @property
     def succeeded(self) -> bool:
-        """L'acquisition a-t-elle abouti, même partiellement ?
+        """L'**acquisition** a-t-elle abouti, même partiellement ?
 
-        Une acquisition **non conforme** n'a pas abouti : elle a reçu une
-        réponse, mais cette réponse ne répond pas à la question posée. Le
-        statut `non_conforme` n'est donc pas un succès, même partiel.
+        C'est l'axe de l'acquisition : la réponse est-elle arrivée, la page
+        a-t-elle été conservée ? Une acquisition **non conforme a bien
+        abouti** — c'est sa *conformité* qui a échoué, pas son transport, et
+        les deux faits doivent rester lisibles séparément.
+
+        Cette propriété ne dit **rien** de l'exploitabilité : une acquisition
+        non conforme a abouti et n'est pas exploitable. Pour cela, c'est
+        `exploitable` qu'il faut regarder — c'est là qu'est la porte.
         """
         return self.status in (AcquisitionStatus.SUCCESS, AcquisitionStatus.PARTIAL)
 
@@ -385,11 +401,14 @@ class AcquisitionOutcome:
     def exploitable(self) -> bool:
         """L'issue peut-elle être transformée en observations ?
 
-        **C'est la porte.** Elle est fausse dès que la réponse n'est pas
-        conforme : une source qui renvoie les lignes d'une autre station ne
-        crée aucune observation, même si sa réponse a été reçue, conservée et
-        empreinte correctement. La preuve brute, elle, reste : une réponse
-        non conforme est une preuve, et elle est conservée.
+        **C'est la porte**, et c'est la seule question à poser avant de
+        construire des observations. Elle est fausse dès que la réponse n'est
+        pas conforme : une source qui renvoie les lignes d'une autre station
+        ne crée aucune observation.
+
+        Elle est fausse **sans rien retirer à la preuve** : la réponse non
+        conforme reste reçue, conservée, empreinte et journalisée. Ce qui ne
+        se fait pas, c'est l'usage.
         """
         return self.succeeded and self.conformite is not Conformite.NON_CONFORME
 

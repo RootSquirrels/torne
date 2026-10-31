@@ -81,7 +81,7 @@ def _decrire(issue, magasin: FileRawStore) -> None:
     """Affiche la chaîne complète d'une acquisition."""
     print(f"source       : {issue.request.source_id}")
     print(f"demande      : {issue.request.method} {issue.request.effective_url}")
-    print(f"issue        : {issue.status.value}")
+    print(f"acquisition  : {issue.status.value}")
     print(f"exhaustivité : {issue.exhaustiveness.value}")
     print(f"conformité   : {issue.conformite.value}")
     print(f"exploitable  : {'oui' if issue.exploitable else 'non'}")
@@ -199,8 +199,9 @@ def main(argv: list[str]) -> int:
         apercu = ", ".join(str(empreinte)[:12] for empreinte in empreintes[:2]) or "—"
         print(
             f"  {entree['acquired_at']} · {entree['source_id']} · "
-            f"{entree['status']}/{entree['exhaustiveness']} · {len(empreintes)} page(s) · "
-            f"{apercu}… · {entree['media_type']} · {entree['size']} octets"
+            f"{entree['status']}/{entree['exhaustiveness']}/{entree['conformite']} · "
+            f"{len(empreintes)} page(s) · {apercu}… · {entree['media_type']} · "
+            f"{entree['size']} octets"
         )
 
     # ------------------------------------------------------------------
@@ -244,10 +245,17 @@ def main(argv: list[str]) -> int:
     print(f"sources exploitables : {exploitables}/{len(issues)}")
     print()
     for issue in bloquees:
-        print(f"  BLOQUÉE : {issue.request.source_id} — {issue.status.value}")
+        print(f"  BLOQUÉE : {issue.request.source_id} — conformité {issue.conformite.value}")
         if issue.verdict_conformite is not None and issue.verdict_conformite.motif:
             print(f"            {issue.verdict_conformite.motif}")
-        print(f"            preuve brute conservée : {issue.page_count} page(s)")
+        print(
+            f"            acquisition {issue.status.value} · preuve brute conservée : "
+            f"{issue.page_count} page(s)"
+        )
+    print()
+    print("L'acquisition et la conformité sont deux axes distincts : l'acquisition")
+    print("a abouti — la réponse est arrivée, elle est conservée, elle est empreinte —")
+    print("et son contenu n'est pas exploitable. La preuve reste ; l'usage, non.")
     print()
     print("Elle prouve : que le socle transversal sait récupérer, suivre la pagination,")
     print("conserver la réponse brute, l'empreinter, et consigner l'échec comme le succès.")

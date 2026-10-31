@@ -552,11 +552,10 @@ def _verdict_non_conforme() -> VerdictConformite:
 
 
 def test_une_source_qui_renvoie_les_lignes_d_une_autre_station_ne_cree_aucune_observation():
-    """La porte : un verdict défavorable bloque, et le statut le dit.
+    """La porte : un verdict défavorable bloque, et la porte est explicite.
 
-    C'est le test central de la conformité d'acquisition : l'acquisition a
-    eu lieu — la réponse a été reçue — mais elle **ne produit aucune
-    observation**, et elle porte un vocabulaire qui ne laisse aucun doute.
+    C'est le test central de la conformité d'acquisition : la réponse a été
+    reçue, et elle **ne produit aucune observation**.
     """
     transport = RecordingTransport([_reponse(b'{"data": []}')])
     magasin = MagasinMemoire()
@@ -565,11 +564,30 @@ def test_une_source_qui_renvoie_les_lignes_d_une_autre_station_ne_cree_aucune_ob
         AdapteurFixe(SOURCE, verdict=_verdict_non_conforme())
     )
 
-    assert issue.status is AcquisitionStatus.NON_CONFORME
-    assert issue.error_kind is AcquisitionErrorKind.NON_CONFORMITE
     assert issue.conformite is Conformite.NON_CONFORME
     assert issue.exploitable is False
-    assert issue.succeeded is False
+
+
+def test_la_reussite_du_transport_reste_lisible_quand_la_conformite_echoue():
+    """Les deux axes sont distincts : l'acquisition a abouti, la conformité non.
+
+    L'arbitrage est explicite : présenter la non-conformité comme un échec
+    d'acquisition rendrait ambiguë la réussite du transport. La réponse est
+    arrivée, elle est conservée, et son contenu n'est pas exploitable. Aucun
+    statut ni aucune cause ne prétend le contraire.
+    """
+    transport = RecordingTransport([_reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(SOURCE, verdict=_verdict_non_conforme())
+    )
+
+    assert issue.status is AcquisitionStatus.SUCCESS
+    assert issue.succeeded is True
+    assert issue.error_kind is None
+    assert issue.conformite is Conformite.NON_CONFORME
+    assert issue.exploitable is False
 
 
 def test_la_reponse_brute_est_conservee_malgre_la_non_conformite():
@@ -619,6 +637,7 @@ def test_la_porte_arrete_le_parcours():
 
     assert len(transport.requests) == 1
     assert issue.page_count == 1
+    assert issue.status is AcquisitionStatus.PARTIAL
 
 
 def test_une_exhaustivite_indeclaree_accompagne_un_verdict_non_conforme():

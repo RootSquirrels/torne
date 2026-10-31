@@ -30,11 +30,13 @@ il ne décide pas :
 | l'exhaustivité du parcours | le socle, appuyé sur ce que la source déclare |
 
 Le troisième contrôle est une **porte**. Une source qui renvoie les lignes
-d'une autre station rend un verdict `non_conforme` : l'issue porte alors le
-statut `non_conforme`, elle **ne produit aucune observation**, et le parcours
-s'arrête là. La réponse brute, elle, est conservée : une réponse qui a
-répondu à côté est une preuve, et elle est d'autant plus utile qu'on sait
-qu'elle ne convient pas.
+d'une autre station rend un verdict `non_conforme` : l'issue n'est alors
+**pas exploitable** — elle ne produit aucune observation — et le parcours
+s'arrête là. L'**acquisition**, elle, n'a pas échoué : la réponse est arrivée
+et elle est conservée. Les deux axes restent distincts, et c'est
+`exploitable` qui décide de l'usage. La réponse brute est conservée : une
+réponse qui a répondu à côté est une preuve, et elle est d'autant plus
+utile qu'on sait qu'elle ne convient pas.
 """
 
 from __future__ import annotations
@@ -148,10 +150,12 @@ class Fetcher:
         verdict: VerdictConformite | None = None
         page = 0
         tronque = False
+        interrompu = False
 
         while True:
             if page >= demande.max_pages:
                 tronque = True
+                interrompu = True
                 break
 
             reponse, tentatives_page = self._envoyer(demande, page)
@@ -161,6 +165,7 @@ class Fetcher:
             if tentative.error_kind is not None:
                 erreur = tentative.error_kind
                 detail = tentative.error_detail
+                interrompu = True
                 break
 
             reponse_effective = reponse
@@ -186,15 +191,17 @@ class Fetcher:
             except (ValueError, KeyError) as erreur_adaptateur:
                 erreur = AcquisitionErrorKind.MALFORMED
                 detail = f"la source a renvoyé une réponse illisible : {erreur_adaptateur}"
+                interrompu = True
                 break
 
-            # La porte : un verdict défavorable **bloque**. L'acquisition est
-            # non conforme, elle ne produit aucune observation, et le parcours
-            # s'arrête là — demander la page suivante d'une source qui a
-            # répondu à côté n'apporterait rien.
+            # La porte : un verdict défavorable **bloque**. L'**acquisition**
+            # n'a pas échoué — la réponse est arrivée et elle est conservée —
+            # mais ce qui échoue, c'est la **conformité**, et elle est portée
+            # par son verdict, pas par le statut ni par une cause d'erreur.
+            # Le parcours s'arrête là : demander la page suivante d'une source
+            # qui a répondu à côté n'apporterait rien.
             if verdict.conformite is Conformite.NON_CONFORME:
-                erreur = AcquisitionErrorKind.NON_CONFORMITE
-                detail = verdict.motif
+                interrompu = suivante is not None
                 break
 
             if suivante is None:
@@ -203,18 +210,20 @@ class Fetcher:
 
         finished_at = self._clock()
 
-        if verdict is not None and verdict.conformite is Conformite.NON_CONFORME:
-            statut = AcquisitionStatus.NON_CONFORME
-        elif not preuves:
+        # L'axe de l'ACQUISITION : la réponse est-elle arrivée, et le parcours
+        # est-il complet ? La non-conformité n'y entre pas : une réponse non
+        # conforme est une réponse acquise.
+        if not preuves:
             statut = AcquisitionStatus.FAILED
-        elif tronque or erreur is not None:
+        elif interrompu:
             statut = AcquisitionStatus.PARTIAL
         else:
             statut = AcquisitionStatus.SUCCESS
 
+        non_conforme = verdict is not None and verdict.conformite is Conformite.NON_CONFORME
         if tronque:
             exhaustivite = Exhaustiveness.TRUNCATED
-        elif erreur is not None:
+        elif erreur is not None or non_conforme:
             exhaustivite = Exhaustiveness.UNDECLARED
         elif declare_exhaustion:
             exhaustivite = Exhaustiveness.DECLARED_EXHAUSTED
