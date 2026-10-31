@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+.installed.cfg
+*.egg
+
+# --- Environnements virtuels ---
+.venv/
+venv/
+env/
+
+# --- Outils de developpement et de test ---
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# --- Donnees et sorties de production ---
+data/
+store/
+resultats/
+*.parquet
+*.duckdb
+*.db
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+
+# --- Editeurs et systeme ---
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# --- Verrou de dependances ---
+# uv.lock est VOLONTAIREMENT versionne : c'est lui qui rend l'environnement reproductible.
+# Ne pas ajouter cette ligne au fichier .gitignore.

@@ -1,0 +1,55 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+[project]
+name = "torne"
+version = "0.1.0"
+description = "Plateforme computationnelle de connaissance du monde reel (World Intelligence / World-to-Market Intelligence)."
+readme = "README.md"
+requires-python = ">=3.12"
+
+# Dependances minimales du socle. Chaque bibliotheque est justifiee par une capacite
+# demontree dans au moins deux documents du paquet de reference V2.0 ; aucune n'est ajoutee
+# pour une seule mention d'architecture. Les bornes inferieures sont prudentes et non
+# verrouillees : le verrou reproductible est uv.lock, produit par `uv lock` sur le poste
+# disposant de uv.
+dependencies = [
+    # Calcul numerique : delegation aux bibliotheques compilees eprouvees (ADR-021, ADR-006, SPEC-010)
+    "numpy>=1.26",
+    # Donnees tabulaires, series temporelles, donnees gridded (ADR-009, SPEC-010)
+    "pandas>=2.2",
+    # Interoperabilite et schemas colonnaires Parquet (ADR-005, ADR-006, SPEC-001)
+    "pyarrow>=16.0",
+    # Requetage analytique local sur donnees Parquet (ADR-004, ADR-005, ADR-007)
+    "duckdb>=1.0",
+    # Estimateurs, baselines, evaluation hors echantillon et calibration (ADR-021, SPEC-010, docs/08)
+    "scikit-learn>=1.4",
+    # Acquisition HTTP/REST des sources publiques (SPEC-002, docs/03, ADR-005)
+    "requests>=2.31",
+    # Declaration lisible et versionnee des contrats (ADR-015, SPEC-001, SPEC-002)
+    "pyyaml>=6.0",
+    # Modeles de contrat valides et source executable de verite (ADR-015, CORRECTIONS, docs/04)
+    "pydantic>=2.7",
+]
+
+[project.scripts]
+# Point d'entree console provisoire : il ne fait qu'etatiser le paquet. Aucun code
+# metier ici tant que le premier slice vertical n'est pas choisi.
+torne = "torne:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/torne"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
