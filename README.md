@@ -117,8 +117,8 @@ avec **301 tests**.
 | `uv build` | La sdist et le wheel se construisent : le paquet est publiable. |
 
 `.github/workflows/ci.yml` (GitHub Actions) rejoue ce gate à l'identique, sur Python 3.12.
-**Ce workflow a été exécuté et a réussi** : deux exécutions terminées avec succès sur `main`
-(`d852d23`, `ff11742`). Il rejoue le gate à chaque poussée.
+**Ce workflow a été exécuté et a réussi** : chaque exécution déclenchée sur `main` s'est terminée
+avec le verdict `success`, vérifié par l'API GitHub. Il rejoue le gate à chaque poussée.
 
 Le dépôt est **public** (`github.com/RootSquirrels/torne`) : le code y est lisible par
 quiconque. C'est un fait vérifiable par l'API GitHub, et il a une conséquence à trancher
