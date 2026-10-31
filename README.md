@@ -65,6 +65,7 @@ de lui.
 | **Absences respectées** : une absence reste une absence de la donnée à l'entrée jusqu'au rapport de métriques ; elle n'est jamais remplacée par un zéro | — |
 | **Lignée temporelle fermée** : un produit ne peut pas être daté avant ce qu'il publie, et une entrée citée est l'objet canonique de l'enregistrement — un même identifiant ne peut pas désigner un autre contenu | — |
 | **Première expérience définie** : question falsifiable, hypothèse nulle pré-enregistrée, sources et témoins qualifiés, critères d'arrêt — le pré-enregistrement est écrit avant le premier calcul | Acquisition des sources de l'expérience, puis exécution |
+| **Socle d'acquisition** : récupérer une API ou un fichier, suivre la pagination, conserver la réponse brute et son empreinte, consigner ce qui a été demandé et ce qui a échoué — le secret ne passe jamais dans ce qui est consigné | Les intégrations de sources réelles, puis l'observatoire |
 
 **Aucune performance n'est démontrée sur le monde réel.** Le dépôt contient désormais un modèle
 scientifique — un filtre de Kalman en espace d'état — dont **l'implémentation** est vérifiée :
@@ -135,8 +136,8 @@ par le propriétaire — voir `docs/DECISIONS.md`, « Licence du dépôt TORNE �
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | les quatre frontières, les préoccupations transversales, les responsabilités |
 | [`docs/RESEARCH_AND_VALIDATION.md`](docs/RESEARCH_AND_VALIDATION.md) | cinq modes de validation et hiérarchie des affirmations |
 | [`docs/REUSE_AUDIT.md`](docs/REUSE_AUDIT.md) | **matrice de réutilisation consolidée** : une décision par composant, le blocage de licence, les doublons à ne pas réimplémenter, ce qu'il faut extraire en premier |
-| [`docs/SLICE-PREMIER.md`](docs/SLICE-PREMIER.md) | **premier vertical slice, rechoisi** : le critère de sélection (cible latente, juge indépendant), l'expérience recommandée, ce qu'elle démontre et ce qu'elle ne démontre pas, et les décisions qui restent au propriétaire |
-| [`docs/PRE-ENREGISTREMENT-001.md`](docs/PRE-ENREGISTREMENT-001.md) | **pré-enregistrement de l'expérience 001** : question falsifiable, sources et témoins, modes de validation, hypothèse nulle, critères d'arrêt, conditions de gel — écrit avant tout calcul |
+| [`docs/SLICE-PREMIER.md`](docs/SLICE-PREMIER.md) | **piste de recherche documentée** (`TORNE-EXP-001`) : le critère de sélection relu, l'ambition hydrologique en quatre couches, la réutilisabilité multi-fleuves, et ce qui est demandé au propriétaire |
+| [`docs/PRE-ENREGISTREMENT-001.md`](docs/PRE-ENREGISTREMENT-001.md) | **pré-enregistrement de la piste 001**, statut `planned` : question falsifiable, sources et témoins, modes de validation, hypothèse nulle, critères d'arrêt, conditions de gel — écrit avant tout calcul |
 | [`docs/MISSISSIPPI_DATA_SOURCES.md`](docs/MISSISSIPPI_DATA_SOURCES.md) | **qualification des sources du Mississippi** : neuf sources, schémas réels, état de chaque API, ruptures méthodologiques, jeu de données minimal — et ce qu'il ne permet pas de mesurer |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | journal daté des décisions prises et des points ouverts |
 | [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | le programme d'ingénierie : les gates P0/P1/P2/P3, les principes, la répartition du travail |
@@ -172,6 +173,7 @@ torne/
 ├── src/torne/
 │   ├── __init__.py         # version et point d'entrée console provisoire
 │   ├── contracts/          # contrats fondamentaux, exécutables : temps, validité, modèle, observation, grandeur dérivée, produit
+│   ├── acquisition/        # socle transversal : récupération, pagination, conservation des preuves brutes
 │   ├── execution/          # exécution d'un modèle : configuration, reproductibilité, rejeu
 │   ├── methods/            # méthodes scientifiques : filtre d'état, comparaison, régression, CUSUM, puissance
 │   ├── evaluation/         # séparation temporelle, métriques, références, rapport
@@ -233,6 +235,20 @@ La règle d'établissement de `KNOWN_AT` par source est désormais écrite : qua
 classe détermine l'admissibilité. Aucune donnée n'a été acquise, aucun connecteur créé, aucune
 performance démontrée.
 
+**31 octobre 2026 — programme réordonné, et socle d'acquisition commencé.** Le propriétaire a
+corrigé l'ordre des étapes : pré-enregistrer une expérience précise avant de savoir acquérir une
+seule donnée réelle revenait à laisser les contraintes d'une expérience dicter toute l'architecture.
+La démarche **exploratoire** — collecter, comprendre les sources, découvrir des régularités et des
+lacunes — précède désormais la démarche **confirmatoire** ; le pré-enregistrement reste indispensable
+avant l'analyse confirmatoire, mais il ne doit pas empêcher l'exploration. `TORNE-EXP-001` passe en
+**piste de recherche documentée**, statut `planned`, et son travail est conservé tel quel. La séquence
+du programme devient : **acquisition** → **observatoire des sources** → **fondation d'intelligence de
+domaine** → **découverte scientifique et premiers produits de connaissance**. Trois niveaux sont
+distingués et séparés par des contrats explicites : le socle transversal acquiert et conserve, la
+couche sémantique comprend, la couche scientifique transforme. Le socle transversal est **commencé** :
+contrats, transport, pagination, reprises, conservation des preuves brutes et journal d'acquisition
+sont écrits et testés.
+
 **31 octobre 2026 — mission 001 livrée : exécution, évaluation, preuve.** Le dépôt n'est plus
 un socle documentaire. Il contient une capacité d'exécution (entrées et paramètres explicites,
 graine contrôlée, configuration conservée, rejeu depuis la configuration), une capacité
@@ -244,6 +260,15 @@ indépendante, contre un cas calculé à la main et contre les propriétés atte
 d'état. Quatre primitives d'`athanor.stats` ont été extraites et attribuées. La chaîne complète
 est testée de bout en bout (`tests/test_end_to_end.py`) et rejouable
 (`experiments/mission_001_demo.py`).
+
+**31 octobre 2026 — le dépôt acquiert de vraies données.** Le socle transversal d'acquisition est
+en service : `experiments/acquisition_demo.py` interroge **réellement** trois points d'accès publics
+— les observations hydrométriques de Hub'EAU v2, les valeurs instantanées du NWIS de l'USGS, le
+catalogue OData de Copernicus Data Space — conserve chaque réponse comme preuve brute, l'empreinte,
+et consigne l'échec comme le succès. Le 31 octobre, l'acquisition a réussi sur les trois :
+deux pages Hub'EAU (25 848 et 25 845 octets), une page USGS (56 082 octets), une page Copernicus
+(13 470 octets), quatre lignes de manifeste. La troncature par le budget de pages est reportée
+`partial`, et l'épuisement de la source est reporté `success` : les deux ne se confondent pas.
 
 **31 octobre 2026 — alignement sur les fondations scientifiques et nettoyage du namespace.**
 Le paquet de référence V2.0 (`docs/08-SCIENTIFIC-COMPUTING-FOUNDATION-AND-EVALUATION.md`,
@@ -262,6 +287,6 @@ observation de source a son propre objet et son propre statut de qualité.
 Non fait : aucun connecteur, aucun modèle économique ou financier, aucune application, aucun
 moteur par domaine, aucun registre. **Aucune performance sur le monde réel n'est démontrée.**
 
-En cours : les tests d'accès de l'expérience 001, l'instanciation par source de la règle
-`KNOWN_AT`, et la revue d'art antérieur sur la dispersion inter-agences — trois conditions de gel
-avant le premier calcul.
+En cours : le socle d'acquisition — intégrations de sources réelles, conservation des preuves
+brutes, et une démonstration d'acquisition réelle. Puis l'observatoire des sources, qui dira ce que
+les données permettent réellement de reconstruire et où elles sont lacunaires.
