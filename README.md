@@ -64,6 +64,7 @@ de lui.
 | **Nature par sortie** : un produit publie une seule nature, et chaque sortie garde la sienne à travers la sérialisation | — |
 | **Absences respectées** : une absence reste une absence de la donnée à l'entrée jusqu'au rapport de métriques ; elle n'est jamais remplacée par un zéro | — |
 | **Lignée temporelle fermée** : un produit ne peut pas être daté avant ce qu'il publie, et une entrée citée est l'objet canonique de l'enregistrement — un même identifiant ne peut pas désigner un autre contenu | — |
+| **Première expérience définie** : question falsifiable, hypothèse nulle pré-enregistrée, sources et témoins qualifiés, critères d'arrêt — le pré-enregistrement est écrit avant le premier calcul | Acquisition des sources de l'expérience, puis exécution |
 
 **Aucune performance n'est démontrée sur le monde réel.** Le dépôt contient désormais un modèle
 scientifique — un filtre de Kalman en espace d'état — dont **l'implémentation** est vérifiée :
@@ -134,10 +135,11 @@ par le propriétaire — voir `docs/DECISIONS.md`, « Licence du dépôt TORNE �
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | les quatre frontières, les préoccupations transversales, les responsabilités |
 | [`docs/RESEARCH_AND_VALIDATION.md`](docs/RESEARCH_AND_VALIDATION.md) | cinq modes de validation et hiérarchie des affirmations |
 | [`docs/REUSE_AUDIT.md`](docs/REUSE_AUDIT.md) | **matrice de réutilisation consolidée** : une décision par composant, le blocage de licence, les doublons à ne pas réimplémenter, ce qu'il faut extraire en premier |
-| [`docs/SLICE-PREMIER.md`](docs/SLICE-PREMIER.md) | proposition argumentée du premier vertical slice (Mississippi), critères de succès et conditions d'échec |
+| [`docs/SLICE-PREMIER.md`](docs/SLICE-PREMIER.md) | **premier vertical slice, rechoisi** : le critère de sélection (cible latente, juge indépendant), l'expérience recommandée, ce qu'elle démontre et ce qu'elle ne démontre pas, et les décisions qui restent au propriétaire |
+| [`docs/PRE-ENREGISTREMENT-001.md`](docs/PRE-ENREGISTREMENT-001.md) | **pré-enregistrement de l'expérience 001** : question falsifiable, sources et témoins, modes de validation, hypothèse nulle, critères d'arrêt, conditions de gel — écrit avant tout calcul |
 | [`docs/MISSISSIPPI_DATA_SOURCES.md`](docs/MISSISSIPPI_DATA_SOURCES.md) | **qualification des sources du Mississippi** : neuf sources, schémas réels, état de chaque API, ruptures méthodologiques, jeu de données minimal — et ce qu'il ne permet pas de mesurer |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | journal daté des décisions prises et des points ouverts |
-| [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | le programme d'ingénierie : les gates P0/P1/P2, les principes, la répartition du travail |
+| [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | le programme d'ingénierie : les gates P0/P1/P2/P3, les principes, la répartition du travail |
 | [`docs/CONTRATS_FONDAMENTAUX.md`](docs/CONTRATS_FONDAMENTAUX.md) | les cinq objets, les trois dimensions temporelles, 34 invariants vérifiables |
 | [`docs/P0-RAPPORT.md`](docs/P0-RAPPORT.md) | le rapport du socle de build : sorties réelles des cinq commandes, décisions, limites |
 | [`docs/MISSISSIPPI_DATA_SOURCES.md`](docs/MISSISSIPPI_DATA_SOURCES.md) | **qualification des sources** (gate P1) : dix sources, stations, paramètres, pièges méthodologiques, décisions bloquantes avant tout connecteur |
@@ -216,8 +218,20 @@ résultat publié ni l'établissement de l'enregistrement ; chaque entrée cité
 son objet canonique dans l'enregistrement, et les contrôles temporels s'exercent sur cet objet.
 Cinq tests de non-régression : ils échouent sur le code d'avant, ils passent sur le nouveau.
 
-En cours : consolidation de la matrice de réutilisation à partir des trois rapports
-d'archéologie, et choix du premier slice vertical.
+**31 octobre 2026 — première expérience physique définie.** Le critère de sélection du premier
+slice a été **relu** : il n'est plus le critère MISSISSIPPI/RHIN — un témoin économique public à
+fréquence infra-mensuelle — mais trois portes dures du paquet de référence : la cible doit être une
+grandeur **latente qu'aucun éditeur ne publie**, le juge doit être **véritablement indépendant**, et
+la question doit être **identifiable**. Appliqué à la proposition Mississippi, ce critère la
+refuse : les heures de fermeture d'écluses sont publiées directement, et les taux de fret USDA/AMS
+dérivent du même marché fluvial que le produit expliquerait. L'expérience recommandée est donc la
+**cohérence inter-agences de l'état hydrologique du Rhin** : la divergence entre les reconstructions
+française, allemande et néerlandaise, et le déplacement qu'elle produit sur le compte de jours de
+basses eaux. Son pré-enregistrement est écrit — question, hypothèse nulle, sources, témoins, modes
+de validation, critères d'arrêt, conditions de gel — **avant** tout calcul, comme l'exige ADR-012.
+La règle d'établissement de `KNOWN_AT` par source est désormais écrite : quatre classes, et la
+classe détermine l'admissibilité. Aucune donnée n'a été acquise, aucun connecteur créé, aucune
+performance démontrée.
 
 **31 octobre 2026 — mission 001 livrée : exécution, évaluation, preuve.** Le dépôt n'est plus
 un socle documentaire. Il contient une capacité d'exécution (entrées et paramètres explicites,
@@ -247,3 +261,7 @@ observation de source a son propre objet et son propre statut de qualité.
 
 Non fait : aucun connecteur, aucun modèle économique ou financier, aucune application, aucun
 moteur par domaine, aucun registre. **Aucune performance sur le monde réel n'est démontrée.**
+
+En cours : les tests d'accès de l'expérience 001, l'instanciation par source de la règle
+`KNOWN_AT`, et la revue d'art antérieur sur la dispersion inter-agences — trois conditions de gel
+avant le premier calcul.

@@ -509,7 +509,7 @@ civils par série), `data_gap_interval`, `parent_time_series_id` (chaîne de dé
 `revision_modified` sur les stations. **[FAIT]**. `thresholds` contient par exemple
 `National Weather Service Floodstage` (27 ft à Chester, 33 ft à Thebes), `Peak Stage, 49.74 ft, Aug 7,
 1993`, `Operational limit (maximum) very high condition threshold` (55 ft). **[FAIT]**
-→ **Ce sont des repères de navigabilité,文的, déjà codifiés.** Un gabarit de seuil de décision navigable
+→ **Ce sont des repères de navigabilité, déjà codifiés.** Un gabarit de seuil de décision navigable
 est donc disponible **dans la source**, sans le reconstruire.
 
 **Latence de publication.** `last_modified` sur une valeur du 2026-10-29 à `2026-10-30 08:12:04Z` → le

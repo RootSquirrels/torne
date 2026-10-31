@@ -1,177 +1,198 @@
 # TORNE — Premier vertical slice
 
 **Proposition — 31 octobre 2026**
-**Statut : proposition argumentée. Elle attend la décision du propriétaire.**
+**Statut : recommandation argumentée. Elle attend la décision du propriétaire.**
+**Ce document remplace la proposition du même jour fondée sur le critère MISSISSIPPI/RHIN : cette
+proposition ne survit pas au test de sélection appliqué ci-dessous. Le raisonnement antérieur est
+conservé en §9, pour que le changement de critère soit traçable.**
 
-## 1. La décision proposée
+## 1. Ce qui a changé : le critère de sélection
 
-**Le premier vertical slice est le Mississippi (système fluvial intérieur américain), pas le Rhin.**
+La proposition précédente choisissait un bassin par un critère de **témoin économique** : un terrain
+où la conséquence économique de la donnée physique est mesurée publiquement, à fréquence
+infra-mensuelle. Ce critère est **relativisé**. Il ne disparaît pas — il devient une question de
+coût du terrain, non le critère de sélection d'une expérience.
 
-Ce n'est pas un choix d'intérêt : c'est le choix que dicte le critère le plus rare — **la disponibilité d'un témoin
-économique public, à fréquence infra-mensuelle, sur toute la période d'étude**.
+Le critère de sélection est désormais celui du **paquet de référence V2.0**, qu'une revue
+transversale de sept candidats sur six domaines a appliqué et vérifié :
 
-## 2. Pourquoi le Rhin ne peut pas être le premier slice
+- **T1 — Latent, pas tabulé.** La cible est-elle une grandeur que **aucun éditeur ne publie
+  directement**, mais qui est déterminée par des observations publiques ? Si la variable cible
+  apparaît telle quelle dans un flux public, le candidat n'est pas une expérience : c'est un
+  tableau de bord. Un produit public qui fournit déjà la quantité cible est une **référence** ou un
+  **juge**, jamais la découverte.
+- **T2 — Un juge véritablement indépendant.** Un juge qui partage le réseau de mesure, le
+  forçage, le modèle, le post-traitement, la géographie ou la période du candidat n'est pas une
+  confirmation (ADR-014, ADR-023, SPEC-003 §10).
+- **Identifiabilité.** La question est-elle répondable avec les sources disponibles, et qu'est-ce
+  qui rendrait le résultat infalsifiable ? Une question que presque n'importe quel choix de modèle
+  peut reproduire n'est pas une expérience.
 
-Le Rhin est le meilleur terrain d'intégration *technique* du paquet de référence : sources publiques, historique de
-plusieurs décennies, références indépendantes (PEGEL, EWL), et un modèle de référence physique déjà spécifié. Mais
-l'audit du catalogue de sources et du plan d'essai établit ceci :
+Ces trois portes sont dures : elles éliminent, elles ne se pondèrent pas. Le classement final
+porte sur douze critères notés, mais **aucun score ne rachète l'échec à T1 ou T2**.
 
-- Tous les témoins économiques à fréquence infra-mensuelle sur le Rhin sont **commerciaux** : fret PJK, stocks ARA.
-- Les seuls témoins publics sont **annuels ou trimestriels** (CCNR Market Observation) ou **mensuels** (Destatis).
-- Or l'expérience à mesurer est un **décalage entre le fait physique, la décision publique et le témoin économique** —
-  typiquement de quelques semaines à quelques mois.
+## 2. La proposition précédente échoue à T1 et à T2
 
-**Un témoin trimestriel ne date pas un décalage de quelques semaines.** Il produit un intervalle de censure qui
-contient probablement tout l'effet recherché. Concrètement : le slice Rhin, tel que spécifié, ne peut pas produire
-la seule métrique qui le justifierait.
+Appliquons le critère à la proposition Mississippi du 31 octobre 2026, qui était la version
+antérieure du présent document :
 
-Les trois issues possibles sont donc : acheter un témoin commercial (coût récurrent, dépendance, et la mission
-interdit les coûts non documentés), ou dégrader la revendication économique à une description rétrospective de
-volumes (auquel cas le slice ne démontre pas la chaîne World-to-Market, seulement World Intelligence), ou choisir un
-terrain qui n'a pas le problème.
+| Élément de la proposition | Verdict |
+|---|---|
+| **Fermetures d'écluses USACE** comme fait physique | **Échec T1.** Les heures de fermeture sont *directement publiées* par l'USACE (LPMS). Ce n'est pas un latent : c'est un produit public. Il devient une **référence**, pas la découverte. |
+| **Taux de fret hebdomadaire USDA/AMS** comme témoin économique | **Échec T2.** Ce sont des moyennes hebdomadaire *d'État* d'un marché du transport fluvial — le même marché que le produit explique. Un témoin dépendant du mécanisme qu'il devrait confirmer. |
+| **Décalage entre contrainte physique et témoin économique** comme métrique | Devient infaisable : le témoin est à la fois la référence et la mesure, il n'y a plus rien à comparer. |
 
-## 3. Pourquoi le Mississippi passe le critère
+Autrement dit : la proposition précédente mesurait un décalage entre une grandeur **déjà publiée**
+et un témoin **issu du même marché**. C'est précisément le motif que la doctrine interdit de
+présenter comme une confirmation.
 
-| Critère (MISSION §8) | Mississippi | Rhin |
+**Cette constatation ne disqualifie pas le bassin** — elle disqualifie le **juge** qu'il proposait.
+C'est une correction de fond, et c'est la raison pour laquelle la sélection est refaite.
+
+## 3. L'expérience recommandée — Expérience 001
+
+> **Quelle est l'amplitude de la divergence entre les reconstructions hydrométriques française,
+> allemande et néerlandaise de l'état du Rhin, et à quel point cette divergence déplace-t-elle le
+> nombre de jours de basses eaux — la grandeur opérationnelle sur laquelle le fret fluvial, les
+> autorisations et la politique climatique du bassin sont écrits ?**
+
+- **Identifiant** : `TORNE-EXP-001`
+- **Programme de recherche** : `physical_discovery`
+- **Nature de l'affirmation** : **reconstruction** et **explication** (attribution de la divergence à
+  un mécanisme). Ni prédiction, ni causalité, ni performance financière.
+- **État latent inféré** : (i) un **état harmonisé** de niveau et de débit du Rhin, par section,
+   segmenté par vintage de station et de courbe de tarage, avec une incertitude par observation ;
+   (ii) la **dispersion inter-agences** du compte de jours de basses eaux à chaque section de
+   référence ; (iii) l'**attribution** de cette dispersion à un mécanisme : décalage de datum,
+   révision de courbe de tarage, changement de capteur, règle d'agrégation, traitement des trous
+   de réseau.
+- **Pré-enregistrement** : `docs/PRE-ENREGISTREMENT-001.md` (statut `planned`).
+
+### 3.1 Pourquoi elle passe T1
+
+Aucune agence ne publie un **compte de jours de basses eaux harmonisé, borné en incertitude et
+ comparable entre agences**. Chacune publie sa série brute, dans son référentiel, avec ses règles.
+La grandeur harmonisée et sa dispersion n'existent publiquement nulle part : il faut les construire.
+
+### 3.2 Pourquoi elle passe T2
+
+Les réseaux de jauges de la France, de l'Allemagne et des Pays-Bas mesurent la **même vérité
+physique** avec des **instruments, des datums et des chaînes de courbes de tarage distincts**.
+Aucun forçage partagé, aucun modèle partagé, aucun post-traitement partagé : la géographie est
+partagée — c'est inévitable et c'est déclaré — mais le reste ne l'est pas. C'est exactement la
+classe d'indépendance qu'ADR-014 demande.
+
+L'altimétrie satellitaire **SWOT** est un arbitre externe à horizon long : elle ne partage aucune
+chaîne de jauges, mais elle revisite en ~21 jours. Elle arbitre donc les **tendances longues**,
+pas les comptes journaliers. La conséquence est inscrite dans le protocole : l'affirmation
+**primaire** est **la dispersion**, mesurable par construction entre trois réseaux, et non « quelle
+agence a raison », qui n'est arbitrable qu'à long horizon.
+
+### 3.3 Le piège du domaine, et comment il est évité
+
+Dans ce domaine, **la prévision publique est le juge, et non la découverte**. GloFAS et EFAS sont
+un couple de la même famille de modèles (LISFLOOD) : ils ne se valident pas mutuellement. Toute
+reconstitution hydrologique doit donc s'appuyer sur un **produit publié comme référence**
+(EFAS, GloFAS, climatologie) et jamais le prendre pour un juge.
+
+## 4. Ce que l'expérience démontre — et ce qu'elle ne démontre pas
+
+**Elle démontre :**
+
+1. Une **reconstruction** d'état hydrologique harmonisé, segmentée par vintage, avec incertitude
+   et lignage complet, sur au moins trois sections et sur 1990–2025.
+2. Une **quantification** de la divergence inter-agences sur une grandeur opérationnelle
+   réglementaire, avec son attribution par mécanisme.
+3. Un **produit de connaissance versionné** exposant son propre juge, ses versions et ses
+   incertitudes.
+
+**Elle ne démontre pas, et ne doit pas prétendre :**
+
+- **Aucune causalité** : on mesure une divergence de mesure, pas une chaîne causale.
+- **Aucune performance financière** : la lecture « fret » est un consommateur, jamais la
+  justification. Un prix ne doit jamais pouvoir optimiser le choix scientifique.
+- **Aucun arbitrage « qui a raison »** au-delà de l'horizon SWOT.
+- **Aucune identifiabilité du débit absolu** sans transformations de datum documentées.
+
+## 5. Le coût, et ce qui peut le faire basculer
+
+| Poste | Évaluation |
+|---|---|
+| Accès | Un point d'entrée ouvert vérifié (Hub'EAU v2), un réseau ouvert accessible (ELWIS), un produit satellitaire ouvert. **Friction faible.** |
+| Volume | ~10⁶–10⁷ observations ponctuelles pour le corridor. **Pas de raster dans le cœur du dispositif.** |
+| Modélisation | Aucun modèle physique nouveau : les primitives existent (lissage, ruptures, puissance, comparaison appariée). |
+| Charge | 3 à 6 semaines à ≤ 0,5 ETP pour un prototype monobassin (Hub'EAU + ELWIS). L'arbitrage SWOT ajoute 4 à 6 semaines. **Ordre de grandeur : faible.** |
+
+**Ce qui ferait basculer le classement.** Si la source néerlandaise demeurerait inaccessible **et**
+que SWOT ne pouvait être joint aux sections, l'affirmation se dégraderait en « dispersion sans
+arbitrage externe ». Ce n'est pas un échec, mais c'est une dégradation qui doit être déclarée dans
+le rapport — et le candidat suivant deviendrait le premier.
+
+## 6. Les deux tests d'accès à lever avant toute sélection définitive
+
+Ce ne sont pas des questions de préférence, et ils ne coûtent qu'une semaine chacun :
+
+1. **Une source néerlandaise du Rhin** (Rijkswaterstaat) : existe-t-il un flux machine-lisible
+   documentant le datum et l'historique de section ? *Statut : INCONNU — injoignable depuis ce poste.
+   « Injoignable ici » n'est pas « indisponible ».*
+2. **Le contrat ENTSO-E courant**, pour le candidat de réserve : la base impose-t-elle un jeton,
+   et les documents historiques restent-ils accessibles en masse ? *Statut : INCONNU.*
+
+## 7. Ce qui est requis avant le premier calcul
+
+1. **La procédure de calcul de `usable_at`** : la forme est écrite
+   (`docs/CONTRATS_FONDAMENTAUX.md` §3.10) ; son **instanciation par source** reste à faire, et
+   elle est la condition du démarrage. C'est le dernier blocage de fond.
+2. **Les tests d'accès** du §6.
+3. **Un pré-enregistrement gelé** : `docs/PRE-ENREGISTREMENT-001.md`, à l'état `preregistered`,
+   avec ses seuils, son juge, sa population d'épisodes et sa condition d'arrêt — **avant** le
+   premier calcul, comme l'exige ADR-012 §8.1.
+4. **La liste des sources retenues et écartées**, avec pour chacune son statut de publication
+   (établie / bornée / inconnue), qui décide de son caractère reconstituable ou descriptif.
+5. **Le store synthétique anti-fuite** : chaque valeur encode sa date, le réalisé interdit vaut −1
+   (INV-32, INV-33).
+6. **Une revue de l'art antérieur** sur ce qui est publié sur la dispersion inter-agences
+   hydrométriques : les affirmations « personne ne publie cela » de la revue sont **inférées**, pas
+   établies par une revue systématique de la littérature. C'est le maillon faible du dossier, et il
+   est peu coûteux à fermer.
+
+## 8. Ce qui est demandé au propriétaire, et ce qui ne l'est pas
+
+| Décision | Recommandation | Caractère |
 |---|---|---|
-| Disponibilité des données | USGS (jauges, débits, révisions horodatées), USACE (écluses, tonnages, saison de navigation) | PEGEL, EWL, DWD, Copernicus — excellent aussi |
-| Qualité de l'historique | decades, avec révisions **horodatées** (la preuve point-in-time est constructible) | decades, historique plus fin mais révisions moins tracées |
-| Droits d'accès et de conservation | **public, gratuit, réutilisation explicitement permise** (USDA/AMS : « non-confidential and non-copyrighted sources ») | public également |
-| Reconstruction historique possible | oui | oui |
-| Références indépendantes | oui (USGS ≠ USACE ≠ USDA) | oui (PEGEL ≠ EWL) |
-| Conséquence physique mesurable | jauge, stage, débit | jauge, tirant d'eau, tirant d'air |
-| Conséquence opérationnelle mesurable | **fermetures d'écluses, tonnages hebdomadaires par écluses, saison de navigation** | tirant d'eau navigable, adaptations de barge |
-| **Conséquence économique mesurable** | **taux de fret fluvial aval (percent-of-tariff) HEBDOMADAIRE, 2004 → aujourd'hui, 7 tronçons, gratuit** ; plus les prix agricoles USDA | **commercial** en infra-mensuel ; public en annuel/trimestriel/mensuel seulement |
-| Existence d'une décision publique datée | fermetures d'écluses et restrictions de navigation annoncées par l'USACE | décisions de saisonnalité commerciale (festivals), EWL, CCNR |
-| Difficulté d'implémentation | moyenne | moyenne |
-| Valeur de connaissance | forte | forte |
-| Application financière ultérieure | plausible | plausible |
+| Retenir `TORNE-EXP-001` comme première expérience physique | **Oui**, sous les conditions du §5 | **Recommandation argumentée** — la décision reste au propriétaire |
+| Accepter la correction de la latence `available_transport_capacity` de SPEC-003 §131, non identifiable depuis des sources publiques | **Oui**, en la documentant comme correction du paquet de référence et non comme réinterprétation | Décision du propriétaire : c'est le paquet de référence, pas le dépôt |
+| Lancer les deux tests d'accès du §6 | **Oui**, avant toute sélection définitive | Décision technique réversible |
+| Écrire l'instanciation par source de la procédure `usable_at` | **Oui** | Décision technique réversible |
+| Licence du dépôt public, validation sur données réelles | **Hors périmètre** de ce document | Décision du propriétaire, déjà signalée |
 
-**Le fait décisif, vérifié :** l'USDA Agricultural Marketing Service publie et met à jour chaque semaine les
-**Downbound Grain Barge Rates** pour sept tronçons du Mississippi (Twin Cities, Mid-Mississippi, Illinois River,
-St. Louis, Cincinnati, Lower Ohio, Cairo-Memphis), sous forme de taux « percent-of-tariff » rapportés au barème de
-1976, **depuis 2004**, avec un accès OData direct. Le même producteur publie les **tonnages hebdomadaires** de grains
-par écluses, à partir des données USACE (Lock Performance Monitoring System et Waterborne Commerce Statistics).
+**Ce n'est pas une décision du propriétaire :** le choix du critère de sélection (T1/T2), la
+correction du juge de la proposition Mississippi, et l'écriture de la forme de la procédure
+`usable_at`. Ce sont des corrections de fond, décidées ici, motivées et réversibles.
 
-C'est exactement la chaîne que la thèse décrit : **un phénomène physique (le niveau, le débit), une contrainte
-opérationnelle (l'éclusable, le tirant d'eau), une conséquence économique (le fret), et une décision publique
-datée** (fermeture, restriction, ouverture de saison).
+## 9. Ce que la proposition précédente avait raison de dire, et qui reste vrai
 
-## 4. Ce que le slice démontre — et ce qu'il ne démontre pas
+- **Le Rhin est le meilleur terrain d'intégration technique du paquet de référence** : sources
+  publiques, plusieurs décennies d'historique, références indépendantes, modèle de référence
+  physique déjà spécifié. Cela reste vrai, mais ce n'est plus le critère : c'est un constat de
+  faisabilité, pas un motif de sélection.
+- **Le Rhin reste le bon terrain pour les adjudications** — les releases de l'EWL sont le
+  contre-exemple documenté d'une décision dont la justification est elle-même un enjeu.
+- **La qualification des sources du Mississippi (P1, `docs/MISSISSIPPI_DATA_SOURCES.md`) reste
+  valable** : six sources vérifiées, fenêtre commune 2004–2026, pièges d'identification relevés,
+  décalages de publication structurels, question bloquante sur la moyenne des taux. Ce travail
+  n'est pas perdu ; il redevient simplement un **coût de terrain** et non un critère, et il n'a
+  plus de juge indépendant disponible.
+- **Le Rhin n'a pas de témoin économique public infra-mensuel** : cela reste vrai, et cela
+  devient un argument *pour* la première expérience, qui ne porte pas de témoin économique.
 
-Le slice doit démontrer un chemin complet :
+## 10. Sources citées
 
-```
-Source réelle
-    ↓
-Observation exploitable
-    ↓
-Variable ou estimation construite
-    ↓
-Produit de connaissance
-    ↓
-Évaluation reproductible
-```
-
-Concrètement, sur le Mississippi :
-
-1. **Source réelle** : jauge USGS (niveau, débit, datum, révisions horodatées) ; tonnages hebdomadaires par
-   écluses (USACE via USDA) ; taux de fret hebdomadaire (USDA/AMS) ; décisions de navigation datées (USACE).
-2. **Observation exploitable** : une série de niveau et de débit reconstituée **point-in-time**, chaque valeur
-   portant sa date de révision et la preuve de sa disponibilité à l'époque.
-3. **Variable ou estimation construite** : une grandeur dérivée de type « navigabilité contrainte » — par exemple
-   l'ensemble des fenêtres où le débit observé rendait une classe de barge inaccessible — **calculée au moment où la
-   décision a été prise**, jamais recalculée après coup.
-4. **Produit de connaissance** : un état de navigabilité reconstitué, versionné, avec son lignage complet
-   (source, snapshot, transformation, horodatage de chaque étape).
-5. **Évaluation reproductible** : un juge. L'e-processus et l'e-LOND d'`athanor.stats` sont disponibles et testés ;
-   le juge doit ici être **physique** (J1–J2 : fidélité de reconstitution, compétence événementielle), pas financier.
-
-**Ce que le slice ne démontre pas, et ne doit pas prétendre :**
-
-- Aucune performance financière. Le produit de connaissance n'est pas encore consommé par une application de marché.
-- Aucune causalité démontrée entre niveau et fret : on mesure un **décalage observé**, pas une chaîne causale.
-- Aucun claim de type « BORÉE prédit le fret ». Le premier slice doit d'abord être **honnête sur ce qu'il ne
-  prouve pas** — c'est la condition pour que le reste tienne.
-
-## 5. Critères de succès — et ce qui ferait échouer le slice
-
-Le slice réussit si, à la fin :
-
-1. Une période de **cinq ans au moins** de niveau, débit, tonnage et fret est reconstituée **point-in-time**, avec
-   les révisions USGS rejouées dans leur état d'origine et une empreinte du store vérifiable.
-2. Le **décalage observé** entre contrainte physique et témoin économique est mesuré, avec son intervalle de
-   censure, sur des épisodes 독립 identifiés **avant** de regarder le témoin.
-3. Le juge physique est **exécuté** et rend un verdict, y compris un verdict négatif ou « pas de puissance ».
-4. Chaque résultat est reproductible par une tierce personne à partir de l'empreinte du store et du commit du code.
-5. Le catalogue de sources est **complet pour ce bassin** : le catalogue de référence du paquet V2.0 est borné au
-   Rhin et **ne contient aucune source du Mississippi** — c'est le premier travail à faire.
-
-Le slice échoue, et il faut le dire, si : la reconstruction point-in-time des révisions USGS s'avère impossible à
-prouver ; si le décalage mesuré tombe dans l'intervalle de censure du témoin ; si la puissance est insuffisante pour
-distinguer l'effet du bruit ; ou si le juge rend « pas de conclusion » — ce qui reste un résultat valide.
-
-## 6. Le Rhin n'est pas abandonné
-
-Le Rhin reste le **deuxième slice**, et il reste le meilleur terrain pour la reconstitution physique fine
-(tirant d'eau, tirant d'air, adaptation de barge) et pour la question des **adjudications** — les releases de l'EWL
-sont le contre-exemple documenté d'une décision dont la justification est elle-même un enjeu. Il reste aussi le
-terrain naturel du volet financier européen.
-
-Ce qui manque au Rhin, c'est un témoin économique public infra-mensuel. Cette question est ouverte et mérite son
-propre document plutôt qu'un contournement dans le slice.
-
-## 7. Ce qu'il faut avant de commencer
-
-1. **Décision du propriétaire** sur le bassin (cette proposition est une recommandation, pas un fait acquis).
-2. **Licence Athanor** : sans elle, le juge et le magasin brut ne sont pas reprenables (`docs/REUSE_AUDIT.md` §6).
-3. **Catalogue des sources du Mississippi** : USGS, USACE, USDA/AMS, avec pour chacun l'historique de publication,
-   la politique de révision et la preuve de disponibilité historique.
-4. **Un pré-enregistré rempli** : le gabarit `protocol/PREREGISTRATION-TEMPLATE.md` du paquet de référence, avec les
-   seuils, le juge, la population d'épisodes et la condition de kill — **avant** le premier calcul.
-5. **Le store synthétique anti-fuite** : chaque valeur encode sa date, et le réalisé interdit vaut −1.
-6. **La procédure de calcul de `usable_at`** : c'est la décision qui manque le plus, et elle bloque tout le reste.
-
-## 8. Sources citées
-
-- USDA Agricultural Marketing Service — *Downbound Grain Barge Rates* (hebdomadaire depuis 2004, sept tronçons du
-  Mississippi), via Open Ag Transport Data : https://agtransport.usda.gov/Barge/Downbound-Grain-Barge-Rates/deqi-uken/data
-- USDA AMS — *Grain Transportation Report* (tableaux 9 et 10 : taux de fret hebdomadaires, tonnages par écluses) :
-  https://www.ams.usda.gov/services/transportation-analysis/gtr-datasets
-- Paquet de référence conceptuelle V2.0 : `docs/03-INITIAL-SOURCE-CATALOGUE.md`, `docs/06-PUBLIC-DECISION-GAP-TRIAL-PLAN.md`,
-  `docs/02-DATA-LAKE-AND-PHYSICAL-RECONSTRUCTION.md`, `docs/04-OPERATING-PLAN-AND-BUDGET.md`.
-
-## 9. Ce que la qualification des sources a changé
-
-La mission P1 (`docs/MISSISSIPPI_DATA_SOURCES.md`, 920 lignes, neuf sources vérifiées sur requêtes réelles) confirme le
-choix du bassin et durcit la proposition. Cinq points changent la façon dont le slice doit être écrit.
-
-**1. Le jeu de données minimal existe et il est borné.** Six sources, fenêtre commune **2004-01-07 → 2026-10-27**
-(22 ans), trois stations USGS vérifiées comme porteuses de séries quotidiennes (St. Paul 1892, Chester 1942, Thebes
-1933), plus deux séries USDA de prix et une de volumes. La fenêtre commence exactement au premier point des séries de
-prix : aucune troncature n'est nécessaire.
-
-**2. Il y a un piège d'identification, et il est structurel.** Les taux d'amont manquent en hiver — 729 des 774
-absences sont des fermetures sur Twin Cities et Mid-Mississippi. Or c'est cette absence qui fait monter le prix en
-aval : « l'amont a été fermé » ne peut pas servir de variable explicative quand l'indicateur de prix amont est
-lui-même manquant **par construction**. L'identification devra reposer sur des variations intra-amont ou sur des
-comparaisons entre semaines, jamais sur la présence/absence seule. C'est le point à écrire dans le pré-enregistré.
-
-**3. L'alignement naïf sur la date produirait un résultat faux.** L'hydrologie est publiée à J+1, le prix de la
-semaine à J+4 environ, les volumes à J+5 : le décalage de publication de 4 à 5 jours est structurel. Il doit être
-modélisé, pas absorbé par un alignement sur `date`. Les deux séries USDA n'ont d'ailleurs pas la même fin de semaine :
-les taux sont datés **mardi**, les mouvements **samedi**.
-
-**4. Deux séries de prix coexistent, et le choix n'est pas neutre.** `deqi-uken` donne sept zones en pourcentage du
-barème de 1976 ; `7spn-fbua` donne 26 tronçons **déjà en dollars par tonne**. La réconciliation est exacte pour 24
-tronçons sur 26 testés ; deux résistent (Desoto Landing–Hurricane Point, Letsworth–Greenville) et attendent le
-fichier « Rate Data by Segment ». Recommandation de P1 : `7spn-fbua` en série de référence, `deqi-uken` en complément.
-
-**5. Une question bloquante reste ouverte, et elle n'est pas technique.** La valeur `rate` est un **moyennage sur un
-nombre de jours qui n'est documenté nulle part** : les dénominateurs 3, 7, 16 et 28 observés dans les valeurs le
-laissent deviner, mais c'est une déduction. Sans la confirmation écrite d'USDA/AMS, on risque de modéliser un
-artefact de moyenne. Cette question passe **avant** l'écriture du moindre connecteur.
-
-S'y ajoutent trois ruptures méthodologiques relevées par P1 (granularité des taux, convention de fin de semaine,
-périodes manquantes) et treize vérifications impossibles à mener depuis ce poste, listées dans le rapport de P1.
-
+- Revue transversale des candidats d'expérience, sept candidats sur six domaines, douze critères,
+  vérifications HTTP du 31 octobre 2026 — dossier de recherche hors dépôt :
+  `C:\Users\Romain\Documents\TORNE_Recherche_2026-10-31\FLEET-B_Experiences-scientifiques-candidats.md`
+  et sa synthèse `00-SYNTHESE-ET-DECISIONS.md`.
+- Paquet de référence V2.0, en lecture seule : `specifications/SPEC-003` (§10 jugement, ligne 131 latence, ligne 54 segments de station),
+  `specifications/SPEC-004`, `adrs/ADR-012`, `adrs/ADR-014`, `adrs/ADR-023`, `protocol/RESEARCH-PROTOCOL.md`,
+  `protocol/PREREG_PHYSIQUE.md`, `protocol/PREREGISTRATION-TEMPLATE.md`, `docs/10-VALIDATION-DOCTRINE.md`.
+- Sources publiques citées et leur statut de vérification au 31 octobre 2026 : §3 du pré-enregistrement.

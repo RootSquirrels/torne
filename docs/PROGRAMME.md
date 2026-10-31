@@ -49,6 +49,7 @@ raisonnement juste.
 | **P0** | `uv sync --locked`, `uv run pytest -q`, `uv run ruff check .`, `uv run ruff format --check .` et `uv build` passent sur un environnement propre, et le verrou est versionné. **Aucune phase de développement métier ne commence avant.** |
 | **P1** | Les sources réellement disponibles sont connues, qualifiées et datées. **Aucune conception générique de stockage ou de connecteur ne s'impose avant.** |
 | **P2** | Les contrats d'objets et de temporalité sont écrits, testés, et le point de vue à la décision est implémenté. |
+| **P3** | La première expérience physique est **définie** : question falsifiable, sources et témoins qualifiés, pré-enregistrement écrit et prêt à geler. **Aucun calcul sur les données de l'expérience n'a lieu avant que le pré-enregistrement soit gelé.** |
 
 ## Répartition
 
@@ -195,3 +196,48 @@ règles, le traitement des révisions et des statuts provisoires, la règle « a
 et la liste explicite des points qui dépendent d'une source précise — donc différés au gate P1.
 
 Aucun schéma de stockage. Aucun connecteur. Aucune table.
+
+# P3 — Définition de la première expérience physique
+
+**Rôle :** Senior Hydrological Data Scientist / Research Governance Officer.
+**Objectif :** définir la première expérience physique de TORNE — question, périmètre, sources, témoins,
+protocole, critères d'arrêt — **avant** tout calcul sur ses données.
+
+Cette phase ne construit rien. Elle décide **ce qui sera mesuré**, **avec quoi**, **contre quoi**, et
+**ce qui ferait échouer l'expérience**.
+
+## Périmètre
+
+1. **Critère de sélection, relu.** Le critère MISSISSIPPI/RHIN — un témoin économique public à fréquence
+   infra-mensuelle — est **relativisé** : il devient un coût du terrain, plus le critère de sélection. Le
+   critère de sélection est **T1** (cible latente, non publiée), **T2** (juge indépendant) et
+   **identifiabilité**, selon ADR-014, ADR-023 et SPEC-003 §10.
+2. **Choix de l'expérience**, argued et documenté, avec ce qu'elle démontre et ce qu'elle ne démontre pas.
+3. **Inventaire initial des sources et des témoins**, avec pour chacune son statut de publication
+   (établie / bornée / inconnue) et son statut de vérification (`[FAIT]`, `[INFÉRENCE]`, `[CLAIMÉ]`,
+   `[INCONNU]`).
+4. **Protocole de validation et critères d'arrêt**, y compris l'hypothèse nulle : un résultat négatif
+   est un résultat.
+5. **Pré-enregistrement**, conforme à `protocol/PREREGISTRATION-TEMPLATE.md` et
+   `protocol/PREREG_PHYSIQUE.md` du paquet de référence V2.0.
+
+## Règles
+
+- **Aucun calcul avant le gel.** ADR-012 §8.1 : « Aucun résultat confirmatoire sans preregistration
+  gelée. » Le pré-enregistrement s'écrit avant l'acquisition, et sa date de gel est consignée.
+- **Les inconnues sont nommées, pas comblées.** Un champ non applicable porte `N/A` avec justification.
+  Une source injoignable est *inconnue*, pas *indisponible*.
+- **Aucun juge dépendant.** Un produit public qui fournit déjà la grandeur cible est une référence ou un
+  juge, jamais la découverte ; un témoin qui dérive du mécanisme qu'il doit confirmer est proscrit.
+- **Aucune acquisition massive, aucun moteur physique.** La charge d'ingénierie attendue est
+  l'**ingestion et la provenance**, pas l'architecture : le dépôt n'a pas de connecteur, et P3 n'en crée
+  aucun.
+
+## Livrable
+
+`docs/SLICE-PREMIER.md` (choix et périmètre, mis à jour) et `docs/PRE-ENREGISTREMENT-001.md`
+(pré-enregistrement). Les documents existants sont mis à jour en priorité ; un nouveau document de
+protocole n'est créé que s'il est nécessaire à la conduite de l'expérience — ici, il l'est.
+
+Les décisions qui relèvent du périmètre — choix de l'expérience, correction du paquet de référence —
+sont formulées comme des **recommandations argumentées**, pas comme des faits acquis.

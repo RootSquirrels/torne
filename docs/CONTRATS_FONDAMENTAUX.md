@@ -427,6 +427,48 @@ Le marqueur est indispensable : `athanor/src/athanor/data/rawstore.py:226-233` f
 chemin dédié (`import_archived`, qui reçoit un `known_at` d'origine et marque la ligne `legacy`). TORNE reprend
 le **besoin**, pas nécessairement la syntaxe.
 
+### 3.11 Instanciation par source de `KNOWN_AT` — les quatre classes de source
+
+Le §3.2 donne la **forme** de la règle d'utilisabilité ; le §3.9 donne les trois **états** de la connaissance
+de publication. Ce qui manquait — et que le dépôt qualifiait de « la décision qui manque le plus »
+(`docs/DECISIONS.md`, repris en `docs/SLICE-PREMIER.md`) — est **comment établir `KNOWN_AT` selon ce que la
+source expose réellement**.
+
+Ce n'est pas un problème de fournisseur, et aucun flux payant ne le résout : la revue transversale du 31 octobre
+2026 a constaté le même motif dans tous les domaines physiques examinés — une API de réseau électrique sans
+horodatage de livraison, un catalogue satellitaire qui sépare la date d'origine de la date de publication de
+plusieurs mois, un historique hydrologique explicitement **remplissé a posteriori**. La disponibilité doit
+donc être **construite**, source par source, par la sémantique de TORNE.
+
+**La règle unique.** Pour chaque source, on classe selon ce qu'elle expose, et la classe détermine l'état de
+publication, donc l'admissibilité. On ne choisit jamais un état plus favorable que ce que la source permet.
+
+| Classe | Ce que la source expose | État | Règle d'établissement de `KNOWN_AT` |
+|---|---|---|---|
+| **P — publication horodatée** | l'instant de publication de chaque version | **établie** | `KNOWN_AT` = cet instant. C'est le seul cas où `KNOWN_AT` est une date et non une borne. |
+| **B — borne de publication** | une borne inférieure : « à partir de cet instant, l'information était certainement disponible », et rien de plus | **bornée** | `KNOWN_AT` = la borne. L'observation est admise **à partir** de la borne, pas avant (INV-11). L'intervalle de censure est conservé et rapporté. |
+| **C — cycle de publication documenté** | un cycle de publication documenté (par exemple un bulletin hebdomadaire publié chaque mercredi) et une nominalisation des valeurs à ce cycle | **bornée** | `KNOWN_AT` = **l'instant le plus précoce possible** de publication du cycle concerné, déduit du calendrier de publication documenté. Conservateur par construction : surestimer la disponibilité est impossible. |
+| **N — pas de publication** | ni instant, ni borne, ni cycle : historique rempli a posteriori, ou API sans horodatage de livraison | **inconnue** | Aucun `KNOWN_AT` n'est inventé. L'observation est **non admise** en reconstitution point-in-time. Elle reste utilisable en **descriptif rétrospectif**, et le produit qui l'emploie le déclare (`replay_mode`). |
+
+**Trois conséquences non négociables.**
+
+1. **La classe se déduit de la source, pas de la convenance.** Une source passe en classe N dès qu'elle
+   n'expose pas d'horodatage exploitable, même si son contenu est excellent. Le repli
+   `usable_at = INGESTED_AT` écarté au §5.3 **n'est pas rouvert** : aucune source ne s'en sert à la place d'une
+   preuve ou d'une borne.
+2. **Une source de classe N n'est pas disqualifiée** : elle est reclassée. Elle porte alors une information
+   valuable — une description rétrospective — et son usage est déclaré, non dissimulé. C'est exactement la
+   distinction entre « replay public », « replay opérationnel » et « descriptif rétrospectif » du §3.10.
+3. **La classe est une propriété de la source, versionnée avec elle.** Un changement de format ou de cycle de
+   publication est une révision de la source, pas un détail : il crée une version nouvelle de la fiche de
+   source et peut faire basculer une observation de la classe C à la classe N.
+
+**Ce qui reste à faire, et n'est pas fait ici.** Ce paragraphe donne la **règle de classification**. Il ne
+donne pas, pour chaque source réelle, la classe Effective ni les bornes : cela relève de la **qualification
+des sources** (gate P1) et doit être établi par **exécution**, pas par supposition — une source dont le cycle
+de publication est supposé mais non vérifié est une source de classe N, pas une source de classe C. Le tableau
+ci-dessus est donc la procédure, et chaque fiche de source en est une instantiation.
+
 ---
 
 ## 4. Les invariants vérifiables
@@ -452,7 +494,7 @@ test doit répondre par **oui** ou **non**. Aucun test n'est écrit ici.
 | **INV-07** | Toute observation porte ses trois dimensions, ou l'état explicite de leur absence. | Question : existe-t-il une observation sans les trois champs renseignés ou sans état d'absence explicite ? Attendu : non. |
 | **INV-08** | `usable_at` est une fonction dérivée, jamais un champ stocké. | Question : existe-t-il un champ `usable_at` dans les données ? Attendu : non. |
 | **INV-09** | `usable_at = max(KNOWN_AT, INGESTED_AT)`. | Question : pour un couple de dates donné, le calcul rend-il le maximum ? Attendu : oui. |
-| **INV-10** | Une publication inconnue n'est jamais remplacée par la date d'ingestion. | Question : quand `KNOWN_AT` est inconnu, l'observation est-elle admise en reconstitution point-in-time ? Attendu : non, et elle porte l'état « inconnue ». |
+| **INV-10** | Une publication inconnue n'est jamais remplacée par la date d'ingestion. L'état de publication se déduit de ce que la source **expose**, établi par vérification (§3.11). | Question : quand `KNOWN_AT` est inconnu, l'observation est-elle admise en reconstitution point-in-time ? Et la classe de la source est-elle établie par vérification, non par supposition ? Attendu : non admise, état « inconnue » ; et classe établie par exécution. |
 | **INV-11** | Une publication bornée n'est admise qu'à partir de sa borne. | Question : une requête à `t` antérieur à la borne renvoie-t-elle l'observation ? Attendu : non. |
 | **INV-12** | Une révision est invisible avant sa date de révision. | Question : interroger l'état à `t` antérieur à la révision rend-il la version antérieure ? Attendu : oui. |
 | **INV-13** | Une version révisée coexiste avec la version qu'elle remplace. | Question : les deux versions sont-elles relisibles ? Attendu : oui. |
@@ -612,12 +654,14 @@ Chaque ligne indique **ce qu'il faudra** pour trancher.
 | **Politique de révision par source** : une révision crée-t-elle une nouvelle version d'observation, ou seulement une nouvelle version de fichier ? La source date-t-elle ses révisions ? | La documentation et l'observation empirique du comportement de révision de chaque source. |
 | **Registre d'unités et référentiel spatial** : quelle unité de conservation pour le débit, le niveau, le tonnage ? Quelle référence verticale ? | Un point ouvert déjà identifié dans le dépôt (`docs/DECISIONS.md:42-43`) : aucun des dépôts audités n'a de registre d'unités ni de CRS. |
 | **Forme du « brut » par source** : un fichier, une réponse JSON, une ligne de tableau ? Y a-t-il une unité d'acquisition stable ? | L'observation directe des réponses réelles — donc P1. |
-| **Procédure de calcul de `usable_at` par source** | Elle est donnée (§3.2) ; son **instanciation** dépend de l'établissement de `KNOWN_AT` ci-dessus. |
+| **Procédure de calcul de `usable_at` par source** | **La règle de classification est donnée (§3.11)** : quatre classes de source, et la classe détermine l'état de publication et donc l'admissibilité. Son **instanciation par source** — la classe effective, les bornes, les cycles — dépend de l'établissement de `KNOWN_AT` ci-dessus, et relève de la qualification des sources. |
 
-> **Le point le plus lourd est déjà identifié dans le dépôt** : « Procédure de calcul de `usable_at` : c'est la
-> décision qui manque le plus. Sans elle, la sémantique point-in-time n'est pas implémentable, et le slice ne
-> peut pas démarrer » (`docs/DECISIONS.md:40-41`), repris en `docs/SLICE-PREMIER.md:133`. Ce document en donne
-> **la forme** ; son instanciation par source est différée, et c'est là que le blocage reste entier.
+> **Ce qui a changé le 31 octobre 2026.** « Procédure de calcul de `usable_at` : c'est la décision qui manque le
+> plus. Sans elle, la sémantique point-in-time n'est pas implémentable, et le slice ne peut pas démarrer » — la
+> **règle** est désormais écrite (§3.11 : classes P, B, C et N, et l'effet de chacune sur l'admissibilité). Le
+> blocage qui reste n'est plus la règle mais son **instanciation par source**, qui ne peut pas se faire par
+> supposition : elle exige d'avoir **interrogé** chaque source et constaté ce qu'elle expose. Une source dont le
+> cycle de publication est supposé mais non vérifié est une source de classe N.
 
 ---
 
