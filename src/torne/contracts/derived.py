@@ -26,7 +26,7 @@ Quatre règles structurantes, toutes vérifiables :
    sensibilité ou conclusion qualitative — et la forme n'est acceptée que si
    sa charge utile correspond. Une distribution sophistiquée n'est pas requise
    si les données ne la justifient pas
-   (`docs/RESEARCH_AND_VALIDATION.md:110-115`).
+   (`docs/RESEARCH_AND_VALIDATION.md` §6).
 4. **Elle ne se présente jamais comme une observation de source.** Le type est
    distinct d'`Observation`, il ne porte ni identifiant d'observation, ni
    identifiant de source, ni identifiant de preuve brute, et sa nature est
@@ -68,7 +68,7 @@ class UncertaintyForm(StrEnum):
     """Forme de la qualification d'incertitude (contrat §2.4).
 
     La forme est **adaptée à ce qui est réellement connu**
-    (`docs/RESEARCH_AND_VALIDATION.md:110-115`). Le vocabulaire est fermé, et
+    (`docs/RESEARCH_AND_VALIDATION.md` §6). Le vocabulaire est fermé, et
     chaque forme a une exigence propre : une forme qui ne correspond pas à sa
     charge utile est refusée à la construction.
 

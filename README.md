@@ -1,331 +1,142 @@
 # TORNE
 
-**Plateforme computationnelle de connaissance du monde réel.**
-Socle initial — 31 octobre 2026.
+**Plateforme d'intelligence du monde physique.** TORNE transforme des sources hétérogènes — hydrologiques,
+satellitaires, économiques — en connaissances propriétaires, traçables et validables : des **états reconstruits**
+du monde physique, des **variables dérivées** qui ne figurent dans aucune source, et des produits de connaissance
+versionnés et auditables.
 
-## Ce qu'est TORNE
+> **Aucune performance n'est démontrée à ce jour.** Le dépôt est un socle exécutable : il acquiert, conserve,
+> exécute et évalue. Il ne produit encore aucun résultat scientifique. Ce qui est fait, ce qui ne l'est pas, et ce
+> qui vient ensuite : [`docs/PROGRAMME.md`](docs/PROGRAMME.md).
 
-TORNE est une plateforme de calcul scientifique appliquée au monde réel. Elle doit transformer des
-informations hétérogènes, principalement publiques, en représentations, estimations, prévisions,
-mécanismes et conséquences économiques documentés, que plusieurs applications peuvent consommer.
+## Ce qui distingue TORNE
 
-Le nom vient du fleuve Torne, qui sépare la Finlande de la Suède : le fleuve constituait un axe
-important pour le commerce, le transport et les activités locales, et connaître la date de sa
-débâcle était une information concrètement utile. Au fil des siècles, cette observation physique
-est devenue une archive climatique exploitable scientifiquement : du phénomène à la connaissance,
-sans nommer le domaine ni promettre un usage particulier.
+TORNE n'est pas une plateforme d'intégration de données. Il occupe l'espace entre la donnée et le résultat, et il
+distingue trois choses qu'il ne faut pas confondre :
 
-## Les deux objectifs
+| | Ce que c'est | Exemple |
+|---|---|---|
+| **TORNE, la plateforme** | sa capacité à acquérir, comprendre, rapprocher, reconstruire et documenter des informations sur le monde physique | le socle d'acquisition, les contrats, la lignée |
+| **Les domaines de connaissance** | hydrologie, énergie, météorologie, logistique, agriculture, industrie, infrastructures | ce qu'un domaine définit comme objets, unités, référentiels, relations |
+| **Les expériences scientifiques** | des questions particulières auxquelles TORNE répond à partir de ses données et de ses modèles | la cohérence inter-agences de l'état du Rhin |
 
-TORNE porte deux objectifs **autonomes**, avec deux tableaux de bord distincts. Aucun score
-agrégé ne doit masquer l'échec de l'un par la réussite de l'autre.
+Confondre les trois, c'est construire une plateforme sur mesure d'une expérience. TORNE les distingue, et les
+rapports de résultat les distinguent encore : **une affirmation physique n'est jamais une affirmation financière**.
 
-### A. World Intelligence
+## Deux objectifs, deux tableaux de bord
 
-Produire des connaissances nouvelles à partir de sources diverses : collecter et qualifier des
-données, reconstruire des états physiques, produire des variables et estimations dérivées,
-modéliser des phénomènes et des contraintes, simuler des évolutions, publier des produits de
-connaissance réutilisables par plusieurs applications.
+Deux enjeux coexistent, et ils ne sont pas mutuellement conditionnels. Ils sont mesurés et rapportés
+**séparément** : un score agrégé qui masquerait l'échec de l'un par la réussite de l'autre est interdit.
 
-Cette activité a une valeur **indépendante de toute application financière**. Si la thèse
-financière échoue ou change, les données qualifiées, les modèles et les produits validés
-demeurent.
+**A — Produire une valeur d'intelligence.** Collecter et qualifier des sources diverses, surtout publiques ;
+reconstruire des états physiques, géographiques, industriels ou institutionnels ; coupler des sources et des
+modèles ; créer des variables absentes des sources ; simuler des trajectoires et des contraintes ; rendre les
+résultats interrogeables, cartographiables et auditables. Cette activité est un actif autonome.
 
-### B. World-to-Market Intelligence
+**B — Chercher un avantage financier.** Utiliser ces connaissances pour anticiper une conséquence économique
+réelle, identifier les entités et actifs exposés, estimer le moment où la conséquence devient observable, puis
+tester si le prix des instruments concernés l'intègre avec retard ou incomplètement — et si l'écart est
+négociable après coûts, risques et contraintes d'exécution. C'est une hypothèse de recherche.
 
-Utiliser les connaissances produites, ainsi que d'autres informations pertinentes, pour
-anticiper les conséquences économiques et financières d'événements réels : identifier ce qui va
-se produire, estimer son calendrier de révélation, repérer les instruments exposés, puis tester
-si le marché intègre la conséquence tardivement ou incomplètement.
+**B est reportée** tant que le socle d'intelligence physique n'est pas suffisamment mature
+([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §5). Si B échoue, A conserve ses données qualifiées, ses modèles,
+ses variables et sa capacité à produire de l'intelligence : B peut être modifié ou remplacé sans reconstruire le
+socle.
 
-Cet objectif est une **hypothèse de recherche**, pas un acquis. Il consomme A ; A ne dépend pas
-de lui.
+## Le problème que TORNE attaque
 
-## État réel : ce qui est construit, ce qui est envisagé
+- Les sources sont hétérogènes, datées, révisées, parfois redondantes, rarement décrites par les conditions dans
+  lesquelles elles étaient disponibles.
+- Les phénomènes qui déterminent une conséquence économique sont rarement observés directement : ils doivent être
+  reconstruits à partir de signaux indirects.
+- Les conséquences ne sont pas visibles au moment où elles se produisent : il y a un décalage entre la réalité
+  physique, la conséquence opérationnelle, sa révélation, et l'intégration financière.
+- Les démonstrations disponibles mélangent des niveaux de preuve incompatibles : une reconstruction cohérente
+  présentée comme une prédiction, une corrélation comme une causalité, une simulation comme un fait.
 
-| Construit aujourd'hui | Envisagé, pas implémenté |
+TORNE attaque les quatre points à la fois : qualifier les sources, reconstruire les états, dater les étapes, et
+**nier l'affirmation plus forte que la preuve**.
+
+## L'état réel
+
+| Ce qui est en place | Ce qui ne l'est pas |
 |---|---|
-| Socle documentaire : vision, architecture, doctrine de validation, journal de décisions | Connecteurs vers des sources réelles, acquisition de données |
-| **Contrats fondamentaux exécutables** : cinq objets, trois dimensions temporelles, invariants appliqués à la construction | Règles temporelles propres à chaque source, et les six décisions bloquantes à lever avant le premier connecteur |
-| **Capacité d'exécution** : entrées et paramètres explicites, graine contrôlée, configuration reproductible, rejeu depuis la configuration | Simulation d'évolutions, modèles physiques opérationnels |
-| **Capacité d'évaluation** : séparation temporelle stricte, marche avant, références, métriques, couverture d'intervalles, comparaison appariée | Modèles économiques ou financiers |
-| **Preuve et provenance** : source, preuve brute, observation, enregistrement d'exécution, produit de connaissance versionné | Connecteurs, secrets, magasin brut |
-| **Une méthode scientifique réelle et vérifiée** : filtre de Kalman en espace d'état « tendance linéaire locale » | D'autres modèles, d'autres domaines |
-| **Quatre primitives statistiques intégrées sous des noms TORNE** : OLS + CR1, Diebold-Mariano apparié + HAC, CUSUM, puissance — avec l'origine tracée en tête de module | Les huit autres primitives d'Athanor, non nécessaires ici |
-| Paquet Python installable et construisible ; deux dépendances runtime (`numpy`, `scipy`), chacune au premier import réel | Dépendances de stockage, de connecteurs, d'outillage |
-| Point d'entrée console qui énonce l'état du paquet | Reconstruction d'états sur données réelles, assimilation |
-| **Les cinq objets du contrat, exécutables** : source, preuve brute, observation, grandeur dérivée, produit de connaissance | Règles temporelles propres à chaque source |
-| **Oracles indépendants** : `statsmodels` (dépendance de développement) confronte le filtre d'état, la variance HAC et les écarts-types groupés | D'autres oracles : SciPy pour les distributions, une base de référence pour l'hydrologie |
-| 306 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
-| Environnement verrouillé (`uv.lock` versionné) et gate de qualité exécuté sur Python 3.12 | Exécution de la CI sur d'autres matrices (versions de Python, platforms) |
-| **Matrice de réutilisation consolidée** : trois audits d'archéologie, une décision par composant | Première application financière, edge démontré, capacité de déploiement |
-| **Proposition argumentée du premier vertical slice** (Mississippi) et ses conditions d'échec | — |
-| **Publication contrôlée** : la lignée est vérifiée au moment de la publication, pas seulement quand on le demande ; un enregistrement invalide ne peut pas produire de produit | — |
-| **Nature par sortie** : un produit publie une seule nature, et chaque sortie garde la sienne à travers la sérialisation | — |
-| **Absences respectées** : une absence reste une absence de la donnée à l'entrée jusqu'au rapport de métriques ; elle n'est jamais remplacée par un zéro | — |
-| **Lignée temporelle fermée** : un produit ne peut pas être daté avant ce qu'il publie, et une entrée citée est l'objet canonique de l'enregistrement — un même identifiant ne peut pas désigner un autre contenu | — |
-| **Première expérience définie** : question falsifiable, hypothèse nulle pré-enregistrée, sources et témoins qualifiés, critères d'arrêt — le pré-enregistrement est écrit avant le premier calcul | Acquisition des sources de l'expérience, puis exécution |
-| **Socle d'acquisition** : récupérer une API ou un fichier, suivre la pagination, conserver la réponse brute et son empreinte, consigner ce qui a été demandé et ce qui a échoué — le secret ne passe jamais dans ce qui est consigné | Les intégrations de sources réelles, puis l'observatoire |
+| Socle d'acquisition exécutable : transport durci, magasin brut adressé par le contenu, fetcher paginé, contrat de connecteur à quatre contrôles | Aucune observation issue de données réelles n'a encore été produite |
+| **Trois sources réellement intégrées**, interrogées sur le réseau : Hub'EAU v2, USGS NWIS, catalogue Copernicus Data Space | Aucune source n'est qualifiée au sens de la classe de publication — établie, bornée, inconnue |
+| Objets et temporalité : cinq objets, trois dimensions, `usable_at` dérivé, absence qualifiée | Pas de couche sémantique, pas d'objet de domaine, pas de moteur, pas de registre |
+| Méthodes : filtre de Kalman en espace d'état, régression et erreur-type CR1, rupture CUSUM, puissance, comparaison appariée | Aucun modèle ajusté sur des données réelles ; aucune performance démontrée |
+| Exécution rejouable, évaluation — découpage cumulatif, références, métriques, incertitude —, enregistrement avec lignée vérifiable | Aucune preuve prospective : le pré-enregistrement est écrit, mais pas outillé |
+| Plus de 400 tests verts ; la CI construit le paquet, l'installe et le lance | Une source peut accepter un filtre sans l'appliquer — cas mesuré sur Hub'EAU, voir `docs/SOURCES.md` §I.1 |
+| La conformité d'acquisition bloque ce qui n'est pas conforme, et la preuve brute est conservée | La licence du dépôt n'est pas choisie — c'est une décision du propriétaire |
 
-**Aucune performance n'est démontrée sur le monde réel.** Le dépôt contient désormais un modèle
-scientifique — un filtre de Kalman en espace d'état — dont **l'implémentation** est vérifiée :
-concordance à 1e-10 avec une implémentation de référence indépendante, cas à deux observations
-calculé à la main, propriétés d'un estimateur d'état contrôlées sur un processus synthétique dont
-l'état latent est connu par construction, et intervalle prédictif dont la couverture empirique
-retrouve le 95 % nominal. Cela établit que **le code est correct**, pas qu'il prédit quoi que ce
-soit du monde réel : la série de démonstration est synthétique. Les sources
-réelles, elles, **sont qualifiées** — le gate P1 a établi dix sources, leurs
-stations et leurs paramètres (`docs/MISSISSIPPI_DATA_SOURCES.md`) — mais la
-mission 001 n'implémente pas de connecteur, et les règles temporelles par
-source restent à fixer avant d'écrire le premier. La démonstration avait en
-outre besoin d'un état latent **connu par construction**, ce qu'aucune série
-publique ne donne. L'évaluation conduite compare le modèle à des références sur
-ces mêmes données synthétiques — un écart observé, sous la puissance du test
-disponible. Aucun chiffre de ce dépôt n'est une performance revendicable.
+Le détail — et surtout **ce qui manque** — sont dans [`docs/PROGRAMME.md`](docs/PROGRAMME.md).
 
-## Installation et tests
+## Les documents de référence
 
-Le dépôt utilise `uv`, qui gère l'environnement Python et le verrou des dépendances. La version
-de référence est **Python 3.12**, le plancher déclaré par le projet.
+Sept documents, une responsabilité chacun.
+
+| Document | Ce qu'il fixe |
+|---|---|
+| [`README.md`](README.md) | ce que TORNE est, et où l'on trouve quoi |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | les frontières, les responsabilités, les couches — **où** passe chaque chose |
+| [`docs/CONTRATS_FONDAMENTAUX.md`](docs/CONTRATS_FONDAMENTAUX.md) | les objets, la temporalité, les invariants — **ce qui** doit rester vrai |
+| [`docs/RESEARCH_AND_VALIDATION.md`](docs/RESEARCH_AND_VALIDATION.md) | la doctrine de preuve — **comment** une affirmation se teste |
+| [`docs/SOURCES.md`](docs/SOURCES.md) | les sources intégrées et qualifiées — **ce que** chaque source donne, et ne donne pas |
+| [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | la situation, l'objectif prioritaire, les critères de sortie — **quoi** ensuite |
+| [`docs/PRE-ENREGISTREMENT-001.md`](docs/PRE-ENREGISTREMENT-001.md) | le protocole d'une expérience confirmatoire, écrit avant de la regarder |
+
+[`experiments/README.md`](experiments/README.md) explique ce qui a sa place dans `experiments/` : des scripts
+d'exploration jetables, qui ne deviennent du code que s'ils survivent à la relecture.
+
+## Installer et vérifier
 
 ```bash
-uv sync --locked              # installe l'environnement à partir de uv.lock, sans le modifier
-uv run pytest -q              # exécute la suite de tests
-uv run ruff check .           # contrôle de style et d'erreurs
-uv run ruff format --check .  # contrôle de formatage
-uv build                      # construit la sdist et le wheel
+uv sync --locked
+uv run pytest -q
+uv run ruff check .
+uv run ruff format --check .
+uv build
 ```
 
-Si `uv` n'est pas dans le `PATH`, l'appeler par son chemin absolu ou l'ajouter au `PATH` de la
-commande.
+Python 3.12, `uv` épinglé par la CI. Le point d'entrée console `torne` décrit l'état du paquet :
 
-`uv.lock` est volontairement versionné : c'est lui qui rend l'environnement reproductible.
-`uv sync --locked` échoue si le verrou ne correspond plus à `pyproject.toml` : c'est le premier
-garde-fou contre la dérive des dépendances.
+```console
+$ torne
+torne 0.1.0 — exécution, évaluation et preuve implémentées ; aucune performance sur le monde réel n'est démontrée
+```
 
-## Qualité
-
-Le gate tient en cinq commandes. Elles ont toutes été exécutées et ont toutes passé le
-31 octobre 2026 sur Python 3.12. Les sorties réelles du **socle initial** sont dans
-`docs/P0-RAPPORT.md` ; après la mission 001, le gate est rejoué à l'identique et passe de nouveau,
-avec 256 tests au lieu de 2 ; après la remédiation d'acceptation, il est rejoué encore, et passe
-avec 301 tests ; après la fermeture de la lignée temporelle, il est rejoué une dernière fois, et
-passe avec **306 tests**.
-
-| Commande | Ce qu'elle garantit |
-|---|---|
-| `uv sync --locked` | L'environnement correspond exactement au verrou versionné, et le verrou est à jour vis-à-vis de `pyproject.toml`. |
-| `uv run pytest -q` | La suite de tests passe. |
-| `uv run ruff check .` | Aucune erreur de lint (style, imports, modernité). |
-| `uv run ruff format --check .` | Le code est formaté selon la règle du projet. |
-| `uv build` | La sdist et le wheel se construisent : le paquet est publiable. |
-
-`.github/workflows/ci.yml` (GitHub Actions) rejoue ce gate à l'identique, sur Python 3.12.
-**Ce workflow a été exécuté et a réussi** : chaque exécution déclenchée sur `main` s'est terminée
-avec le verdict `success`, vérifié par l'API GitHub. Il rejoue le gate à chaque poussée.
-
-Le dépôt est **public** (`github.com/RootSquirrels/torne`) : le code y est lisible par
-quiconque. C'est un fait vérifiable par l'API GitHub, et il a une conséquence à trancher
-par le propriétaire — voir `docs/DECISIONS.md`, « Licence du dépôt TORNE ».
-
-## Documents de référence
-
-| Document | Contenu |
-|---|---|
-| [`docs/VISION.md`](docs/VISION.md) | thèse, problème, deux objectifs et leurs critères, limites, non-objectifs |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | les quatre frontières, les préoccupations transversales, les responsabilités |
-| [`docs/RESEARCH_AND_VALIDATION.md`](docs/RESEARCH_AND_VALIDATION.md) | cinq modes de validation et hiérarchie des affirmations |
-| [`docs/REUSE_AUDIT.md`](docs/REUSE_AUDIT.md) | **matrice de réutilisation consolidée** : une décision par composant, le blocage de licence, les doublons à ne pas réimplémenter, ce qu'il faut extraire en premier |
-| [`docs/SLICE-PREMIER.md`](docs/SLICE-PREMIER.md) | **piste de recherche documentée** (`TORNE-EXP-001`) : le critère de sélection relu, l'ambition hydrologique en quatre couches, la réutilisabilité multi-fleuves, et ce qui est demandé au propriétaire |
-| [`docs/PRE-ENREGISTREMENT-001.md`](docs/PRE-ENREGISTREMENT-001.md) | **pré-enregistrement de la piste 001**, statut `planned` : question falsifiable, sources et témoins, modes de validation, hypothèse nulle, critères d'arrêt, conditions de gel — écrit avant tout calcul |
-| [`docs/MISSISSIPPI_DATA_SOURCES.md`](docs/MISSISSIPPI_DATA_SOURCES.md) | **qualification des sources du Mississippi** : neuf sources, schémas réels, état de chaque API, ruptures méthodologiques, jeu de données minimal — et ce qu'il ne permet pas de mesurer |
-| [`docs/DECISIONS.md`](docs/DECISIONS.md) | journal daté des décisions prises et des points ouverts |
-| [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | le programme d'ingénierie : les gates P0/P1/P2/P3, les principes, la répartition du travail |
-| [`docs/CONTRATS_FONDAMENTAUX.md`](docs/CONTRATS_FONDAMENTAUX.md) | les cinq objets, les trois dimensions temporelles, 34 invariants vérifiables |
-| [`docs/P0-RAPPORT.md`](docs/P0-RAPPORT.md) | le rapport du socle de build : sorties réelles des cinq commandes, décisions, limites |
-| [`docs/MISSISSIPPI_DATA_SOURCES.md`](docs/MISSISSIPPI_DATA_SOURCES.md) | **qualification des sources** (gate P1) : dix sources, stations, paramètres, pièges méthodologiques, décisions bloquantes avant tout connecteur |
-| [`docs/audit/ATHANOR.md`](docs/audit/ATHANOR.md) | audit d'`athanor` : estimateurs, juge, machine à états, licence, doublons |
-| [`docs/audit/CRIN.md`](docs/audit/CRIN.md) | audit de SquirrelBetting / C.R.I.N. : discipline expérimentale, métriques, ce qui est hippique |
-| [`docs/audit/LEGACY-BOREE.md`](docs/audit/LEGACY-BOREE.md) | audit de l'ancien BORÉE : point-in-time, lac, scellés, anti-fuite, ce qui est électrique |
-| [`docs/audit/REVUE-CONSISTENCE.md`](docs/audit/REVUE-CONSISTENCE.md) | revue indépendante de la matrice de réutilisation : 25 écarts relevés et corrigés |
-| [`experiments/README.md`](experiments/README.md) | ce qui a le droit d'être jetable |
-
-La spécification conceptuelle de TORNE est le paquet de référence
-`BOREE_W2M_Greenfield_Reference_V2.0` (76 fichiers, empreintes SHA-256 dans `SHA256SUMS.txt`),
-conservé **en lecture seule** dans le dépôt voisin. C'est une spécification, pas une
-implémentation : il ne prouve pas que des connecteurs, modèles, méthodes, validations ou
-résultats existent.
-
-Les dépôts historiques (`boree`, `athanor`, `SquirrelBetting`) restent **en lecture seule** et ne
-sont pas des dépendances de TORNE. Ce qui en est repris est réécrit ou réadapté ici, jamais
-référencé. L'observatoire Borée H3 et son protocole prospectif scellé sont hors périmètre :
-strictement inchangés.
-
-## Arborescence
+## Structure du dépôt
 
 ```text
-torne/
-├── pyproject.toml          # paquet, dépendances minimales, configuration pytest et ruff
-├── uv.lock                 # verrou des dépendances, versionné
-├── README.md               # ce document
-├── .gitignore
-├── .github/workflows/ci.yml # gate de qualité en GitHub Actions
-├── src/torne/
-│   ├── __init__.py         # version et point d'entrée console provisoire
-│   ├── contracts/          # contrats fondamentaux, exécutables : temps, validité, modèle, observation, grandeur dérivée, produit
-│   ├── acquisition/        # socle transversal : récupération, pagination, conservation des preuves brutes
-│   ├── execution/          # exécution d'un modèle : configuration, reproductibilité, rejeu
-│   ├── methods/            # méthodes scientifiques : filtre d'état, comparaison, régression, CUSUM, puissance
-│   ├── evaluation/         # séparation temporelle, métriques, références, rapport
-│   └── knowledge/          # enregistrement d'exécution, lignée, produit de connaissance
-├── tests/                  # tests des contrats, des maillons, et test d'intégration bout en bout
-├── docs/                   # vision, architecture, validation, audit de réutilisation, décisions
-└── experiments/            # explorations jetables, hors paquet
+src/torne/
+  acquisition/    socle transversal : transport, fetcher, magasin brut, contrat de connecteur, adaptateurs
+  contracts/      objets et temporalité : source, preuve brute, observation, variable dérivée, produit
+  methods/        couche scientifique : Kalman, régression, rupture, puissance, comparaison
+  evaluation/     découpage temporel, références, métriques, incertitude, rapport
+  execution/      exécution rejouable d'un modèle
+  knowledge/      enregistrement d'un produit et vérification de sa lignée
+docs/             les documents de référence
+tests/            la suite de tests
+experiments/      explorations jettables
 ```
 
-Il n'y a ni moteur, ni service, ni registre, ni répertoire vide : ils apparaîtront lorsqu'un
-besoin concret les justifiera. Les quatre sous-paquets correspondent à quatre responsabilités
-réellement exercées, pas à des couches prévues pour l'avenir.
+## Limites et non-objectifs
 
-## État du projet
+TORNE ne cherche pas à construire : un modèle universel du monde ; un moteur causal universel ; un moteur
+mathématique propriétaire réimplémentant l'écosystème scientifique ; une chaîne causale générique applicable sans
+adaptation à tout domaine ; un graphe de connaissances qui prétend expliquer un système par la seule présence de
+relations ; une architecture microservices, un bus d'événements, un framework de plugins, un système de workflow
+généraliste ; une validation uniforme imposant les mêmes métriques à tous les modèles ; un outil de trading auquel
+on aurait ajouté des données physiques ; une couche de métadonnées dupliquant les contrats de données.
 
-**31 octobre 2026 — socle documentaire créé.** Le dépôt contient la vision, l'architecture, la
-doctrine de validation, le journal de décisions, le format de la matrice de réutilisation, un
-paquet Python sans code métier et un point d'entrée console provisoire.
+Chacun de ces choix pourra être reconsidéré **uniquement en présence d'un besoin démontré**.
 
-**31 octobre 2026 — socle d'ingénierie en place et vérifié.** L'environnement est verrouillé
-(`uv.lock` versionné), le paquet s'installe, se construit et s'importe, et le gate de qualité
-(synchronisation, tests, lint, format, construction) passe sur Python 3.12. Le workflow GitHub
-Actions qui rejoue ce gate **a été exécuté et a réussi**.
+**Avec les systèmes existants :** TORNE est un système neuf et indépendant. Il ne modifie, ne migre et ne fusionne
+aucun des dépôts historiques, qui restent en lecture seule et servent de références de recherche. Ce qui en est
+repris est réécrit, avec son origine déclarée en tête de module
+([`docs/CONTRATS_FONDAMENTAUX.md`](docs/CONTRATS_FONDAMENTAUX.md) §5).
 
-**31 octobre 2026 — remédiation d'acceptation.** Cinq défauts d'acceptation du socle scientifique
-ont été corrigés, chacun par un test qui échouait avant et passe après (47 tests rouge sur
-l'ancien code, 301 verts sur le nouveau) : la lignée est vérifiée au moment de la publication et
-un enregistrement invalide ne peut plus être publié ; un produit publie une seule nature et
-chaque sortie garde la sienne ; `ModelResult` refuse un horodatage naïf, un intervalle sans
-sortie correspondante, une longueur incohérente, des bornes non finies ou non ordonnées, et une
-nature de sortie non déclarée ; la méthode d'incertitude des métriques est celle que la
-référence V2.0 autorise (variance HAC de Newey-West, taille effective) — et non un bootstrap que
-le message du précédent commit décrivait à tort ; une absence reste une absence jusqu'au rapport
-de métriques, sans jamais devenir un zéro.
+## Licence
 
-**31 octobre 2026 — fermeture de la lignée temporelle.** Deux failles d'intégrité subsistaient,
-au-delà des cinq défauts ci-dessus. Un produit pouvait être daté **avant** la production de ce
-qu'il publie — un produit antidaté, dont la lignée aurait été vérifiée à un instant où ce qu'il
-contient n'existait pas encore. Et une grandeur dérivée pouvait citer une **autre instance** de
-son entrée, de même identifiant mais de contenu différent : le contrôle de temporalité
-s'exerçait alors sur le substitut, et laissait passer un calcul antérieur à l'utilisabilité de sa
-véritable entrée. L'instant effectif de publication ne peut plus précéder ni la production du
-résultat publié ni l'établissement de l'enregistrement ; chaque entrée citée est rapprochée de
-son objet canonique dans l'enregistrement, et les contrôles temporels s'exercent sur cet objet.
-Cinq tests de non-régression : ils échouent sur le code d'avant, ils passent sur le nouveau.
-
-**31 octobre 2026 — première expérience physique définie.** Le critère de sélection du premier
-slice a été **relu** : il n'est plus le critère MISSISSIPPI/RHIN — un témoin économique public à
-fréquence infra-mensuelle — mais trois portes dures du paquet de référence : la cible doit être une
-grandeur **latente qu'aucun éditeur ne publie**, le juge doit être **véritablement indépendant**, et
-la question doit être **identifiable**. Appliqué à la proposition Mississippi, ce critère la
-refuse : les heures de fermeture d'écluses sont publiées directement, et les taux de fret USDA/AMS
-dérivent du même marché fluvial que le produit expliquerait. L'expérience recommandée est donc la
-**cohérence inter-agences de l'état hydrologique du Rhin** : la divergence entre les reconstructions
-française, allemande et néerlandaise, et le déplacement qu'elle produit sur le compte de jours de
-basses eaux. Son pré-enregistrement est écrit — question, hypothèse nulle, sources, témoins, modes
-de validation, critères d'arrêt, conditions de gel — **avant** tout calcul, comme l'exige ADR-012.
-La règle d'établissement de `KNOWN_AT` par source est désormais écrite : quatre classes, et la
-classe détermine l'admissibilité. Aucune donnée n'a été acquise, aucun connecteur créé, aucune
-performance démontrée.
-
-**31 octobre 2026 — programme réordonné, et socle d'acquisition commencé.** Le propriétaire a
-corrigé l'ordre des étapes : pré-enregistrer une expérience précise avant de savoir acquérir une
-seule donnée réelle revenait à laisser les contraintes d'une expérience dicter toute l'architecture.
-La démarche **exploratoire** — collecter, comprendre les sources, découvrir des régularités et des
-lacunes — précède désormais la démarche **confirmatoire** ; le pré-enregistrement reste indispensable
-avant l'analyse confirmatoire, mais il ne doit pas empêcher l'exploration. `TORNE-EXP-001` passe en
-**piste de recherche documentée**, statut `planned`, et son travail est conservé tel quel. La séquence
-du programme devient : **acquisition** → **observatoire des sources** → **fondation d'intelligence de
-domaine** → **découverte scientifique et premiers produits de connaissance**. Trois niveaux sont
-distingués et séparés par des contrats explicites : le socle transversal acquiert et conserve, la
-couche sémantique comprend, la couche scientifique transforme. Le socle transversal est **commencé** :
-contrats, transport, pagination, reprises, conservation des preuves brutes et journal d'acquisition
-sont écrits et testés.
-
-**31 octobre 2026 — mission 001 livrée : exécution, évaluation, preuve.** Le dépôt n'est plus
-un socle documentaire. Il contient une capacité d'exécution (entrées et paramètres explicites,
-graine contrôlée, configuration conservée, rejeu depuis la configuration), une capacité
-d'évaluation (séparation temporelle stricte, marche avant, références, métriques, comparaison
-appariée), la preuve et la provenance (source, preuve brute, observation, enregistrement,
-produit de connaissance versionné), et **une méthode scientifique réelle** : un filtre de Kalman
-en espace d'état « tendance linéaire locale », vérifié contre une implémentation de référence
-indépendante, contre un cas calculé à la main et contre les propriétés attendues d'un estimateur
-d'état. Quatre primitives d'`athanor.stats` ont été extraites et attribuées. La chaîne complète
-est testée de bout en bout (`tests/test_end_to_end.py`) et rejouable
-(`experiments/mission_001_demo.py`).
-
-**31 octobre 2026 — le dépôt acquiert de vraies données.** Le socle transversal d'acquisition est
-en service : `experiments/acquisition_demo.py` interroge **réellement** trois points d'accès publics
-— les observations hydrométriques de Hub'EAU v2, les valeurs instantanées du NWIS de l'USGS, le
-catalogue OData de Copernicus Data Space — conserve chaque réponse comme preuve brute, l'empreinte,
-et consigne l'échec comme le succès. Le 31 octobre, l'acquisition a réussi sur les trois :
-deux pages Hub'EAU (25 848 et 25 845 octets), une page USGS (56 082 octets), une page Copernicus
-(13 470 octets), quatre lignes de manifeste. La troncature par le budget de pages est reportée
-`partial`, et l'épuisement de la source est reporté `success` : les deux ne se confondent pas.
-
-> **Corrigé le 31 octobre 2026, après la mise en place de la porte de conformité.** L'acquisition
-> Hub'EAU ci-dessus est **réellement allée chercher autre chose** : ce point d'accès accepte
-> `code_station` sans l'appliquer, et les pages reçues portaient d'autres stations. Les trois
-> sources ont bien répondu — mais une seule des trois acquisitions pouvait être exploitée. C'est
-> ce que la porte a mis au jour, et c'est pourquoi « l'acquisition a réussi sur les trois » ne
-> vaut pas ce qu'elle paraît dire.
-
-**31 octobre 2026 — la conformité d'acquisition est vérifiée, et elle bloque (C13).** Le quatrième
-contrôle du socle existe enfin : après le transport, la structure de la réponse et l'exhaustivité,
-une acquisition est confrontée à **la question qui lui a été posée**. L'orchestration reste au socle ;
-le **prédicat est propre à la source** — le socle ne connaît ni les identifiants de stations, ni les
-unités, ni les règles hydrologiques. Le constat qui a déclenché le chantier est mesuré, pas supposé :
-Hub'EAU accepte `code_station` sans l'appliquer (une station inexistante rend la même réponse que la
-station demandée, même `count`, mêmes lignes) ; USGS et Copernicus, eux, appliquent bien leur filtre.
-Une non-conformité porte désormais un **vocabulaire propre et bloquant** — statut `non_conforme`,
-cause `non_conformite`, motif et critères détaillés — et **l'issue ne produit aucune observation**.
-La **preuve brute est conservée malgré tout** : une réponse qui a répondu à côté est une preuve, et
-elle est d'autant plus utile qu'on sait qu'elle ne convient pas. Un critère que la réponse ne permet
-pas de vérifier est consigné comme **non vérifiable**, jamais comme satisfait. Aucun objet de domaine
-n'a été construit ; les huit prédicats de transférabilité ne sont pas concernés, et aucune couche,
-aucun moteur, aucun registre n'a été ajouté.
-
-**31 octobre 2026 — alignement sur les fondations scientifiques et nettoyage du namespace.**
-Le paquet de référence V2.0 (`docs/08-SCIENTIFIC-COMPUTING-FOUNDATION-AND-EVALUATION.md`,
-ADR-021, SPEC-010) a été appliqué, non recopié. Le namespace `athanor` a disparu du paquet :
-les quatre primitives sont des modules TORNE, et la provenance reste en tête de module. La loi de
-Student vient désormais de **SciPy** — elle était réimplémentée, ce qu'ADR-021 interdit
-explicitement. `statsmodels` est ajouté comme **dépendance de développement seulement** : il sert
-d'oracle indépendant au filtre d'état (3,6e-10), à la variance HAC (3,5e-15) et aux écarts-types
-groupés CR1 (4,6e-15). L'audit a trouvé une **incohérence de puissance** — l'approximation
-normale était optimiste de 16,7 % à n=8 —, corrigée sur la loi de Student et validée par
-Monte-Carlo. Le contrat est désormais complet : les **cinq objets** existent en code, la grandeur
-dérivée porte sa propre temporalité (le `KNOWN_AT` du calcul, pas celui de la source), et les
-six catégories ne se confondent plus — un état reconstruit n'est pas une estimation, et une
-observation de source a son propre objet et son propre statut de qualité.
-
-Non fait : aucun connecteur, aucun modèle économique ou financier, aucune application, aucun
-moteur par domaine, aucun registre. **Aucune performance sur le monde réel n'est démontrée.**
-
-**31 octobre 2026 — consolidation d'intégrité du socle d'acquisition (Sprint 2.1).** Quatre points
-ont été corrigés, **sans brique nouvelle**. Le **journal d'acquisition** est durable : le contenu
-brut reste dédupliqué par empreinte, mais chaque acquisition est journalisée séparément —
-tentatives échouées comprises — et l'instant d'un contenu est son instant de **première
-conservation** : le récupérer plus tard ne le change pas. Le **transport** fait désormais ce qu'il
-annonce : plafond de redirections appliqué, durée mesurée, URL finale consignée, et identifiants
-**retirés** lorsqu'une redirection change de serveur, de port ou de schéma. Une **réponse malformée**
-devient une issue structurée (`MALFORMED`), et non une exception qui sortirait de l'acquisition sans
-que rien ne soit consigné. L'**exhaustivité** est qualifiée par source — `DECLARED_EXHAUSTED`,
-`TRUNCATED`, `UNDECLARED` — au lieu d'être déduite du seul code HTTP : une source sans pagination
-ne déclare pas avoir rendu tout ce qu'elle avait. Aucun stockage distribué, aucune base de données,
-aucun framework supplémentaire.
-
-En cours : l’observatoire des sources (Sprint 3), qui dira ce que les données permettent réellement
-de reconstruire et où elles sont lacunaires. Une **contrainte déjà mesurée** y entrera : sur
-l’instance observée, le point d’accès Hub’EAU `observations_tr` ne sait pas rendre les observations
-d’une station précise — il rend le référentiel, filtré ou non. Toute reconstruction d’un état
-hydrologique sur le Rhin devra donc emprunter une autre voie, ou un filtrage vérifié côté
-acquisition. C’est un **constat de source**, pas une limite de l’architecture : le reste du socle
-tient, et le blocage qu’on observe est exactement celui qu’il devait produire.
+**Non choisie.** Le dépôt est hébergé publiquement sur GitHub ; la politique de propriété intellectuelle est gérée
+par le propriétaire, séparément.

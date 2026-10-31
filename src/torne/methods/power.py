@@ -7,7 +7,7 @@ Origine
 - Chemin exact    : `athanor/src/athanor/stats/power.py`.
 - Propriétaire    : le propriétaire de TORNE.
 - Licence        : dépôt privé, réutilisable sans réserve de licence
-                   (`docs/PROGRAMME.md:24-31`) ; la reprise est une réécriture
+                   (`docs/CONTRATS_FONDAMENTAUX.md` §5.2) ; la reprise est une réécriture
                    interne et la traçabilité de l'origine est l'unique exigence.
 - Code tiers      : aucun en-tête de licence tierce dans le fichier d'origine.
 - Dépendances    : `scipy` (loi de Student et loi non centrale de Student) et

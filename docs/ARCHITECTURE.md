@@ -1,12 +1,9 @@
 # TORNE — Architecture
 
-**Quatre frontières, responsabilités transversales — 31 octobre 2026**
-**Statut : vue de responsabilité. Ce document ne décrit aucune implémentation : il fixe où passe
-chaque responsabilité, pas comment elle est rendue.**
-*(Mise à jour du 31 octobre 2026 : la formule « le dépôt ne contient à ce jour aucun modèle » est
-périmée. La mission 001 a implémenté un premier modèle — un filtre de Kalman en espace d'état — et
-avec lui l'exécution, l'évaluation, la preuve et la provenance. Ce document reste la vue de
-responsabilité : les frontières n'ont pas bougé, et aucune de ces briques ne les franchit.)*
+**Frontières, responsabilités et couches**
+**Statut : vue de responsabilité.** Ce document ne décrit pas d'implémentation : il fixe **où passe chaque
+responsabilité**, pas comment elle est rendue. Le code en est une application, pas la source : quand les deux
+divergent, c'est le document qui a tort, et il est corrigé.
 
 ## 1. Le modèle mental
 
@@ -30,6 +27,21 @@ bien des produits d'autres modèles.
 Les frontières sont **logiques**. Elles n'impliquent ni microservices, ni déploiement séparé, ni
 bus d'événements, ni exécution strictement linéaire.
 
+### 1.1 Trois niveaux, séparés par des contrats explicites
+
+Au-dessus des quatre frontières, le dépôt distingue trois **niveaux** de responsabilité, qui ne se mélangent
+jamais dans un même module :
+
+| Niveau | Ce qu'il contient | Ce qu'il ne contient pas |
+|---|---|---|
+| **Socle transversal** | acquisition, transport, conservation de la preuve, contrats de données, exécution, empreinte | aucune connaissance du domaine : ni débit, ni hauteur d'eau, ni série temporelle |
+| **Couche sémantique** | ce qui donne un sens métier aux objets du socle : observation, grandeur dérivée, produit de connaissance | aucun accès direct au réseau ni au magasin brut |
+| **Couche scientifique** | les méthodes : régression, rupture, puissance, filtrage d'état, comparaison à une référence | aucune écriture, aucun accès réseau |
+
+La séparation n'est pas cosmétique : c'est elle qui permet d'ajouter une méthode sans toucher au socle, et
+d'ajouter une source sans réécrire une méthode. Un adaptateur de source ne sait rien du domaine — il construit
+une URL et dit comment la source se parcourt ; un modèle ne sait rien du réseau.
+
 ## 2. Frontière 1 — Sources
 
 **Question :** d'où viennent les informations, et sous quelles conditions étaient-elles
@@ -52,10 +64,26 @@ un état ou un événement du monde.
 **Ce qu'elle ne fait pas :** elle ne déduit rien. Une source ne produit pas de connaissance ; elle
 fournit la matière dont la connaissance est dérivée.
 
-**Point d'attention :** les règles temporelles du protocole scellé Borée H3 sont hors périmètre et
-ne sont pas reprises ici. TORNE définira ses propres conventions temporelles, en s'appuyant sur la
+**Les quatre règles que l'acquisition doit tenir.** C'est là que l'erreur est la plus facile à commettre et la
+plus difficile à voir : on peut croire avoir obtenu la chose demandée sans l'avoir obtenue. Chaque règle est un
+invariant vérifiable (`docs/CONTRATS_FONDAMENTAUX.md` §4.8 et §4.9) :
+
+- **La présence de données brutes ne vaut pas conformité sémantique.** Un adaptateur vérifie, sur les lignes
+  réellement reçues, que les identifiants demandés sont ceux qui reviennent ; il ne suppose pas que le
+  fournisseur a obéi.
+- **L'exhaustivité est qualifiée par source.** Une réponse HTTP réussie ne prouve pas que le fournisseur a
+  rendu toutes les observations attendues : soit la source le dit, soit elle ne le dit pas, et le parcours peut
+  être tronqué par notre propre budget.
+- **Une erreur d'adaptateur est un résultat, pas une exception.** Une réponse malformée produit une issue
+  structurée — `failed` ou `partial` — et la tentative est consignée comme toute autre.
+- **Un secret ne circule que par référence.** Ce qui est consigné — journal, manifeste, empreinte — porte une
+  référence d'identifiant, jamais la valeur ; et un identifiant ne franchit pas une redirection qui change de
+  serveur, de port ou de schéma.
+
+**Point d'attention :** les règles temporelles du protocole scellé de l'ancien projet électrique sont hors
+périmètre et ne sont pas reprises ici. TORNE a défini ses propres conventions temporelles, en s'appuyant sur la
 distinction canonique entre temps de validité, temps de publication, temps de réception, temps de
-disponibilité et temps d'usage.
+disponibilité et temps d'usage (`docs/CONTRATS_FONDAMENTAUX.md` §3.1).
 
 ## 3. Frontière 2 — Modèles
 
@@ -115,6 +143,12 @@ financière est une application parmi d'autres, et non la propriétaire du socle
 **Ce qu'elle ne fait pas :** elle ne décide pas de la validité d'un modèle. Une application qui
 réussit ne valide pas rétroactivement les modèles amont.
 
+**Cette frontière n'est pas ouverte.** La branche « world-to-market » — transformer une intelligence du monde
+physique en décision financière — est **reportée** tant que le socle d'intelligence physique n'est pas
+suffisamment mature. Le report est délibéré, et il découle de la règle ci-dessus : une application financière
+qui réussit ne valide pas rétroactivement les modèles physiques amont, et elle n'a rien à dire de leur justesse.
+Elle s'ouvrira quand les produits de connaissance qu'elle consomme seront eux-mêmes validés.
+
 ## 6. Préoccupations transversales
 
 Les quatre préoccupations suivantes ne sont pas une cinquième frontière ni une couche : elles
@@ -171,6 +205,15 @@ Elle ne propose aujourd'hui aucun moteur, aucun service, aucun registre, aucun b
 graphe, aucun framework de plugins, aucun système de workflow, ni aucun répertoire de packages
 prévu pour les contenir. Les frontières décrites sont des responsabilités à remplir par le
 code, pas des répertoires à créer.
+
+Deux règles complètent cette liste, et elles ont bite sur ce que le dépôt a accepté de contenir :
+
+- **Une responsabilité, une implémentation.** Le dépôt n'héberge jamais deux briques de la même responsabilité,
+  et toute brique reprise d'un dépôt d'origine est classée avant d'entrer — REUSE, ADAPT, REIMPLEMENT ou
+  REJECT — avec son origine déclarée en tête de module. La règle, ses conditions et ce qui a été repris sont
+  dans `docs/CONTRATS_FONDAMENTAUX.md` §5.
+- **Aucune dépendance runtime sans import réel.** Une dépendance qui n'est jamais importée n'est pas une
+  dépendance : elle ne figure ni dans `pyproject.toml`, ni dans le verrou.
 
 Une proposition d'architecture nouvelle doit répondre à quatre questions avant d'être acceptée :
 

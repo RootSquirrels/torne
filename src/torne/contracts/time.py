@@ -21,7 +21,7 @@ d'admission :
   point-in-time.
 
 La publication inconnue n'est jamais remplacée par la date d'ingestion : ce
-serait un comblement par supposition, interdit par `docs/PROGRAMME.md:18-19`.
+serait un comblement par supposition, interdit par `docs/CONTRATS_FONDAMENTAUX.md` §3.9.
 
 Aucun instant n'est stocké sans fuseau : le refus est à l'entrée (INV-15). Une
 date civile n'est jamais dégradée en instant par défaut (§3.3) : la conversion

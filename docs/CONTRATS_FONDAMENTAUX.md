@@ -1,9 +1,9 @@
 # TORNE — Contrats fondamentaux
 
-**Objets, temporalité, invariants — 31 octobre 2026**
+**Objets, temporalité, invariants**
 **Statut : contrat.** Ce document fixe des responsabilités, des invariants et des formes vérifiables. Il ne
-décrit aucun schéma de stockage, aucun connecteur, aucune table, aucun service. Le gate P1 n'est pas franchi
-par ce document : tout ce qui dépend d'une source précise est explicitement différé (§6).
+décrit aucun schéma de stockage, aucun connecteur, aucune table, aucun service. Tout ce qui dépend d'une source
+précise est explicitement différé (§6).
 
 ---
 
@@ -17,22 +17,28 @@ trois choses ne dépendent plus du style de l'implémenteur :
 - quelle question un test doit pouvoir poser pour constater qu'une règle tient.
 
 Il n'est **pas** une architecture de stockage. Il ne dit ni où vit une observation, ni sous quelle forme, ni
-dans quel format elle circule. Le gate P1 (`docs/PROGRAMME.md:50`) interdit d'imposer une conception générique
-avant de connaître les données réellement disponibles ; ce document respecte cette interdiction en distinguant,
+dans quel format elle circule. Le programme interdit d'imposer une conception générique avant de connaître les
+données réellement disponibles (`docs/PROGRAMME.md`) ; ce document respecte cette interdiction en distinguant,
 à chaque fois, ce qui est **contractuel** de ce qui est **différé**.
 
-Il n'est **pas** une spécification d'implémentation non plus : aucune brique n'est décrite comme acquise, et
-aucune affirmation de ce document ne repose sur du code de TORNE — le dépôt n'en contient pas encore.
-*(Mise à jour du 31 octobre 2026 : le dépôt contient désormais une forme exécutable de ces contrats,
-dans `src/torne/contracts/`. Ce document reste la **source** : le code en est l'application, et il ne
-lui ajoute aucune brique.)*
+Il n'est **pas** une spécification d'implémentation. Le dépôt contient désormais une forme exécutable de ces
+contrats, dans `src/torne/contracts/` et `src/torne/acquisition/` : ce document reste la **source**, le code en
+est l'application, et il ne lui ajoute aucune brique. Quand le code et ce document divergent, c'est le document
+qui a tort, et il est corrigé.
 
-### 0.1 Ce qui est vérifié et ce qui est cité
+### 0.1 Ce qui est vérifié, et comment on le sait
 
-Les affirmations sur les dépôts historiques portent un chemin de fichier et, quand c'est possible, une ligne.
-Elles ont été relues dans les fichiers eux-mêmes, pas seulement dans les rapports d'audit. Les trois audits
-(`docs/audit/ATHANOR.md`, `docs/audit/CRIN.md`, `docs/audit/LEGACY-BOREE.md`) restent la référence pour le
-contexte ; lorsqu'une affirmation y est reprise ici, elle est signalée comme **revérifiée**.
+Les affirmations de ce document sont de trois natures, et le lecteur doit pouvoir les distinguer :
+
+| Nature | Ce qui la fonde | Comment on le vérifie |
+|---|---|---|
+| **Norme** | une décision prise par le projet | la décision est écrite ici, et son application est testée |
+| **Pratique** | le comportement réel d'une source ou d'une dépendance | une observation, datée, rejouable |
+| **Héritage** | le comportement d'un dépôt d'origine | le dépôt, le commit et le chemin exact du fichier, cités en tête de module |
+
+Une affirmation d'héritage cite le dépôt, le commit et le chemin. Un dépôt d'origine n'est **pas** une
+dépendance de TORNE : il n'est ni installé, ni importé, ni consultable depuis ce dépôt. Il n'est cité que pour
+dire d'où vient une brique reprise, et pour tracer les écarts délibérés.
 
 ---
 
@@ -106,7 +112,7 @@ acquisition dont la source n'est pas déclarée est un fait à corriger, pas une
 **Elle ne garantit pas** : que la source publie ce qu'elle annonce, ni à quelle date, ni que ses données sont
 complètes ou exactes, ni que ses données ne seront pas révisées. Elle ne garantit pas non plus que la source
 existe encore demain — la disparition d'une source est un risque que la provenance doit rendre visible
-(`docs/VISION.md:128`).
+(`README.md`).
 
 ### 2.2 Raw Evidence
 
@@ -126,7 +132,7 @@ re-collecté identique est idempotent. Une acquisition est consignée au journal
 que l'on voudra. Il ne garantit pas que la source ait renvoyé ce qu'elle aurait dû renvoyer. Il ne porte pas
 l'interprétation : l'analyse n'y touche jamais, il se laisse re-parser.
 
-> **Le brut ne s'écrase pas silencieusement** (`docs/PROGRAMME.md:13`). La forme vérifiable est l'existence d'un
+> **Le brut ne s'écrase pas silencieusement** (`docs/PROGRAMME.md`). La forme vérifiable est l'existence d'un
 > second enregistrement de version, jamais une mutation de l'ancien.
 
 ### 2.3 Observation
@@ -161,7 +167,7 @@ est identifiée et versionnée, et que la variable ne se présente jamais comme 
 **Invariants.** Une variable dérivée cite l'ensemble de ses entrées, transitivement jusqu'aux preuves brutes. Elle
 porte sa propre temporalité : `VALID_TIME` est celui du phénomène qu'elle décrit ; `KNOWN_AT` et `INGESTED_AT`
 sont ceux **du calcul**, jamais ceux de la source. Elle porte une qualification d'incertitude adaptée à ce qui
-est réellement connu (`docs/RESEARCH_AND_VALIDATION.md:110-115`).
+est réellement connu (`docs/RESEARCH_AND_VALIDATION.md` §6).
 
 > **Point de fuite principal.** Une variable calculée le 21 octobre à partir d'observations publiées le 18 octobre
 > n'est connue que du 21 octobre. Lui attribuer le `KNOWN_AT` de ses entrées fait passer une reconstruction
@@ -179,18 +185,18 @@ indépendamment.
 
 **Il garantit** une version, une date d'étatisation, une provenance complète jusqu'aux sources, un domaine de
 validité, une incertitude qualifiée et un statut explicite : utilisable, dégradé, retiré, ou résultat
-inconclusif (`docs/ARCHITECTURE.md:87-90`).
+inconclusif (`docs/ARCHITECTURE.md` §4).
 
 **Invariants.** Un produit n'est publiable que si sa lignée est complète et vérifiable. Un produit publié ne se
 réécrit pas : une correction produit une **version nouvelle**, et l'ancienne reste consultable. Un produit
 inconclusif est un résultat valide, rapporté comme tel, avec sa cause
-(`docs/RESEARCH_AND_VALIDATION.md:130-135`). Un produit ne cite pas d'observation qui n'était pas admissible au
+(`docs/RESEARCH_AND_VALIDATION.md` §8). Un produit ne cite pas d'observation qui n'était pas admissible au
 moment où il a été établi ; et son instant d'établissement ne précède ni la production du résultat qu'il
 publie, ni l'établissement de l'enregistrement qui le porte : **un produit ne précède pas ce qu'il publie**.
 
 **Il ne garantit pas** : que le produit soit vrai, ni qu'il reste vrai, ni qu'il soit réutilisable hors de son
 domaine de validité. Il n'est pas un registre et ne catalogue pas l'existant
-(`docs/ARCHITECTURE.md:92-95`). Il ne valide pas rétroactivement les modèles amont.
+(`docs/ARCHITECTURE.md` §4). Il ne valide pas rétroactivement les modèles amont.
 
 ---
 
@@ -198,7 +204,7 @@ domaine de validité. Il n'est pas un registre et ne catalogue pas l'existant
 
 ### 3.1 Les trois dimensions, et ce qui n'en est pas une
 
-`docs/ARCHITECTURE.md:53-54` évoque « la distinction canonique entre temps de validité, temps de publication,
+`docs/ARCHITECTURE.md` §6.2 évoque « la distinction canonique entre temps de validité, temps de publication,
 temps de réception, temps de disponibilité et temps d'usage ». Ce contrat **n'en stocke que trois**, parce que
 les autres notions sont soit dérivables, soit des paramètres de requête. Stocker une cinquième dimension
 introduirait une redondance que rien ne gouverne.
@@ -292,7 +298,7 @@ même résultat. C'est la forme vérifiable de « le fuseau ne dépend pas de l'
 TORNE **n'hérite pas** des règles de fuseau de l'ancien BORÉE. `boree/src/boree/temps.py:86-95` (les fonctions
 `horaire` et `local`, qui moyennent les quarts d'heure et fusionnent les deux heures UTC tombant sur 2 h locale)
 est un pattern générique et testé, mais son **contenu** est lié au marché électrique et hors périmètre
-(`docs/REUSE_AUDIT.md:153`). Ce que TORNE en retient, c'est l'idée qu'une heure locale peut être ambiguë — et
+(§5). Ce que TORNE en retient, c'est l'idée qu'une heure locale peut être ambiguë — et
 donc que la conversion doit être faite et conservée, pas recalculée à la lecture.
 
 ### 3.5 Précision variable
@@ -305,7 +311,7 @@ Deux sources neymes pas la même chose par « précision », et le contrat les s
 Une valeur dont la résolution est horaire porte une incertitude qui n'est pas nulle simplement parce que la
 source ne la publie pas. Le contrat impose qu'une observation **sans incertitude qualifiée** le dise
 explicitement, plutôt que de laisser croire à une précision que personne n'a établie. La forme retenue est
-l'adaptation de la forme à ce qui est connu (`docs/RESEARCH_AND_VALIDATION.md:110-115`) : intervalle,
+l'adaptation de la forme à ce qui est connu (`docs/RESEARCH_AND_VALIDATION.md` §6) : intervalle,
 distribution, scénario, borne, sensibilité, ou conclusion qualitative.
 
 L'arrondi de présentation **n'est pas** une incertitude : arrondir à l'affichage ne réduit pas l'incertitude
@@ -357,8 +363,8 @@ une affirmation sur la source, pas sur le contrat.
 ### 3.8 Informations absentes
 
 **Absent ≠ zéro.** C'est une règle du vocabulaire canonique, énoncée deux fois dans le dépôt :
-`docs/ARCHITECTURE.md:130-131` (« Une donnée absente porte la raison de son absence ; elle ne porte jamais zéro
-en guise d'absence ») et `docs/RESEARCH_AND_VALIDATION.md:119` (« Une valeur absente porte la raison de son
+`docs/ARCHITECTURE.md` §6.2 (« Une donnée absente porte la raison de son absence ; elle ne porte jamais zéro
+en guise d'absence ») et `docs/RESEARCH_AND_VALIDATION.md` §6 (« Une valeur absente porte la raison de son
 absence et n'est jamais zéro »).
 
 Le contrat nomme le champ qui porte cette raison : **`missing_reason`**. C'est un choix de ce document ; la
@@ -382,12 +388,12 @@ donnée n'a pas été cherchée. Les confondre revient à annoncer une mesure de
 
 Et l'inverse : **une absence n'est jamais comblée par une supposition**. Un `missing_reason` n'est jamais
 remplacé par une estimation, une interpolation ou une valeur par défaut
-(`docs/PROGRAMME.md:18-19`).
+(`docs/PROGRAMME.md`).
 
 ### 3.9 Publication inconnue : une ignorance explicite et exploitable
 
 C'est le point le plus exigeant du contrat, et celui que le cahier des charges pose frontalement
-(`docs/PROGRAMME.md:180-181`) : **si la source ne permet pas de connaître la date de publication initiale, ne
+(`docs/PROGRAMME.md`) : **si la source ne permet pas de connaître la date de publication initiale, ne
 pas l'inventer**.
 
 Le contrat ne se contente pas de l'interdire. Il rend l'ignorance **exploitable**, en distinguant trois états de
@@ -399,7 +405,7 @@ la connaissance de publication, portés par l'observation :
 | **Bornée** | un instant **borne inférieure** est connu : à partir de lui, l'information étaitcertainement disponible ; avant, on ne sait pas | admissible à partir de la borne, **pas avant** |
 | **Inconnue** | ni instant ni borne | **non admissible** en reconstitution point-in-time, et l'observation le dit |
 
-Pourquoi une borne plutôt qu'un refus sec : `docs/RESEARCH_AND_VALIDATION.md:70` admet un « replay public :
+Pourquoi une borne plutôt qu'un refus sec : `docs/RESEARCH_AND_VALIDATION.md` §4 admet un « replay public :
 ce qui était publiquement accessible, **sur preuve ou borne conservatrice** ». Une borne conservatrice est donc
 une réponse recevable, à condition d'être conservatrice — c'est-à-dire de ne jamais **surestimer** la
 disponibilité. Elle produit un intervalle de censure, pas une date inventée : on sait que l'information était là
@@ -407,13 +413,13 @@ disponibilité. Elle produit un intervalle de censure, pas une date inventée : 
 
 Et c'est ici que le contrat **diverge d'`athanor`** : `athanor/src/athanor/kernel/clock.py:39-46` fait
 `usable_from(published_at=None, known_at=…) = known_at`, c'est-à-dire **remplacer une publication inconnue par
-la date d'ingestion**. C'est exactement le comblement par supposition que `docs/PROGRAMME.md:18-19` interdit.
+la date d'ingestion**. C'est exactement le comblement par supposition que `docs/PROGRAMME.md` interdit.
 TORNE ne reprend pas ce repli : une publication inconnue reste inconnue, et l'observation n'est pas admise en
 reconstitution point-in-time.
 
 ### 3.10 Replay opérationnel, replay public, descriptif rétrospectif
 
-`docs/RESEARCH_AND_VALIDATION.md:67-76` pose trois lectures temporelles distinctes, « jamais interchangeables dans
+`docs/RESEARCH_AND_VALIDATION.md` §4 pose trois lectures temporelles distinctes, « jamais interchangeables dans
 un rapport de résultat ». Le contrat les rend distinguished au niveau de la donnée, par un marqueur unique :
 
 - **Replay opérationnel** : ce que TORNE avait effectivement reçu et rendu utilisable. Une observation acquise
@@ -430,9 +436,8 @@ le **besoin**, pas nécessairement la syntaxe.
 ### 3.11 Instanciation par source de `KNOWN_AT` — les quatre classes de source
 
 Le §3.2 donne la **forme** de la règle d'utilisabilité ; le §3.9 donne les trois **états** de la connaissance
-de publication. Ce qui manquait — et que le dépôt qualifiait de « la décision qui manque le plus »
-(`docs/DECISIONS.md`, repris en `docs/SLICE-PREMIER.md`) — est **comment établir `KNOWN_AT` selon ce que la
-source expose réellement**.
+de publication. Ce qui manquait — et que le programme identifiait comme « la décision qui manque le plus » —
+est **comment établir `KNOWN_AT` selon ce que la source expose réellement**.
 
 Ce n'est pas un problème de fournisseur, et aucun flux payant ne le résout : la revue transversale du 31 octobre
 2026 a constaté le même motif dans tous les domaines physiques examinés — une API de réseau électrique sans
@@ -465,7 +470,7 @@ publication, donc l'admissibilité. On ne choisit jamais un état plus favorable
 
 **Ce qui reste à faire, et n'est pas fait ici.** Ce paragraphe donne la **règle de classification**. Il ne
 donne pas, pour chaque source réelle, la classe Effective ni les bornes : cela relève de la **qualification
-des sources** (gate P1) et doit être établi par **exécution**, pas par supposition — une source dont le cycle
+des sources** (qualification des sources) et doit être établi par **exécution**, pas par supposition — une source dont le cycle
 de publication est supposé mais non vérifié est une source de classe N, pas une source de classe C. Le tableau
 ci-dessus est donc la procédure, et chaque fiche de source en est une instantiation.
 
@@ -483,7 +488,7 @@ test doit répondre par **oui** ou **non**. Aucun test n'est écrit ici.
 | **INV-01** | Un contenu brut n'est écrit qu'une fois, sous son empreinte. | Question : re-collecter le même contenu crée-t-il une seconde entrée ? Réponse attendue : non. |
 | **INV-02** | Un changement de contenu pour une même clé crée une version nouvelle ; l'ancienne reste lisible et inchangée. | Question : après modification de la source, les deux versions existent-elles et l'empreinte de l'ancienne est-elle inchangée ? Attendu : oui. |
 | **INV-03** | Toute acquisition de brut est consignée, y compris son échec et son statut « rien ici ». | Question : l'acquisition a-t-elle produit une entrée de journal ? Attendu : oui, dans tous les cas. |
-| **INV-04** | Le journal des acquisitions est append-only et chaîné. | Question : une modification a posteriori d'une entrée est-elle détectée ? Attendu : oui. |
+| **INV-04** | Le journal des acquisitions est append-only. Les contenus qu'il référence sont adressés par empreinte : un contenu modifié ne correspond plus à son empreinte. En revanche les lignes du journal ne sont pas chaînées entre elles, et la modification d'une ligne déjà écrite n'est pas détectée par le journal. | Question : une ligne ajoutée touche-t-elle les autres ? Un contenu modifié conserve-t-il son empreinte ? Attendu : non et non. La chaîne de lignes est une limite connue, pas une garantie. |
 | **INV-05** | Aucun brut n'est supprimé parce qu'une version plus récente existe. | Question : l'ancienne version est-elle encore relisible ? Attendu : oui. |
 | **INV-06** | La déduplication ne perd rien : un contenu identique déjà présent n'est ni réécrit ni perdu. | Question : deux acquisitions du même contenu aboutissent-elles à un seul contenu stocké et deux traces d'acquisition ? Attendu : oui. |
 
@@ -535,98 +540,199 @@ test doit répondre par **oui** ou **non**. Aucun test n'est écrit ici.
 | **INV-33** | Le réalisé interdit porte une valeur sentinelle distincte (par convention −1), jamais 0. | Question : la sentinelle est-elle distinguable d'une valeur légitimement nulle ? Attendu : oui. |
 | **INV-34** | Une reconstitution point-in-time ne renvoie aucune observation non admissible. | Question : la requête à `t` renvoie-t-elle une observation dont `usable_at > t` ? Attendu : non, jamais. |
 
-> Le store synthétique est une **décide déjà prise** (`docs/DECISIONS.md:17` : « Le store synthétique anti-fuite
-> est posé dès la première table »), et la technique de référence est celle de l'ancien BORÉE : chaque valeur
-> encode sa date, le réalisé interdit vaut −1 (`boree/tests/fabrique.py:1-2`, `:26`, `:34`, `:70`). Ce document
-> en fait un **invariant**, pas une bonne pratique.
+> Le store synthétique est une **décision déjà prise** : il est posé dès la première table, et la technique de
+> référence est celle de l'ancien dépôt d'origine — chaque valeur encode sa date, le réalisé interdit vaut −1.
+> Ce document en fait un **invariant**, pas une bonne pratique.
 
 ### 4.6 La forme testable
 
 La règle générale qui rend ces invariants utilisables : **un test d'anti-fuite n'est pas un test de valeurs, c'est
-un test de dates.** Il ne vérifie pas qu'une valeur est correcte ; il vérifie qu'une valeur **n'a pas pu être
-produite par une information postérieure au moment simulé**. La forme canonique est celle de
-`boree/tests/fabrique.py` : écrire dans le store une donnée dont la **valeur** est la date dont elle est
-issue, de sorte qu'une fuite temporelle se lise comme un nombre faux et non comme une subtilité de code.
+un test de dates**. Il ne vérifie pas qu'une valeur est correcte ; il vérifie qu'une valeur **n'a pas pu être
+produite par une information postérieure au moment simulé**.
+
+La forme canonique est celle du **store synthétique** : écrire dans le store une donnée dont la **valeur** est la
+date dont elle est issue, de sorte qu'une fuite temporelle se lise comme un nombre faux et non comme une
+subtilité de code. C'est la forme qu'emploie la suite d'évaluation (`tests/test_evaluation.py`).
+
+### 4.7 Reproductibilité numérique
+
+| Réf. | Invariant | Forme vérifiable |
+|---|---|---|
+| **INV-35** | L'aléa global n'est jamais touché : la graine est transmise au composant, qui fabrique son propre générateur. | Question : une exécution à graine fixée produit-elle le même résultat qu'une autre exécution à la même graine ? Attendu : oui. |
+| **INV-36** | Un composant qui échantillonne est déterministe à graine fixée. | Question : deux tirages du même composant, à la même graine, sont-ils identiques ? Attendu : oui. |
+
+### 4.8 Conformité d'une acquisition
+
+L'acquisition est le seul endroit où l'on peut confondre « j'ai obtenu des octets » et « j'ai obtenu la chose
+demandée ». Le dépôt tient ces deux choses séparées, et c'est une exigence de contrat, pas une précaution
+d'implémentation.
+
+| Réf. | Invariant | Forme vérifiable |
+|---|---|---|
+| **INV-37** | **La présence de données brutes ne vaut pas conformité sémantique.** Un adaptateur vérifie, sur les lignes réellement reçues, que les identifiants demandés sont ceux qui reviennent ; il ne suppose pas que le fournisseur a obéi. | Question : une requête portant un identifiant inexistant revient-elle avec les lignes de cet identifiant ? Attendu : non, et le verdict est `non_conforme`. |
+| **INV-38** | **L'exhaustivité est qualifiée par source.** Une réponse HTTP réussie ne prouve pas que le fournisseur a rendu toutes les observations attendues. | Question : l'issue porte-t-elle une exhaustivité — `declared_exhausted`, `truncated` ou `undeclared` ? Attendu : oui, toujours. |
+| **INV-39** | **Une erreur d'adaptateur est un résultat, pas une exception.** Une réponse malformée produit une issue structurée (`failed` ou `partial`), jamais une exception qui sort de l'acquisition sans que rien ne soit consigné. | Question : une réponse malformée produit-elle une issue et une trace ? Attendu : oui, et l'issue est `failed` ou `partial`. |
+| **INV-40** | **La conformité est qualifiée, pas supposée.** Un verdict de conformité est `conforme`, `non_conforme` ou `non_applicable`, et il est établi par exécution. | Question : un verdict est-il produit sans avoir interrogé la source ? Attendu : non. |
+
+### 4.9 Secrets et identifiants
+
+| Réf. | Invariant | Forme vérifiable |
+|---|---|---|
+| **INV-41** | **Un secret ne circule que par référence.** Ce qui est consigné — journal, manifeste, empreinte, rapport, message — porte une référence d'identifiant, jamais la valeur. | Question : la valeur d'un secret apparaît-elle dans un support consigné ? Attendu : non. |
+| **INV-42** | **Un identifiant ne franchit pas une origine.** Un changement de serveur, de port ou de schéma retire les identifiants ; une descente de `https` vers `http` les retire aussi. | Question : une redirection vers une autre origine transmet-elle l'identifiant ? Attendu : non. |
+
+### 4.10 Nature d'un résultat et statut opérationnel
+
+| Réf. | Invariant | Forme vérifiable |
+|---|---|---|
+| **INV-43** | **La nature d'un résultat et le statut opérationnel d'un produit sont deux choses distinctes, et ne se déduisent pas l'un de l'autre.** Une grandeur dérivée porte sa nature (`estimated`, `reconstructed`, `predicted`, `simulated`, `derived`) ; un produit de connaissance porte son statut opérationnel (`usable`, `degraded`, `withdrawn`, `inconclusive`). Le dépôt n'en distingue aujourd'hui que deux axes ; les deux autres, et la règle de non-contamination qui les gouverne, sont posés en doctrine (`docs/RESEARCH_AND_VALIDATION.md` §12). | Question : un produit `inconclusive` peut-il porter une nature d'estimation ? Et un produit `usable` porte-t-il toujours une nature ? Attendu : oui et oui. |
 
 ---
 
-## 5. Les arbitrages « un seul de chaque »
+## 5. La politique de réutilisation, et les arbitrages « un seul de chaque »
 
-`docs/REUSE_AUDIT.md:194-207` a établi que **sept briques** ont été construites deux fois, dans trois dépôts.
-Le gate P1 n'a rien à y voir : ces arbitrages-là sont **techniques**, pas liés à une source précise.
+### 5.1 La règle, et les quatre catégories
 
-**Une précision de fond, tirée de `docs/REUSE_AUDIT.md:176-192`** : Athanor est un dépôt privé du propriétaire ;
-il est réutilisable **sans réserve de licence**. L'arbitrage n'est donc pas juridique. Il est **technique** : le
-quel des deux est le plus robuste, et lequel est lié au domaine d'origine. C'est le critère retenu ci-dessous.
+TORNE n'écrit pas ce qui existe déjà ailleurs quand l'existant est bon. Avant d'écrire une brique, on cherche :
+elle a peut-être déjà été écrite, auditée et testée dans un dépôt que le projet contrôle.
 
-| # | Besoin | Doublons | **Retenu par TORNE** | Pourquoi — en une phrase |
-|---|---|---|---|---|
-| 1 | Magasin brut point-in-time | `athanor.data.rawstore.RawStore` / `boree.archive.py` | **`athanor.data.rawstore`** | C'est le seul qui pose lui-même l'instant d'ingestion et refuse d'être antidaté (`athanor/src/athanor/data/rawstore.py:9`), et le seul dont la lecture `asof` applique la règle d'utilisabilité (`:297-303`) ; celui de `boree` en est un doublon moins robuste. |
-| 2 | Registre de modèles (contrats, statuts) | `athanor.research.registry` / `boree.registre` | **`athanor.research.registry`** | Il rejoue une machine à états depuis le journal chaîné au lieu de stocker un état mutable qui dérive (`athanor/src/athanor/kernel/journal.py:4-5`), alors que le registre de `boree` est expérimental et tourne « en ombre » (`boree/PROTOCOLE.md:152-156`). |
-| 3 | Contrat de connecteur | `athanor.data.source` (+ `data/compliance.py`) / `boree.ingest.sources` | **`athanor.data.source`** | Il couvre en plus robots.txt et conditions d'usage, et refuse par défaut une source restreinte tant qu'une décision humaine n'est pas prise (`athanor/src/athanor/data/source.py:7-11`) ; celui de `boree` est lié au marché électrique. |
-| 4 | Gestion des secrets | `athanor.kernel.secrets` / `boree.archive.py:312-314` | **`athanor.kernel.secrets`** | L'environnement l'emporte, les valeurs ne sont jamais écrites dans un journal, un rapport ou un message, et `api_key=` est masqué dans les URL (`athanor/src/athanor/kernel/secrets.py:8-9`) ; celui de `boree` est une simple lecture d'une variable d'environnement. |
-| 5 | Client S3 | `athanor.data.s3` / `boree.exploitation.garage` | **`athanor.data.s3`** | Un seul client pour un seul besoin ; le client de `boree` est écarté, mais **ses trois règles sont reprises** : local d'abord, copie après (`:5-7`), intégrité par empreinte et jamais par décodage (`:12-13`), instantané cohérent de l'index (`:9-10`). |
-| 6 | Fermeture du code de mesure | `athanor.research.provenance` / garde de `boree` | **`athanor.research.provenance`** | Il fait la fermeture transitive des imports et la preuve d'équivalence ; l'ancien BORÉE n'a pas de module de provenance équivalent, et sa garde est propre à son architecture. |
-| 7 | Statistiques du juge | `athanor.stats` | **`athanor.stats`** | Douze primitives testées contre les définitions publiées ; BORÉE les utilise déjà, et C.R.I.N. les ignore — ce qui est son erreur (`docs/REUSE_AUDIT.md:207`). |
+Une brique candidate est classée dans **une seule** des quatre catégories, et la catégorie est écrite :
 
-### 5.1 Trois briques non listées dans les sept, mais arbitrées ici
+| Catégorie | Ce qu'elle signifie |
+|---|---|
+| **REUSE** | le code est repris tel quel, l'origine est déclarée en tête de fichier |
+| **ADAPT** | le code est repris et modifié, la modification est justifiée |
+| **REIMPLEMENT** | la brique est réécrite : le doublon est lié au domaine d'origine, ou l'original n'est pas réutilisable en l'état |
+| **REJECT** | la brique n'est pas reprise, et la raison est écrite |
 
-- **Le journal chaîné** : `athanor.kernel.journal` est retenu comme **journal unique** — append-only, chaîné par
-  empreintes, verrouillé entre processus (`athanor/src/athanor/kernel/journal.py:1-13`). Il n'y a pas de second
-  journal dans TORNE.
-- **Le lignage minimal** : le motif des quatre colonnes de BORÉE (`_source`, `_cle`, `_empreinte`, `_connu_a`,
-  `boree/src/boree/lac/connu.py:32`) est retenu comme lignage minimum de toute ligne dérivée — voir INV-27 ; seul
-  le nom du quatrième élément change (§5.2).
-- **La forme dérivée** : le principe « le brut est la vérité, le dérivé est reconstructible » de
-  `boree/src/boree/lac/parquet.py:4-6` est retenu ; la réécriture atomique des partitions (`:53-54`, `:67-68`)
-  est retenue comme patron.
+Quatre conditions pour qu'une brique entre en REUSE ou ADAPT :
 
-### 5.2 Le danger de nommage que cet arbitrage crée
+1. **l'octet de licence** est lu dans le fichier lui-même, jamais supposé ;
+2. **l'origine est vérifiable** — dépôt, commit et chemin exact sont notés en tête de module ;
+3. **une seule décision par composant** — le dépôt n'héberge jamais deux implémentations de la même responsabilité ;
+4. **l'import est réel** — une dépendance jamais importée n'est pas une dépendance.
 
-En retenant `athanor.data.rawstore`, on importe un champ qui s'appelle `known_at` et qui signifie **notre
-date d'ingestion** (`athanor/src/athanor/data/rawstore.py:9` ; `athanor/src/athanor/kernel/clock.py:7` : «
-`known_at` quand NOTRE système l'a ingéré »).
+Aucune brique n'entre dans TORNE sans avoir été, au moins, **classée**.
 
-Or, dans le vocabulaire de ce contrat, **`known_at` est l'instant de publication dans la source**. Les deux mots
-désignent deux instants différents. Une reprise littérale du magasin ferait porter `INGESTED_AT` sous le nom
-`KNOWN_AT` — un contresens silencieux, qui ne casserait aucun test existant et qui inverserait la sémantique
-point-in-time.
+### 5.2 Ce que TORNE a repris, et d'où
 
-**Arbitrage : TORNE n'importe pas le nom `known_at` d'Athanor.** Le magasin retenu sera réécrit ou adapté avec
-la nomenclature du présent contrat, et la table de correspondance est :
+Quatre primitives statistiques viennent d'un dépôt historique du propriétaire, **privé**, donc réutilisable sans
+réserve de licence. Elles ont été reprises en réécriture interne : la seule exigence est la traçabilité de
+l'origine.
 
-| Athanor | TORNE | Sens |
+| Besoin | Module TORNE | Référence publiée |
+|---|---|---|
+| Moindres carrés ordinaires, erreur-type robuste CR1 | `src/torne/methods/regression.py` | Cameron, Gelbach & Miller (2011), *REStat* 93(2) |
+| Test de Diebold-Mariano apparié, variance de long terme HAC | `src/torne/methods/calibration.py` | Diebold & Mariano (1995), *JBES* 13(3) ; Newey & West (1987), *Econometrica* 55(3) |
+| Rupture de moyenne par CUSUM | `src/torne/methods/breaks.py` | Ploberger & Krämer (1992), *Econometrica* 60(2) |
+| Effet minimal détectable, taille d'échantillon, puissance | `src/torne/methods/power.py` | Lehr (1992), *Stat. Med.* 11(10) ; Kish (1965) |
+
+Chaque fichier porte en tête le dépôt d'origine, le commit (`athanor@6dacc87`), le chemin exact, le statut de la
+licence, les dépendances tierces et la référence publiée. Les tests correspondants vérifient les résultats contre
+les définitions publiées — `scipy`, `statsmodels` — et **non** contre une réimplémentation interne : une brique
+qui ne se distingue pas de sa référence n'est pas une brique.
+
+### 5.3 Une responsabilité, une implémentation
+
+C'est l'arbitrage « un seul de chaque », énoncé sur l'état réel du dépôt et non sur celui d'un audit :
+
+| Responsabilité | Implémentation unique dans TORNE |
+|---|---|
+| Magasin brut point-in-time | `src/torne/acquisition/store.py` |
+| Contrat de connecteur et conformité | `src/torne/acquisition/contracts.py` |
+| Client HTTP et transport | `src/torne/acquisition/transport.py`, `fetcher.py` |
+| Empreinte canonique | `src/torne/contracts/fingerprint.py` |
+| Journal d'acquisition | `src/torne/acquisition/store.py` (`manifeste.jsonl`) |
+| Exécution rejouable d'un modèle | `src/torne/execution/runner.py` |
+| Enregistrement d'un produit et vérification de sa lignée | `src/torne/knowledge/record.py` |
+| Statistiques | `src/torne/methods/` |
+
+### 5.4 Ce qui a été écarté, et ce qu'il ne faut pas réécrire à l'aveugle
+
+Les autres briques vues dans les dépôts historiques ont été écartées, pour trois motifs distincts : elles étaient
+liées au domaine d'origine, elles étaient déjà couvertes par une brique de TORNE, ou elles dépendaient d'une
+infrastructure que le socle ne veut pas.
+
+Le détail de ces verdicts n'a plus d'intérêt opérationnel : les dépôts audités ne sont **pas** des dépendances de
+TORNE, et leur code n'y est plus consultable. Ce qui reste, c'est la règle du §5.1.
+
+Trois familles restent volontairement **non réimplémentées** tant qu'aucun besoin ne les réclame. Elles sont
+citées ici pour que leurs conditions soient connues le jour où le besoin vient :
+
+- **e-values et LOND.** Une garantie de FDR sous dépendance arbitraire, mais **seulement** si l'hypothèse porte sur
+  l'**espérance conditionnelle** de chaque unité et que les unités corrélées sont **agrégées par grappe** avant
+  le test. L'agrégation par grappe est un prérequis, pas une option : sans elle, la garantie tombe. Le
+  rétrécissement par bootstrap, lui, ne donne un FDR que sous indépendance ou PRDS — **pas** sous dépendance
+  arbitraire. C'est la nuance à ne pas perdre.
+- **Cycle d'exploration « brûle / rétréci ».** Un regard exploratoire **consomme** la fenêtre qu'il regarde, pour
+  toutes les hypothèses du même ensemble : une règle y trouvée n'est ensuite confirmée que sur des données
+  neuves. Le meilleur des K variantes se lit ensuite *rétréci*, pour contrer la malédiction du gagnant. Ce cycle
+  n'a de sens que si l'ensemble des hypothèses est défini.
+- **Budget d'alpha partagé.** Une répartition d'un alpha entre hypothèses d'un même ensemble, avec une
+  gouvernance explicite de la part qui la consomme.
+
+### 5.5 Le danger de nommage que cet arbitrage crée
+
+Un dépôt d'origine porte souvent des noms qui ne veulent pas dire la même chose qu'ici. C'est ainsi qu'une brique
+reprise peut inverser une sémantique **sans casser aucun test**.
+
+L'exemple le plus net : dans le dépôt d'origine, `known_at` désigne **notre** date d'ingestion. Dans le présent
+contrat, `KNOWN_AT` désigne la **publication dans la source**. Reprendre le nom tel quel ferait porter
+`INGESTED_AT` sous l'étiquette `KNOWN_AT` — un contresens silencieux, qui inverserait la sémantique
+point-in-time sans faire échouer un seul test.
+
+**Arbitrage : aucun nom n'est repris quand son sens diffère.** La correspondance est explicite :
+
+| Nom du dépôt d'origine | TORNE | Sens |
 |---|---|---|
 | `event_time` | `VALID_TIME` | quand le fait s'est produit |
 | `published_at` | `KNOWN_AT` | quand la source l'a rendu public |
 | `known_at` | `INGESTED_AT` | quand TORNE l'a acquis |
 | `usable_from(published_at, known_at)` | `usable_at(KNOWN_AT, INGESTED_AT)` | fonction dérivée |
 
-De même, le `_connu_a` de `boree/src/boree/lac/connu.py:32-33` (posé depuis `ref.known_at`, donc l'ingestion)
-devient `_ingeste_a` dans la nomenclature TORNE. Le principe — « la version et l'instant de connaissance
-voyagent ensemble » — est conservé ; le nom est corrigé.
+Une reprise qui n'a pas de table de correspondance n'est pas une reprise : c'est une copie.
 
-### 5.3 Une divergence assumée
+### 5.6 Une divergence assumée
 
-`athanor/src/athanor/kernel/clock.py:39-46` fait `usable_from(published_at=None, known_at=…) = known_at`, donc
-remplace une publication inconnue par la date d'ingestion. TORNE ne fait pas ce repli (§3.9) : il porte
-l'état « publication inconnue » ou « bornée » et refuse l'admission point-in-time sans preuve ni borne
-conservatrice.
+Le dépôt d'origine fait `usable_from(published_at=None, known_at=…) = known_at`, donc remplace une publication
+inconnue par la date d'ingestion. TORNE ne fait pas ce repli (§3.9) : il porte l'état « publication inconnue » ou
+« bornée », et refuse l'admission point-in-time sans preuve ni borne conservatrice.
 
 C'est une divergence **délibérée** avec une brique retenue. Elle est justifiée par un invariant du programme
-(`docs/PROGRAMME.md:18-19` : « Ne jamais combler une métadonnée manquante par une supposition ») et par
-`docs/RESEARCH_AND_VALIDATION.md:70` (« sur preuve ou borne conservatrice »). Elle devra être visible dans
-la réécriture du magasin.
+(« ne jamais combler une métadonnée manquante par une supposition ») et par `docs/RESEARCH_AND_VALIDATION.md` §4
+(« sur preuve ou borne conservatrice »). Elle doit rester visible dans le code.
 
----
+### 5.7 « Local d'abord, copie après »
 
-## 6. Ce qui est différé au gate P1
+Le magasin local est la vérité ; une copie distante est une copie. Une panne du stockage distant retarde la
+copie, elle ne perd rien. Trois règles en découlent :
 
-Le gate P1 exige que « les sources réellement disponibles sont connues, qualifiées et datées » avant toute
-conception générique de stockage ou de connecteur (`docs/PROGRAMME.md:50`). Ce contrat s'arrête donc avant tout
-ce qui dépend d'une source précise.
+1. **Local d'abord, copie après** — la copie n'est jamais en amont de la vérité locale.
+2. **Intégrité par empreinte, jamais par décodage** — on vérifie que l'empreinte correspond, pas que le contenu
+   « se lit bien ».
+3. **Instantané cohérent de l'index** — la copie porte un index cohérent, jamais une vue partielle.
 
-### 6.1 Ce qui est contractuel, et se fait maintenant
+### 5.8 Une règle n'est pas une garantie tant qu'elle n'est pas outillée
+
+Trois statuts, à ne pas confondre :
+
+| Statut | Ce qu'il engage |
+|---|---|
+| **écrite** | elle n'engage que son auteur |
+| **outillée** | elle est vérifiée par l'exécution — un test la contrôle |
+| **documentée** | elle n'engage que son lecteur |
+
+Une règle qui n'est qu'**écrite** n'est pas une garantie. Chaque invariant du §4 est formulé comme une question à
+laquelle un test doit répondre par oui ou non ; tant que le test n'existe pas, l'invariant est **écrit**, non
+**outillé**. Le programme (`docs/PROGRAMME.md`) dit lesquels le sont.
+
+## 6. Ce qui dépend d'une source précise
+
+Le programme interdit d'imposer une conception générique de stockage ou de connecteur avant que « les sources
+réellement disponibles soient connues, qualifiées et datées » (`docs/PROGRAMME.md`). Ce contrat s'arrête donc
+avant tout ce qui dépend d'une source précise.
+
+### 6.1 Ce qui est contractuel, et ne dépend d'aucune source
 
 - Les cinq objets : responsabilités, invariants, ce qu'ils ne garantissent pas, relations (§1-§2).
 - Les trois dimensions temporelles, leur ordre, et le fait que `usable_at` est dérivé (§3.1-§3.2).
@@ -638,30 +744,36 @@ ce qui dépend d'une source précise.
 - Le lignage minimal à quatre éléments (INV-27) et la reconstructibilité du dérivé (INV-28).
 - Le store synthétique anti-fuite comme invariant (INV-32 à INV-34).
 - Les arbitrages « un seul de chaque » de §5, qui ne dépendent d'aucune source.
+- La conformité d'une acquisition : conformité sémantique distincte de la présence de données, exhaustivité
+  qualifiée par source, erreur d'adaptateur transformée en issue (INV-37 à INV-40).
+- Les secrets et identifiants : un secret ne circule que par référence, et ne franchit pas une origine
+  (INV-41, INV-42).
+- L'aléa global n'est jamais touché, et un composant qui échantillonne est déterministe à graine fixée
+  (INV-35, INV-36).
+- La nature d'un résultat et son statut opérationnel sont deux choses distinctes (INV-43).
 
-### 6.2 Ce qui dépend d'une source précise, et attend P1
+### 6.2 Ce qui attend la qualification des sources
 
 Chaque ligne indique **ce qu'il faudra** pour trancher.
 
 | Point différé | Ce qu'il faudra pour trancher |
 |---|---|
-| **Établissement de `KNOWN_AT` par source** : d'où vient la date de publication (en-tête HTTP, métadonnée du document, champ de la charge utile, date du fichier) ? | Le contenu réel de la réponse et ses métadonnées, pour chaque source retenue — c'est précisément la qualification que P1 doit produire. |
+| **Établissement de `KNOWN_AT` par source** : d'où vient la date de publication (en-tête HTTP, métadonnée du document, champ de la charge utile, date du fichier) ? | Le contenu réel de la réponse et ses métadonnées, pour chaque source retenue — c'est précisément la qualification des sources (`docs/SOURCES.md`). |
 | **La borne conservatrice, quand la publication est inconnue** : quelle borne est défendable par source ? | La granularité de publication observée et la fréquence de mise à jour de la source. |
 | **Granularité retenue par source** : horaire, quotidien, hebdomadaire ; et la règle d'agrégation. | Les paramètres réels de chaque jeu de données. |
 | **Convention de date civile par source** : une semaine « se terminant le samedi » se termine-t-elle en heure locale de l'émetteur ou en UTC ? Le décalage change la date d'appartenance d'une observation. | Le fuseau déclaré par l'émetteur et l'heure de coupure de son cycle de publication. |
 | **Correspondance des statuts de qualité** : « provisional », « estimated », « approved », « provisional » de l'API hydrologique — à quoi se rattachent-ils dans le vocabulaire fermé de §3.7 ? | La documentation de qualité de chaque source, et non son nom de champ. |
 | **Valeurs de `missing_reason` par source** : « non mesuré », « non publié », « série arrêtée », « instrument défaillant », « hors domaine » ? | L'inventaire des motifs d'absence réellement rencontrés dans les données de chaque source. |
 | **Politique de révision par source** : une révision crée-t-elle une nouvelle version d'observation, ou seulement une nouvelle version de fichier ? La source date-t-elle ses révisions ? | La documentation et l'observation empirique du comportement de révision de chaque source. |
-| **Registre d'unités et référentiel spatial** : quelle unité de conservation pour le débit, le niveau, le tonnage ? Quelle référence verticale ? | Un point ouvert déjà identifié dans le dépôt (`docs/DECISIONS.md:42-43`) : aucun des dépôts audités n'a de registre d'unités ni de CRS. |
-| **Forme du « brut » par source** : un fichier, une réponse JSON, une ligne de tableau ? Y a-t-il une unité d'acquisition stable ? | L'observation directe des réponses réelles — donc P1. |
+| **Registre d'unités et référentiel spatial** : quelle unité de conservation pour le débit, le niveau, le tonnage ? Quelle référence verticale ? | Un point ouvert déjà identifié dans le dépôt (`docs/PROGRAMME.md`) : aucun des dépôts audités n'a de registre d'unités ni de CRS. |
+| **Forme du « brut » par source** : un fichier, une réponse JSON, une ligne de tableau ? Y a-t-il une unité d'acquisition stable ? | L'observation directe des réponses réelles. |
 | **Procédure de calcul de `usable_at` par source** | **La règle de classification est donnée (§3.11)** : quatre classes de source, et la classe détermine l'état de publication et donc l'admissibilité. Son **instanciation par source** — la classe effective, les bornes, les cycles — dépend de l'établissement de `KNOWN_AT` ci-dessus, et relève de la qualification des sources. |
 
-> **Ce qui a changé le 31 octobre 2026.** « Procédure de calcul de `usable_at` : c'est la décision qui manque le
-> plus. Sans elle, la sémantique point-in-time n'est pas implémentable, et le slice ne peut pas démarrer » — la
-> **règle** est désormais écrite (§3.11 : classes P, B, C et N, et l'effet de chacune sur l'admissibilité). Le
-> blocage qui reste n'est plus la règle mais son **instanciation par source**, qui ne peut pas se faire par
-> supposition : elle exige d'avoir **interrogé** chaque source et constaté ce qu'elle expose. Une source dont le
-> cycle de publication est supposé mais non vérifié est une source de classe N.
+> **Ce qui bloque encore.** La **règle** de calcul de `usable_at` est écrite (§3.11 : classes P, B, C et N, et
+> l'effet de chacune sur l'admissibilité). Ce qui reste à faire n'est plus la règle mais son **instanciation par
+> source**, qui ne peut pas se faire par supposition : elle exige d'avoir **interrogé** chaque source et constaté
+> ce qu'elle expose. Une source dont le cycle de publication est supposé mais non vérifié est une source de
+> classe N.
 
 ---
 
@@ -671,25 +783,25 @@ Trois points ne relèvent ni d'une erreur de conception ni d'une négligence : i
 avant que les données soient connues.
 
 1. **La reconstitution de l'historique des révisions est-elle possible ?** Le premier slice en fait un critère
-   de succès (`docs/SLICE-PREMIER.md:102`, `:110-112`).Cela dépend entièrement de la source : une source qui
+   de succès (`docs/PROGRAMME.md`). Cela dépend entièrement de la source : une source qui
    date ses révisions permet la reconstitution ; une source qui ne les date pas ne la permet pas, et le contrat
    ne peut que le constater en qualifiant l'absence. **Ce n'est pas une question de conception.**
 2. **La granularité commune entre sources.** Aligner un flux hebdomadaire de fret sur un flux horaire de débit
    suppose de choisir une règle d'agrégation et une convention de rattachement. La règle d'agrégation est
    contractuelle (§3.3) ; le **choix** de la granularité commune ne l'est pas.
-3. **La qualité du point de vue opérationnel.** `docs/RESEARCH_AND_VALIDATION.md:69-72` distingue trois lectures
+3. **La qualité du point de vue opérationnel.** `docs/RESEARCH_AND_VALIDATION.md` §4 distingue trois lectures
    temporelles. La question « jusqu'où TORNE peut-il affirmer ce qu'il savait *alors* » dépend de la fréquence
    réelle de collecte, qui est une donnée d'exploitation, pas une donnée de conception.
 
 S'y ajoute un point de **méthode**, non de source : le contrat dit ce qui doit être vérifiable, mais ne dit pas
-comment le tester. Un test d'anti-fuite suppose un harnais de dates simulées ; sa forme est celle de
-`boree/tests/fabrique.py`, mais son écriture relève de P2-B.
+comment le tester. Un test d'anti-fuite suppose un harnais de dates simulées ; sa forme est celle du store
+synthétique (§4.6), et son écriture relève du programme.
 
 ---
 
 ## Les dix décisions que ce document prend
 
-1. **Cinq objets, cinq responsabilités.** Les cinq concepts de `docs/PROGRAMME.md:163-171` ne deviennent ni cinq
+1. **Cinq objets, cinq responsabilités.** Les cinq concepts de `docs/PROGRAMME.md` ne deviennent ni cinq
    couches, ni cinq tables, ni cinq services ; ils deviennent cinq questions auxquelles un objet répond seul
    (§1.1), et les relations sont une lignée de données, pas un pipeline obligatoire (§1.3).
 
@@ -697,16 +809,17 @@ comment le tester. Un test d'anti-fuite suppose un harnais de dates simulées ; 
    dérivée** (`usable_at`), le temps d'usage devient un **paramètre de requête** (`asof`), et la date déclarée
    par l'émetteur devient une **métadonnée de source** (§3.1).
 
-3. **Le nom `known_at` d'Athanor est refusé tel quel.** `known_at` y signifie l'ingestion ; ici il signifie la
-   publication. Une reprise littérale inverserait la sémantique point-in-time sans casser aucun test (§5.2).
+3. **Aucun nom n'est repris quand son sens diffère.** Dans le dépôt d'origine, `known_at` signifie l'ingestion ;
+   ici il signifie la publication. Une reprise littérale inverserait la sémantique point-in-time sans casser
+   aucun test (§5.5).
 
-4. **`usable_at = max(KNOWN_AT, INGESTED_AT)`, jamais stocké.** Règle identique à celle d'`athanor.kernel.clock`,
-   mais avec trois conséquences explicites : fonction dérivée, ingestion antérieure à la publication = donnée
-   douteuse, ordre naturel `VALID_TIME ≤ KNOWN_AT ≤ INGESTED_AT` (§3.2).
+4. **`usable_at = max(KNOWN_AT, INGESTED_AT)`, jamais stocké.** Trois conséquences explicites : fonction dérivée,
+   ingestion antérieure à la publication = donnée douteuse, ordre naturel
+   `VALID_TIME ≤ KNOWN_AT ≤ INGESTED_AT` (§3.2).
 
 5. **Une publication inconnue n'est pas remplacée par la date d'ingestion.** Trois états — établie, bornée,
    inconnue — et une règle d'admission ; l'état « inconnue » **exclut** l'observation de la reconstitution
-   point-in-time (§3.9). C'est une divergence assumée avec `athanor.kernel.clock:39-46` (§5.3).
+   point-in-time (§3.9). C'est une divergence assumée avec le dépôt d'origine (§5.6).
 
 6. **La révision ne réécrit pas l'historique.** Une révision est une version nouvelle, coexistant avec
    l'ancienne, invisible avant sa date de révision (§3.6, INV-12 et INV-13).
@@ -723,9 +836,10 @@ comment le tester. Un test d'anti-fuite suppose un harnais de dates simulées ; 
    pratiques.** Toute ligne dérivée porte source, clé, empreinte et instant de connaissance ; toute table a un
    store synthétique où chaque valeur encode sa date et où le réalisé interdit vaut −1 (§4.4, §4.5).
 
-10. **Les sept doublons sont arbitrés techniquement en faveur d'Athanor**, sur le critère « le plus robuste, et
-    non lié au domaine » — avec la reprise des trois *règles* de `boree.exploitation.garage`, du lignage de
-    `boree.lac.connu` et du principe « brut = vérité, dérivé = reconstructible » de `boree.lac.parquet` (§5).
+10. **Une responsabilité, une implémentation.** Le dépôt n'héberge jamais deux briques de la même
+    responsabilité, et toute brique reprise est classée (REUSE, ADAPT, REIMPLEMENT, REJECT) avant d'entrer
+    (§5.1, §5.3). Le principe « brut = vérité, dérivé = reconstructible » est retenu, comme les trois règles
+    « local d'abord, copie après » (§5.7).
 
 ---
 
@@ -733,11 +847,11 @@ comment le tester. Un test d'anti-fuite suppose un harnais de dates simulées ; 
 
 1. **Comment `KNOWN_AT` est-il établi pour chaque source retenue** — quel champ, quelle métadonnée, quelle
    granularité de publication ? C'est la question qui conditionne tout le reste, et elle est close par la
-   qualification des sources que P1 doit produire.
+   qualification des sources (`docs/SOURCES.md`).
 
 2. **Quelle borne conservatrice est défendable quand la publication est inconnue** — faut-il donner à chaque
    source sa propre borne, dérivée de son cycle de publication, ou une borne uniforme pour toutes ? Le repli
-   `usable_at = INGESTED_AT`, écarté au §5.3, **n'est pas rouvert** : aucune source ne peut s'en servir à la
+   `usable_at = INGESTED_AT`, écarté au §5.6, **n'est pas rouvert** : aucune source ne peut s'en servir à la
    place d'une preuve ou d'une borne.
 
 3. **Quelle granularité commune, et quelle règle de rattachement entre sources de fréquences différentes**
@@ -746,7 +860,7 @@ comment le tester. Un test d'anti-fuite suppose un harnais de dates simulées ; 
 
 4. **Quel registre d'unités et quel référentiel spatial** — conservation dans les unités de la source ou
    conversion, et quelle référence verticale pour les grandeurs hydrologiques ? Le point est déjà ouvert dans
-   le dépôt (`docs/DECISIONS.md:42-43`) et aucun dépôt historique n'y apporte de réponse.
+   le programme (`docs/PROGRAMME.md`) et aucun dépôt historique n'y apporte de réponse.
 
 5. **Le statut de qualité des sources se rattache-t-il proprement au vocabulaire fermé de §3.7**, et quelles
    sont les valeurs de `missing_reason` réellement rencontrées ? Le vocabulaire est posé ; son instantiation
@@ -754,5 +868,5 @@ comment le tester. Un test d'anti-fuite suppose un harnais de dates simulées ; 
 
 ---
 
-*Ce document ne franchit pas le gate P1. Les points du §6 lui sont explicitement renvoyés, et les cinq questions
-ci-dessus ne sont pas tranchables avant que les sources soient connues.*
+*Les points du §6 lui sont explicitement renvoyés, et les cinq questions ci-dessus ne sont pas tranchables avant
+que les sources soient qualifiées.*

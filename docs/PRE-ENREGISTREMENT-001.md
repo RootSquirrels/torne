@@ -4,7 +4,7 @@
 **Ce pré-enregistrement n'est pas l'expérience fondatrice de TORNE pour l'instant.** Il est conservé
 tel quel, avec ses inconnues nommées, comme **piste de recherche documentée** : le programme a été
 réordonné le 31 octobre 2026 pour construire d'abord la capacité à observer un domaine physique
-(`docs/PROGRAMME.md`, séquence S2→S5).
+(`docs/PROGRAMME.md` §4.1).
 
 **Ce que cela change, et ce que cela ne change pas.** Un pré-enregistrement est indispensable avant
 l'analyse confirmatoire ; il ne doit pas empêcher l'exploration préalable des données, et il n'a pas à
@@ -16,8 +16,8 @@ réservation de données, la définition du seuil, et le choix des variantes se 
 de la période test, et toute dérogation crée un amendement append-only (ADR-012 §4).
 
 Ce document est rédigé **avant** tout calcul sur les données de l'expérience : il ne le sera plus
-jamais après. Il suit le gabarit `protocol/PREREGISTRATION-TEMPLATE.md` et la fiche
-`protocol/PREREG_PHYSIQUE.md` du paquet de référence V2.0.
+jamais après. Il suit le gabarit `PREREGISTRATION-TEMPLATE.md` et la fiche `PREREG_PHYSIQUE.md` du
+paquet de référence V2.0, conservé hors de ce dépôt et en lecture seule.
 
 **Convention de libellé.** `[FAIT]` vérifié par exécution ou lecture directe de la source ;
 `[INFÉRENCE]` déduit de faits vérifiés ; `[CLAIMÉ]` l'éditeur ou la documentation l'affirme, sans
@@ -46,7 +46,7 @@ La sélection a suivi trois portes dures du paquet de référence — **T1** (ci
 publiée), **T2** (juge indépendant), **identifiabilité** — appliquées à sept candidats sur six
 domaines. La proposition Mississippi antérieure échoue à T1 (heures de fermeture USACE publiées
 directement) et à T2 (taux de fret USDA/AMS issus du même marché que le produit explique). Le
-raisonnement complet est dans `docs/SLICE-PREMIER.md`.
+raisonnement complet est dans `docs/PROGRAMME.md` §7.
 
 ### A.3 Ce qui est demandé au propriétaire
 
@@ -265,7 +265,7 @@ puissance cible fixée au gel. Si le seuil `δ` ne peut pas être atteint, le r�
 
 - Toute variante — seuil, section, fenêtre, lissage, méthode d'harmonisation, découpage
   d'épisodes — est **enregistrée** avant exécution, avec le commit du code qui l'a produite
-  (ADR-001, `RESEARCH-PROTOCOL.md` §5).
+  (ADR-001, `RESEARCH-PROTOCOL.md` §5, paquet de référence externe).
 - La **métrique primaire** est unique : la divergence inter-agences sur le compte de jours de
   basses eaux. Toute autre métrique est **exploratoire** et déclarée comme telle.
 - La correction de multiplicité s'applique à la famille de variantes autorisées ; elle est fixée
@@ -368,11 +368,10 @@ vers l'événement append-only correspondant. Aucun amendement ne détruit une v
 
 ## Sources consultées pour ce pré-enregistrement
 
-- `C:\Users\Romain\Documents\TORNE_Recherche_2026-10-31\FLEET-B_Experiences-scientifiques-candidats.md`
-  — revue transversale, sept candidats, vérifications HTTP du 31 octobre 2026.
-- Paquet de référence V2.0, en lecture seule : `protocol/RESEARCH-PROTOCOL.md`,
-  `protocol/PREREGISTRATION-TEMPLATE.md`, `protocol/PREREG_PHYSIQUE.md`,
-  `specifications/SPEC-003`, `specifications/SPEC-010`, `adrs/ADR-001`, `adrs/ADR-012`,
-  `adrs/ADR-014`, `adrs/ADR-023`, `docs/10-VALIDATION-DOCTRINE.md`.
+- Revue transversale des expériences scientifiques candidates (sept candidats sur six domaines,
+  vérifications HTTP du 31 octobre 2026), produite par une piste de recherche séparée et conservée hors de ce
+  dépôt, au `C:\Users\Romain\Documents\TORNE_Recherche_2026-10-31\`.
+- Un paquet de référence externe, en lecture seule, hors de ce dépôt : protocole de recherche, modèle de
+  pré-enregistrement, spécifications de validation et décisions d'architecture correspondantes.
 - Dépôt TORNE : `docs/CONTRATS_FONDAMENTAUX.md`, `docs/RESEARCH_AND_VALIDATION.md`,
-  `docs/SLICE-PREMIER.md`.
+  `docs/PROGRAMME.md`.

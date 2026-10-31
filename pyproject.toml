@@ -24,7 +24,7 @@ requires-python = ">=3.12"
 # reimplementees. Le reste du socle n'ecrit que de la bibliotheque standard.
 # Les candidates restantes (pandas, pyarrow, duckdb, scikit-learn, requests,
 # pyyaml, pydantic) reviendront au premier import reel, phase par phase : le
-# detail figure dans docs/P0-RAPPORT.md.
+# detail figure dans docs/PROGRAMME.md.
 dependencies = [
     "numpy>=2.0,<3",
     "scipy>=1.13,<2",

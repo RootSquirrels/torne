@@ -1,12 +1,131 @@
-# Mississippi — qualification des sources de données
+# TORNE — Sources
+
+Ce document décrit les sources dont TORNE se sert, et celles qu'il pourrait se servir. Il sépare deux choses
+qu'il faut ne pas confondre : ce qui est **branché** et ce qui est **étudié**.
+
+| Partie | Ce qu'elle décrit | État |
+|---|---|---|
+| **I** | Les sources **réellement intégrées** : un adaptateur les interroge, et leur comportement a été observé sur le réseau | branchées, comportement connu |
+| **II** | Les sources **qualifiées** : leur comportement a été étudié par requêtes directes, mais aucun adaptateur ne les interroge encore | étudiées, pas branchées |
+
+**Une source étudiée n'est pas une source intégrée.** Tant qu'un adaptateur n'existe pas, la source a un
+comportement *documenté*, pas un comportement *garanti* — et le dépôt ne produit rien à partir d'elle.
+
+**Règle de preuve.** Chaque affirmation est classée **[FAIT]** (observé sur une requête), **[INFÉRENCE]** (lecture
+plausible d'un fait observé) ou **[NON VÉRIFIÉ]** (non vérifié — avec la marche à suivre). Toutes les URL ont été
+consultées le **31 octobre 2026** ; le statut HTTP et un extrait représentatif sont donnés pour chaque appel.
+
+---
+
+## Partie I — Les sources réellement intégrées
+
+Trois sources sont branchées. Chacune a un adaptateur dans `src/torne/acquisition/adapters/`, et chaque
+adaptateur ne connaît **rien du domaine** : il construit une URL, dit comment la source se parcourt, et rend la
+page suivante ou `None`. Ce qu'il ignore du domaine, c'est ce qui garantira qu'un jour une source de débit n'aura
+rien à voir avec le code qui la récupère.
+
+### I.1 Hub'EAU v2 — observations hydrologiques
+
+| | |
+|---|---|
+| Identifiant de source | `hubeau.hydrometrie.observations_tr` |
+| Point d'accès | `https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr` |
+| Pagination | **par curseur** : `next` est une URL absolue portant `cursor`, et le curseur fait réellement avancer la page |
+| Exhaustivité | déclarée quand la source rend `next: null` |
+
+**Ce qui a été vérifié sur le réseau** (31 octobre 2026) :
+
+- la réponse est un objet JSON `{"count", "first", "prev", "next", "api_version", "data"}`, et `data` porte les
+  observations de la page ;
+- le paramètre `page` est **accepté mais ignoré** : la page demandée avec `page=2` est exactement celle de
+  `page=1`. L'adaptateur suit donc le lien `next`, qui est le seul mécanisme qui fonctionne ;
+- `size` est honoré, et `count` donne le nombre d'observations correspondant à la requête ;
+- **les filtres `code_station`, `code_cours_eau`, `date_debut` et `date_fin` sont acceptés et renvoyés dans les
+  liens `first`/`next`, mais ne restreignent pas le résultat**. Mesuré le 31 octobre 2026 à 23:29 : une requête
+  portant `code_station=O919001001` et `grandeur_hydro=H` rend le même `count` (17 350 477) et les mêmes stations
+  qu'une requête sans filtre de station ; une station **inexistante** (`ZZZZZZZZZZ`) rend cette réponse-là
+  encore. Seuls `grandeur_hydro` et le curseur restreignent effectivement le résultat. C'est une limite de
+  l'instance observée, consignée ici pour que personne ne croie l'avoir vérifié à la place de quelqu'un d'autre.
+
+**Ce que le dépôt en fait.** Le prédicat de conformité de cet adaptateur **vérifie les identifiants présents
+dans les lignes réellement reçues** : il ne suppose pas que le fournisseur a obéi. Sur cette instance, il rend
+un verdict `non_conforme`, et l'acquisition est **bloquée**. La preuve brute, elle, est conservée — une réponse
+qui a répondu à côté est une preuve, et elle est d'autant plus utile qu'on sait qu'elle ne convient pas.
+
+**Limite à connaître.** Cette instance ne se comporte pas comme l'API publique documentée. Toute requête qui
+suppose un filtrage par station sur ce point d'accès produit les données d'une autre station : la porte de
+conformité est ce qui empêche cette erreur de devenir une observation.
+
+### I.2 USGS NWIS — valeurs instantanées
+
+| | |
+|---|---|
+| Identifiant de source | `usgs.nwis.iv` |
+| Point d'accès | `https://waterservices.usgs.gov/nwis/iv/` |
+| Pagination | **aucune** : la fenêtre demandée tient dans une seule réponse |
+| Exhaustivité | `undeclared` — la source ne le dit pas |
+
+**Ce qui a été vérifié sur le réseau** (31 octobre 2026) :
+
+- le point d'accès ne rend du JSON que si `format=json` est demandé ; sinon il rend du XML ;
+- la réponse est un objet JSON `{"name", "declaredType", "scope", "value"}`, et `value` porte `queryInfo` et
+  `timeSeries` ;
+- les paramètres `sites`, `parameterCd`, `period`, `startDT` et `endDT` sont acceptés et consignés par le
+  fournisseur dans `queryInfo.criteria`, qui en confirme l'interprétation exacte ;
+- `startDT`/`endDT` bornent une **plage** (`mode=RANGE`) : `endDT` inclut le jour entier ; `period` demande une
+  durée relative ;
+- les valeurs les plus récentes sont marquées provisoires par le qualificatif `P` et par l'avertissement que le
+  fournisseur joint à chaque réponse. Ce marqueur est **conservé tel quel** dans le brut : il appartient à la
+  preuve, pas à l'interprétation.
+
+### I.3 Copernicus Data Space — catalogue des produits
+
+| | |
+|---|---|
+| Identifiant de source | `copernicus.dataspace.products` |
+| Point d'accès | `https://catalogue.dataspace.copernicus.eu/odata/v1/Products` |
+| Pagination | OData v4 : `$top` (taille de page) et `$skip` (décalage) |
+| Exhaustivité | déclarée quand `@odata.nextLink` est absent |
+
+**Ce qui a été vérifié sur le réseau** (31 octobre 2026) :
+
+- le point d'accès est une API **OData v4** : la réponse porte les produits sous `value`, et l'indicateur
+  `@odata.nextLink` donne l'URL de la page suivante ;
+- la pagination et le filtre sont acceptés et appliqués ;
+- le lien de page suivante est une URL **absolue**, dont les paramètres sont encodés (`%24top`, `%24filter`,
+  `%24skip`) : l'adaptateur le décode et reporte ses paramètres dans la demande suivante, pour que les paramètres
+  restent toujours portés par la demande et jamais concaténés à la main ;
+- le catalogue ne publie pas de licence par produit : les conditions d'usage sont donc portées par la source, pas
+  par le produit.
+
+### I.4 Ce qui les sépare, et ce qui leur est commun
+
+**Ce qui les sépare** est ce qui les rend utiles ensemble :
+
+| Source | Pagination | Filtres | Statut de qualité | Ce qui manque |
+|---|---|---|---|---|
+| Hub'EAU v2 | curseur | **ne filtre pas** (mesuré) | non documenté par la source | une instance conforme à l'API publique |
+| USGS NWIS | aucune | appliqués | `P` pour provisoire | l'exhaustivité |
+| Copernicus | `$top` / `$skip` | appliqués | aucun | une licence par produit |
+
+**Ce qui leur est commun** est ce que le socle garantit, et ce n'est pas négociable :
+
+- une réponse réussie n'est **pas** la preuve que le fournisseur a rendu tout ce qu'il avait ;
+- la présence de données brutes n'est **pas** la conformité sémantique ;
+- une source qui répond à côté produit une issue `non_conforme` et **aucune observation**, et sa preuve brute est
+  conservée quand même.
+
+**Ce qui manque encore à ces trois sources.** Aucune n'est qualifiée au sens de `docs/CONTRATS_FONDAMENTAUX.md`
+§3.11 : leur classe de publication — établie, bornée ou inconnue — **n'est pas établie par exécution**. C'est le
+premier chantier de l'observatoire (`docs/PROGRAMME.md` §4.3).
+
+---
+
+## Partie II — Les sources qualifiées : le bassin du Mississippi
 
 **Statut** : document de travail, rédigé le 31 octobre 2026 par requêtes réelles sur les API et pages publiques.
 **Portée** : documenter ce que TORNE peut réellement ingérer pour reconstruire les états hydrologiques et
 opérationnels du Mississippi et étudier leurs conséquences sur le transport fluvial.
-**Règle de preuve** : chaque affirmation est classée **[FAIT]** (observé sur une requête), **[INFÉRENCE]**
-(lecture plausible d'un fait observé) ou **[NON VÉRIFIÉ]** (non vérifié — avec la marche à suivre).
-Toutes les URL ont été consultées le **31 octobre 2026** ; le statut HTTP et un extrait représentatif sont
-donnés pour chaque appel.
 
 ---
 
@@ -871,6 +990,9 @@ hivernale.
 
 ## Ce qui n'a pas pu être vérifié
 
+Les treize points ci-dessous concernent les sources de la Partie II. Les manques
+des sources intégrées sont en §I.4.
+
 1. **Le fichier « Rate Data by Segment »** (barèmes par tronçon, annexé à la page S2) : non téléchargé
    (XLSX binaire). Deux tronçons de S2 résistent à la reconstitution. *Marche à suivre :* le télécharger
    et le lire ; il lèvera probablement la réserve.
@@ -901,6 +1023,9 @@ hivernale.
 
 ## Ce qu'il faut vérifier avant d'écrire le moindre connecteur
 
+Cette liste ne concerne que les sources de la Partie II : celles de la Partie I ont déjà un
+adaptateur, et leurs manques sont en §I.4.
+
 **Bloquant — à lever avant de coder :**
 
 1. **Confirmer par écrit la nature de `rate`** (moyennage sur combien de jours ?) auprès d'USDA/AMS.
@@ -921,8 +1046,8 @@ hivernale.
 **Important — à vérifier pendant la construction :**
 
 7. Que `daily` renvoie bien des lignes pour **chaque** couple (station, paramètre, statistic) retenu, en
-   scolaire de contrôle (compter les semaines reçues contre `begin`/`end` de `time-series-metadata`).
-8. Les `thresholds`naval de chaque station retenue (seuils de floodstage, limites opérationnelles) —
+   contrôle (compter les semaines reçues contre `begin`/`end` de `time-series-metadata`).
+8. Les `thresholds` navals de chaque station retenue (seuils de floodstage, limites opérationnelles) —
    à figer en table, car ils portent la sémantique de navigabilité.
 9. La présence des séries `00065`/`30800` **et seulement elles** pour la hauteur quotidienne, station par
    station (§9-7).
@@ -934,10 +1059,10 @@ hivernale.
 11. La bascule des paquets USGS `readNWIS`/`read_waterdata` **avant le 2026-11-16**.
 12. La coupure de WaterServices **2027-02-22** : aucun code de production ne doit cibler
     `waterservices.usgs.gov` au-delà de cette date, et aucun ne doit en dépendre pour l'historique.
-13. La reprise NOAA, si le slice devaittrait un jour les précipitations ou les crues.
+13. La reprise NOAA, si le slice devait traiter un jour les précipitations ou les crues.
 
 ---
 
 *Toutes les URL citées ont été consultées le 31 octobre 2026. Les statuts HTTP et extraits
-représentatifs sont given ci-dessus pour chaque famille d'appels. Les nombres « vus », « non nuls »,
+représentatifs sont donnés ci-dessus pour chaque famille d'appels. Les nombres « vus », « non nuls »,
 « distincts » proviennent de requêtes de comptage directes sur les API, non d'estimations.*
