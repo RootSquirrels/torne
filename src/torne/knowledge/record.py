@@ -17,10 +17,17 @@ Trois règles structurantes :
    (INV-30). `verify_lineage` contrôle, à l'instant d'établissement du
    produit, que chaque observation citée était admissible : une publication
    inconnue la rend non admissible, et une observation postérieure au produit
-   n'a pas pu l'alimenter.
+   n'a pas pu l'alimenter. Le même contrôle s'applique aux grandeurs
+   dérivées : une grandeur calculée avant que ses entrées ne soient
+   utilisables, ou après l'instant du produit, est signalée (INV-17).
 3. **Rien n'est réécrit** (INV-31). Une correction produit une version
    nouvelle ; l'ancienne reste consultable. C'est le champ `version` du
    produit qui l'exprime.
+
+L'enregistrement porte les **grandeurs dérivées produites** par l'exécution :
+elles relient le résultat aux observations qui l'ont nourci, et c'est par
+elles que la lignée remonte du produit jusqu'aux preuves brutes — produit →
+variable dérivée → observations → preuves brutes → source (INV-29).
 """
 
 from __future__ import annotations
@@ -31,6 +38,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
 
+from ..contracts.derived import DerivedVariable
 from ..contracts.fingerprint import fingerprint
 from ..contracts.knowledge import (
     KnowledgeProduct,
@@ -47,7 +55,7 @@ from ..contracts.model import (
     ModelSpec,
     ResultNature,
 )
-from ..contracts.observation import Observation, RawEvidence, Source
+from ..contracts.observation import Observation, QualityStatus, RawEvidence, Source
 from ..contracts.time import PublicationState, to_utc
 from ..contracts.validity import PointValidity
 from ..execution.runner import ExecutionOutcome
@@ -60,11 +68,18 @@ class ExecutionRecord:
     L'enregistrement réunit tout ce qui est nécessaire pour rejouer une
     affirmation et pour l'auditer : le modèle (identité **et** version), la
     configuration reproductible, les paramètres, les entrées, le résultat, les
-    observations d'entrée, les preuves brutes et les sources citées, l'instant
-    d'établissement, et l'évaluation si elle existe.
+    observations d'entrée, les **grandeurs dérivées produites**, les preuves
+    brutes et les sources citées, l'instant d'établissement, et l'évaluation
+    si elle existe.
 
     Il est figé : le corriger consiste à produire un autre enregistrement ou une
     version nouvelle de produit, jamais à muter celui-ci.
+
+    `derived_variables` est le produit de l'exécution au sens du contrat : les
+    grandeurs calculées par le modèle, qui cite chacune ses entrées. C'est
+    par elles que la lignée remonte du produit jusqu'aux preuves brutes
+    (INV-29) : produit → grandeur dérivée → observations → preuves brutes →
+    source.
     """
 
     record_id: str
@@ -78,6 +93,7 @@ class ExecutionRecord:
     sources: tuple[Source, ...]
     produced_at: datetime
     evaluation: Mapping[str, object] | None = None
+    derived_variables: tuple[DerivedVariable, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.record_id, str) or not self.record_id.strip():
@@ -85,6 +101,12 @@ class ExecutionRecord:
         object.__setattr__(self, "input_observations", tuple(self.input_observations))
         object.__setattr__(self, "evidence", tuple(self.evidence))
         object.__setattr__(self, "sources", tuple(self.sources))
+        object.__setattr__(self, "derived_variables", tuple(self.derived_variables))
+        for variable in self.derived_variables:
+            if not isinstance(variable, DerivedVariable):
+                raise TypeError(
+                    "ExecutionRecord.derived_variables ne contient que des grandeurs dérivées"
+                )
         object.__setattr__(
             self,
             "produced_at",
@@ -98,14 +120,19 @@ class ExecutionRecord:
 
         Elle énumère, dans cet ordre : le **modèle** (identifiant et version),
         les **paramètres** (empreinte), les **observations** d'entrée, les
-        **preuves brutes** citées, les **sources** citées, et l'**évaluation**
-        lorsqu'elle existe.
+        **grandeurs dérivées** produites, les **preuves brutes** citées, les
+        **sources** citées, et l'**évaluation** lorsqu'elle existe.
 
         Chaque référence est une `ProvenanceRef` : un type, un identifiant
         stable, un libellé et, quand elle est connue, la version de l'objet
         cité. La lignée permet de remonter du résultat jusqu'aux preuves
         brutes : les preuves et les sources citées portent elles-mêmes les
         identifiants qui permettent de les retrouver.
+
+        Les grandeurs dérivées occupent une place à part entière : chacune cite
+        ses entrées, et ces entrées sont, elles aussi, dans la lignée. C'est ce
+        qui rend la remontée « produit → variable dérivée → observations →
+        preuves brutes → source » possible.
         """
         references: list[ProvenanceRef] = [
             ProvenanceRef(
@@ -128,6 +155,15 @@ class ExecutionRecord:
                 revision=observation.revision_of,
             )
             for observation in self.input_observations
+        )
+        references.extend(
+            ProvenanceRef(
+                kind=ProvenanceKind.DERIVED_VARIABLE,
+                identifier=variable.variable_id,
+                label=f"{variable.quantity} ({variable.unit}) — {variable.nature.value}",
+                revision=variable.method_version,
+            )
+            for variable in self.derived_variables
         )
         references.extend(
             ProvenanceRef(
@@ -171,6 +207,12 @@ class ExecutionRecord:
         Le produit est **nouveau** : il ne modifie ni l'enregistrement ni son
         résultat. Une correction se publie sous une `version` nouvelle, et
         l'ancienne reste consultable (INV-31).
+
+        Le produit porte la **qualification de ses entrées** : le statut de
+        qualité de chaque observation et de chaque grandeur dérivée qu'il
+        consomme. Une information provisoire est conservée, porte son statut,
+        et ce statut arrive jusqu'ici : le produit qui la consomme la
+        distingue d'une information approuvée (§3.7, INV-22).
         """
         if "nature" in extras:
             refuse = extras.pop("nature")
@@ -195,7 +237,23 @@ class ExecutionRecord:
             uncertainty=uncertainty,
             lineage=self.lineage(),
             summary=self._summary(),
+            input_statuses=self._input_statuses(),
         )
+
+    def _input_statuses(self) -> dict[str, QualityStatus]:
+        """Statut de qualité de chaque entrée citée par le produit (§3.7).
+
+        Une observation porte le sien ; une grandeur dérivée porte celui que
+        ses entrées lui imposent — une grandeur calculée sur une information
+        provisoire reste provisoire.
+        """
+        statuts = {
+            observation.observation_id: observation.quality_status
+            for observation in self.input_observations
+        }
+        for variable in self.derived_variables:
+            statuts[variable.variable_id] = variable.status
+        return statuts
 
     def _summary(self) -> dict[str, object]:
         """Contenu du produit : ce que le produit dit, hors lignée."""
@@ -216,7 +274,34 @@ class ExecutionRecord:
                 },
                 "diagnostics": dict(self.result.diagnostics),
             },
+            "derived_variables": [variable.as_dict() for variable in self.derived_variables],
+            "input_qualification": self._qualification_des_entrees(),
             "evaluation": (None if self.evaluation is None else to_serialisable(self.evaluation)),
+        }
+
+    def _qualification_des_entrees(self) -> dict[str, object]:
+        """Ce que le produit dit de la qualité de ce qu'il consomme (§3.7).
+
+        Un produit qui consomme des observations provisoires le dit : la
+        qualification est dans le résumé, donc dans le produit publié, et non
+        dans un registre extérieur.
+        """
+        statuts = self._input_statuses()
+        comptes: dict[str, int] = {}
+        for statut in statuts.values():
+            comptes[statut.value] = comptes.get(statut.value, 0) + 1
+        return {
+            "counts": dict(sorted(comptes.items())),
+            "provisional": sorted(
+                identifiant
+                for identifiant, statut in statuts.items()
+                if statut is QualityStatus.PROVISIONAL
+            ),
+            "unknown_status": sorted(
+                identifiant
+                for identifiant, statut in statuts.items()
+                if statut is QualityStatus.UNKNOWN
+            ),
         }
 
 
@@ -245,6 +330,7 @@ def build_record(
     produced_at: datetime | None = None,
     evaluation: Mapping[str, object] | None = None,
     inputs: ModelInputs | None = None,
+    derived_variables: Sequence[DerivedVariable] = (),
 ) -> ExecutionRecord:
     """Enregistre une issue d'exécution avec la preuve qui l'a nourrie.
 
@@ -252,6 +338,10 @@ def build_record(
     entrées numériques : elle n'en conserve que l'empreinte. Les observations
     d'entrée sont donc transmises explicitement, avec les preuves brutes et les
     sources qu'elles citent.
+
+    `derived_variables` porte les **grandeurs dérivées produites** par
+    l'exécution : chacune cite ses entrées, et c'est par elles que la lignée
+    remonte du produit jusqu'aux preuves brutes (INV-29).
 
     `inputs` permet de transmettre les entrées exactes de l'exécution, telles
     qu'elles ont été fournies au modèle. À défaut, elles sont **reconstruites**
@@ -278,6 +368,7 @@ def build_record(
         sources=tuple(sources),
         produced_at=outcome.ended_at if produced_at is None else to_utc(produced_at),
         evaluation=evaluation,
+        derived_variables=tuple(derived_variables),
     )
 
 
@@ -300,7 +391,16 @@ def verify_lineage(record: ExecutionRecord, *, asof: datetime | None = None) -> 
     6. **Cohérence de la configuration d'exécution** — modèle, version,
        paramètres et entrées correspondent à ce qui a été exécuté ;
     7. **Cohérence de l'évaluation citée** — l'évaluation porte le même modèle
-       et la même version que l'enregistrement.
+       et la même version que l'enregistrement ;
+    8. **Existence des entrées citées par les grandeurs dérivées** — chaque
+       grandeur dérivée produite cite des observations et des grandeurs
+       dérivées **présentes** dans l'enregistrement (INV-29) ;
+    9. **Fermeture transitive de la lignée** — l'ensemble des observations
+       consommées transitivement par les grandeurs dérivées est reconstructible
+       depuis l'enregistrement, jusqu'aux preuves brutes (INV-29) ;
+    10. **Temporalité du calcul** — une grandeur dérivée n'est pas calculée
+       avant que ses entrées ne soient utilisables, et n'est pas calculée
+       après l'instant du produit (INV-17, INV-30).
 
     `asof` est l'instant auquel se pose la question d'admissibilité : par
     défaut, l'instant d'établissement de l'enregistrement.
@@ -319,6 +419,9 @@ def verify_lineage(record: ExecutionRecord, *, asof: datetime | None = None) -> 
         "unicité des identifiants cités",
         "cohérence de la configuration d'exécution",
         "cohérence de l'évaluation citée",
+        "existence des entrées citées par les grandeurs dérivées (INV-29)",
+        "fermeture transitive de la lignée des grandeurs dérivées (INV-29)",
+        "temporalité du calcul des grandeurs dérivées (INV-17)",
     )
     problems: list[str] = []
 
@@ -371,6 +474,7 @@ def verify_lineage(record: ExecutionRecord, *, asof: datetime | None = None) -> 
             )
 
     problems.extend(_problemes_unicite(record))
+    problems.extend(_problemes_grandeurs_derivees(record, moment))
 
     if record.config.model_id != record.spec.model_id:
         problems.append(
@@ -439,6 +543,7 @@ def _problemes_unicite(record: ExecutionRecord) -> list[str]:
     problems: list[str] = []
     for pluriel, identifiants in (
         ("observations", [obs.observation_id for obs in record.input_observations]),
+        ("grandeurs dérivées", [var.variable_id for var in record.derived_variables]),
         ("preuves brutes", [preuve.evidence_id for preuve in record.evidence]),
         ("sources", [source.source_id for source in record.sources]),
     ):
@@ -447,6 +552,71 @@ def _problemes_unicite(record: ExecutionRecord) -> list[str]:
             if identifiant in vus:
                 problems.append(f"deux {pluriel} portent le même identifiant « {identifiant} »")
             vus.add(identifiant)
+    return problems
+
+
+def _problemes_grandeurs_derivees(record: ExecutionRecord, moment: datetime) -> list[str]:
+    """Contrôles propres aux grandeurs dérivées produites par l'exécution.
+
+    Trois questions, toutes vérifiables :
+
+    1. **Existence des entrées citées** — une grandeur dérivée qui consomme
+       une observation ou une autre grandeur dérivée absente de
+       l'enregistrement a une lignée incomplète (INV-29) ;
+    2. **Fermeture transitive** — l'ensemble des observations consommées
+       transitivement est reconstructible depuis l'enregistrement, jusqu'aux
+       preuves brutes (INV-29) ;
+    3. **Temporalité du calcul** — le calcul n'est pas antérieur à
+       l'utilisabilité de ses entrées, ni postérieur à l'instant du produit
+       (INV-17, INV-30).
+    """
+    problems: list[str] = []
+    ids_observation = {obs.observation_id for obs in record.input_observations}
+    ids_variable = {var.variable_id for var in record.derived_variables}
+
+    for variable in record.derived_variables:
+        for item in variable.inputs:
+            if isinstance(item, Observation):
+                if item.observation_id not in ids_observation:
+                    problems.append(
+                        f"grandeur dérivée « {variable.variable_id} » consomme l'observation "
+                        f"« {item.observation_id} », absente des observations citées"
+                    )
+            elif item.variable_id not in ids_variable:
+                problems.append(
+                    f"grandeur dérivée « {variable.variable_id} » consomme la grandeur dérivée "
+                    f"« {item.variable_id} », absente des grandeurs citées"
+                )
+
+        for observation in variable.transitive_observations:
+            if observation.observation_id not in ids_observation:
+                problems.append(
+                    f"grandeur dérivée « {variable.variable_id} » : l'observation "
+                    f"« {observation.observation_id} » n'est pas dans les observations citées"
+                )
+
+        for item in variable.inputs:
+            if isinstance(item, Observation):
+                usable = item.temporal.usable_at
+                if usable is not None and variable.computed_at < usable:
+                    problems.append(
+                        f"grandeur dérivée « {variable.variable_id} » est calculée le "
+                        f"« {variable.computed_at.isoformat()} », avant l'utilisabilité de "
+                        f"l'observation « {item.observation_id} » "
+                        f"(« {usable.isoformat()} »)"
+                    )
+            elif variable.computed_at < item.computed_at:
+                problems.append(
+                    f"grandeur dérivée « {variable.variable_id} » est calculée avant la "
+                    f"grandeur dérivée « {item.variable_id} » qu'elle consomme"
+                )
+
+        if variable.computed_at > moment:
+            problems.append(
+                f"grandeur dérivée « {variable.variable_id} » est calculée le "
+                f"« {variable.computed_at.isoformat()} », après l'instant du produit "
+                f"(« {moment.isoformat()} »)"
+            )
     return problems
 
 

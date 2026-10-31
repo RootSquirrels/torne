@@ -7,15 +7,19 @@ des fonctions qui découpent, qui mesurent, et qui enregistrent.
 Répartition :
 
 - `splits` — les découpages temporels stricts, et le walk-forward cumulatif ;
-- `metrics` — les métriques d'erreur, la couverture, et le décompte des
-  points écartés ;
-- `baselines` — les trois références naïves (persistance, moyenne, dérive) ;
+- `metrics` — les métriques d'erreur, la couverture, le décompte des
+  points écartés, et l'incertitude qui qualifie chaque métrique ;
+- `uncertainty` — l'intervalle de confiance et la taille effective de
+  l'échantillon qui fonde l'incertitude d'une métrique ;
+- `baselines` — les trois références naïves (persistence, moyenne, dérive) ;
 - `report` — le rapport d'évaluation, reproductible et rejouable.
 
 Les sous-modules sont importés explicitement (`from torne.evaluation.report
 import evaluate_walk_forward`). Il n'y a pas de surface d'API implicite à
 maintenir : chaque module expose un vocabulaire distinct et un seul.
 
-Aucune dépendance n'est cachée, aucun service n'est créé, aucune dépendance
-externe n'est requise : la bibliothèque standard suffit.
+Aucune dépendance n'est cachée, aucun service n'est créé : les statistiques
+employées — variance HAC de Newey-West, fenêtre de Bartlett — sont celles du
+paquet `torne.methods`, déjà utilisées par le test apparié de Diebold-Mariano,
+et aucune n'est réimplémentée ici.
 """

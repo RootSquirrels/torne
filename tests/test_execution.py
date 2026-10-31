@@ -27,6 +27,7 @@ from torne.execution.errors import (
     ConfigurationMismatchError,
     InvalidInputError,
     InvalidParameterError,
+    InvalidResultError,
 )
 from torne.execution.runner import execute, library_versions, reproduce
 
@@ -140,6 +141,84 @@ class FailingModel:
         seed: int | None = None,
     ) -> ModelResult:
         raise ValueError("échec contrôlé")
+
+
+class ModelAvecSortieNonFinie(StubModel):
+    """Modèle qui rend une sortie non finie : ce n'est pas un résultat."""
+
+    def run(
+        self,
+        inputs: ModelInputs,
+        params: ModelParameters,
+        *,
+        seed: int | None = None,
+    ) -> ModelResult:
+        return ModelResult(
+            spec=self.spec,
+            nature=ResultNature.ESTIMATED,
+            parameters=params,
+            produced_at=datetime.now(UTC),
+            outputs={"moyenne": (float("nan"),)},
+        )
+
+
+class ModelAvecIntervalleNonFini(StubModel):
+    """Modèle qui rend un intervalle dont une borne n'est pas finie."""
+
+    def run(
+        self,
+        inputs: ModelInputs,
+        params: ModelParameters,
+        *,
+        seed: int | None = None,
+    ) -> ModelResult:
+        return ModelResult(
+            spec=self.spec,
+            nature=ResultNature.ESTIMATED,
+            parameters=params,
+            produced_at=datetime.now(UTC),
+            outputs={"moyenne": (1.0,)},
+            intervals={"moyenne": ((0.0, float("inf")),)},
+        )
+
+
+class ModelAvecResultatEtranger(StubModel):
+    """Modèle qui rend un résultat portant l'identité d'un autre modèle."""
+
+    def run(
+        self,
+        inputs: ModelInputs,
+        params: ModelParameters,
+        *,
+        seed: int | None = None,
+    ) -> ModelResult:
+        return ModelResult(
+            spec=replace(SPEC_STUB, model_id="autre_modele", version="9.9.9"),
+            nature=ResultNature.ESTIMATED,
+            parameters=params,
+            produced_at=datetime.now(UTC),
+            outputs={"moyenne": (1.0,)},
+        )
+
+
+class ModelAvecDiagnosticNonFini(StubModel):
+    """Modèle qui rend un diagnostic infini : un diagnostic n'est pas un résultat."""
+
+    def run(
+        self,
+        inputs: ModelInputs,
+        params: ModelParameters,
+        *,
+        seed: int | None = None,
+    ) -> ModelResult:
+        return ModelResult(
+            spec=self.spec,
+            nature=ResultNature.ESTIMATED,
+            parameters=params,
+            produced_at=datetime.now(UTC),
+            outputs={"moyenne": (1.0,)},
+            diagnostics={"vraisemblance": float("-inf")},
+        )
 
 
 def _entrees() -> ModelInputs:
@@ -422,3 +501,35 @@ def test_un_parametre_hors_domaine_du_modele_est_refuse():
             _entrees(),
             ModelParameters(values={**_parametres().values, "inexistant": 1.0}),
         )
+
+
+# --- Le résultat rendu doit être un résultat ---------------------------------
+
+
+def test_une_sortie_non_finite_est_refusee_et_non_rendue_comme_un_resultat():
+    """Un `NaN` n'est pas une mesure : le runner refuse de le rendre.
+
+    Sans ce refus, l'issue porterait un résultat inexploitable, et une
+    défaillance passerait pour un résultat.
+    """
+    with pytest.raises(InvalidResultError, match="n'est pas finie"):
+        execute(ModelAvecSortieNonFinie(), _entrees(), _parametres(), seed=7)
+
+
+def test_un_intervalle_non_fini_est_refuse():
+    """Une borne infinie n'est pas une borne : le runner refuse de la rendre."""
+    with pytest.raises(InvalidResultError, match="n'est pas finie"):
+        execute(ModelAvecIntervalleNonFini(), _entrees(), _parametres(), seed=7)
+
+
+def test_un_resultat_qui_n_est_pas_celui_du_modele_execute_est_refuse():
+    """La configuration annonce le modèle exécuté : le résultat doit s'y conformer."""
+    with pytest.raises(ConfigurationMismatchError, match="le modèle exécuté"):
+        execute(ModelAvecResultatEtranger(), _entrees(), _parametres(), seed=7)
+
+
+def test_un_diagnostic_non_fini_est_admis():
+    """Seuls les résultats sont contrôlés : une vraisemblance dégénérée vaut `-inf`."""
+    issue = execute(ModelAvecDiagnosticNonFini(), _entrees(), _parametres(), seed=7)
+
+    assert issue.result.diagnostics["vraisemblance"] == float("-inf")

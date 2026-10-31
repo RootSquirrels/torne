@@ -12,17 +12,23 @@ readme = "README.md"
 # multi-version et vaut aussi pour 3.13 et 3.14.
 requires-python = ">=3.12"
 
-# Dependance de runtime : la premiere dependance reellement importee par le
+# Dependances de runtime : la premiere dependance reellement importee par le
 # depot. Regle du programme : une bibliotheque s'installe quand un module du
 # depot l'importe reellement ; sa presence dans un document d'architecture ne
 # suffit pas.
 #
 # numpy est requis par le calcul scientifique (filtrage d'etat, estimateurs
-# statistiques repris d'Athanor) ; le reste du socle n'ecrit que de la
-# bibliotheque standard. Les candidates restantes (pandas, pyarrow, duckdb,
-# scikit-learn, requests, pyyaml, pydantic) reviendront au premier import
-# reel, phase par phase : le detail figure dans docs/P0-RAPPORT.md.
-dependencies = ["numpy>=2.0,<3"]
+# statistiques repris) ; scipy est requis par la loi de Student
+# (`scipy.stats.t.cdf`) et par la loi non centrale de Student qui donne la
+# puissance exacte d'un test t : ces primitives etablies ne sont pas
+# reimplementees. Le reste du socle n'ecrit que de la bibliotheque standard.
+# Les candidates restantes (pandas, pyarrow, duckdb, scikit-learn, requests,
+# pyyaml, pydantic) reviendront au premier import reel, phase par phase : le
+# detail figure dans docs/P0-RAPPORT.md.
+dependencies = [
+    "numpy>=2.0,<3",
+    "scipy>=1.13,<2",
+]
 
 [project.scripts]
 # Point d'entree console provisoire : il ne fait qu'etatiser le paquet. Aucun code
@@ -30,9 +36,20 @@ dependencies = ["numpy>=2.0,<3"]
 torne = "torne:main"
 
 [dependency-groups]
+# Dependances de developpement : elles ne sont jamais importees par le paquet
+# installe, elles servent aux tests. `statsmodels` y figure pour une raison
+# precise et verifiee : il fournit un **oracle independant** a trois
+# implementations de TORNE (filtre de Kalman en tendance lineaire locale,
+# variance de long terme HAC, erreur-type CR1 groupe). Les etats du filtre de
+# statsmodels sont initialises de facon diffuse ; l'alignement avec
+# l'initialisation exacte de TORNE se fait en donnant a statsmodels le meme
+# etat anterieur (apres la premiere transition), et l'ecart mesure tombe sous
+# 1e-9. La comparaison par simple beginning de serie n'aurait pas ete
+# justifiable : elle depend de la convention d'initialisation.
 dev = [
     "pytest>=8.0",
     "ruff>=0.6",
+    "statsmodels>=0.14",
 ]
 
 [tool.uv]

@@ -13,11 +13,17 @@ Contenu :
 - `compare` : comparaison appariée d'une prévision à une référence (test de
   Diebold-Mariano apparié, variance HAC) et recherche d'une rupture de régime
   (CUSUM) ;
-- `athanor` : primitives statistiques reprises et réécrites d'`athanor@6dacc87`
-  (dépôt privé du propriétaire). L'en-tête de chaque module porte l'origine
-  exacte, le commit, le statut de la licence et la référence scientifique.
+- `regression`, `calibration`, `breaks`, `power` : primitives statistiques
+  (moindres carrés ordinaires et erreur-type CR1 groupé ; test de
+  Diebold-Mariano apparié et variance de long terme HAC ; rupture de moyenne
+  par CUSUM ; effet minimal détectable, taille d'échantillon et puissance),
+  reprises et réécrites d'un dépôt historique privé du propriétaire
+  (`athanor@6dacc87`). L'en-tête de chaque module porte l'origine exacte, le
+  commit, le statut de la licence, les dépendances tierces et la référence
+  scientifique.
 """
 
+from . import breaks, calibration, power, regression
 from .compare import (
     ComparisonReport,
     RegimeChangeReport,
@@ -31,7 +37,11 @@ __all__ = [
     "ComparisonReport",
     "LocalLinearTrendModel",
     "RegimeChangeReport",
+    "breaks",
+    "calibration",
     "compare_forecasts",
     "detect_regime_change",
     "ols_trend_forecast",
+    "power",
+    "regression",
 ]

@@ -94,8 +94,12 @@ def _filter(
     y: np.ndarray,
     *,
     settings: _Settings,
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
-    """Récursion du filtre de Kalman ; renvoie niveaux, pentes, prévisions, variances, vraisemblance."""
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, float]:
+    """Récursion du filtre de Kalman.
+
+    Renvoie niveaux, pentes, variances d'état filtrées, prévisions, variances
+    prédictives et vraisemblance.
+    """
     r = settings.measurement_variance
     transition = np.array([[1.0, 1.0], [0.0, 1.0]])
     observation = np.array([1.0, 0.0])
@@ -108,6 +112,7 @@ def _filter(
     n = int(y.size)
     levels = np.empty(n, dtype=np.float64)
     slopes = np.empty(n, dtype=np.float64)
+    state_variances = np.empty(n, dtype=np.float64)
     forecasts = np.empty(n, dtype=np.float64)
     forecast_variances = np.empty(n, dtype=np.float64)
     log_likelihood = 0.0
@@ -126,6 +131,11 @@ def _filter(
 
         levels[t] = float(state[0])
         slopes[t] = float(state[1])
+        # Variance **de l'état filtré** : c'est l'incertitude de l'état
+        # reconstruit, distincte de la variance de l'observation (qui porte en
+        # plus le bruit de mesure). C'est elle qui permet d'annoncer un
+        # intervalle sur l'état reconstruit.
+        state_variances[t] = float(covariance[0, 0])
 
         # Prévision à un pas : moyenne et variance prédictives de y_{t+1}.
         next_state = transition @ state
@@ -138,7 +148,7 @@ def _filter(
             + innovation * innovation / innovation_variance
         )
 
-    return levels, slopes, forecasts, forecast_variances, log_likelihood
+    return levels, slopes, state_variances, forecasts, forecast_variances, log_likelihood
 
 
 class LocalLinearTrendModel:
@@ -164,7 +174,7 @@ class LocalLinearTrendModel:
             "valeur peut-on prévoir pour l'observation suivante ?",
             method="Filtre de Kalman en espace d'état, tendance linéaire locale "
             "(Durbin & Koopman 2012, chap. 3 §3.2.1 et chap. 4 §4.3)",
-            natures=(ResultNature.ESTIMATED, ResultNature.PREDICTED),
+            natures=(ResultNature.RECONSTRUCTED, ResultNature.PREDICTED),
             assumptions=(
                 "Le système latent suit une tendance linéaire locale : le niveau avance de la pente "
                 "courante, la pente dérive aléatoirement.",
@@ -190,11 +200,14 @@ class LocalLinearTrendModel:
         `seed` est accepté pour respecter la signature du contrat et **ignoré** :
         le modèle est entièrement déterministe.
 
-        Le résultat est de nature `ESTIMATED` : le niveau et la pente filtrés
-        sont des estimations de l'état latent. `forecast_level` est la **moyenne
-        prédictive** de l'observation suivante, qualifiée par
-        `intervals["forecast_level"]` ; la nature `PREDICTED` est déclarée par
-        la spec, qui annonce les deux natures produites par ce modèle.
+        Le résultat est de nature `RECONSTRUCTED` : le niveau et la pente filtrés
+        **reconstruisent** l'état latent de la série observée, à partir des
+        observations et d'un modèle d'état — ils ne sont pas une observation,
+        qui a son propre objet et son propre statut de qualité. `forecast_level`
+        est la **moyenne prédictive** de l'observation suivante, qualifiée par
+        `intervals["forecast_level"]` ; la nature `PREDICTED` est déclarée par la
+        spec, qui annonce les deux natures produites par ce modèle, et chaque
+        sortie porte la sienne.
         """
         del seed  # le modèle ne tire aucun aléa : la graine n'a rien à piloter.
         series = inputs.series.get(_SERIES_NAME)
@@ -210,15 +223,24 @@ class LocalLinearTrendModel:
             raise ValueError(f"la série « {_SERIES_NAME} » contient une valeur non finie")
 
         settings = self._settings(params, default_initial_level=float(y[0]))
-        levels, slopes, forecasts, variances, log_likelihood = _filter(y, settings=settings)
+        levels, slopes, state_variances, forecasts, variances, log_likelihood = _filter(
+            y, settings=settings
+        )
 
         intervals = tuple(
             (forecast - _Z_95 * math.sqrt(variance), forecast + _Z_95 * math.sqrt(variance))
             for forecast, variance in zip(forecasts, variances, strict=True)
         )
+        # Intervalle de confiance sur l'**état reconstruit** : il porte la
+        # variance de l'état filtré, non celle de l'observation. Il ne contient
+        # donc pas l'observation elle-même — il contient l'état latent.
+        state_intervals = tuple(
+            (level - _Z_95 * math.sqrt(variance), level + _Z_95 * math.sqrt(variance))
+            for level, variance in zip(levels, state_variances, strict=True)
+        )
         return ModelResult(
             spec=self.spec,
-            nature=ResultNature.ESTIMATED,
+            nature=ResultNature.RECONSTRUCTED,
             parameters=params,
             produced_at=datetime.now(UTC),
             outputs={
@@ -226,7 +248,15 @@ class LocalLinearTrendModel:
                 "slope": tuple(float(value) for value in slopes),
                 "forecast_level": tuple(float(value) for value in forecasts),
             },
-            intervals={"forecast_level": intervals},
+            output_natures={
+                "level": ResultNature.RECONSTRUCTED,
+                "slope": ResultNature.RECONSTRUCTED,
+                "forecast_level": ResultNature.PREDICTED,
+            },
+            intervals={
+                "forecast_level": intervals,
+                "level": state_intervals,
+            },
             diagnostics={
                 "n": int(y.size),
                 "log_likelihood": float(log_likelihood),

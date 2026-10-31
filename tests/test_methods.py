@@ -7,6 +7,9 @@ Chaque résultat est confronté à une **référence indépendante** :
   (aucune matrice 2x2 n'y apparaît) ;
 - un cas à deux observations dont toutes les valeurs sont calculées **à la
   main** et commentées ;
+- l'implémentation `UnobservedComponents` de **`statsmodels`** (tendance
+  linéaire locale), qui est une autre écriture du même filtre — c'est l'oracle
+  le plus indépendant qui soit installable ;
 - des propriétés statistiques vérifiées sur séries simulées à graine fixe
   (convergence, réduction de variance, calibration de l'intervalle prédictif) ;
 - le déterminisme de l'exécution (la graine est ignorée par construction).
@@ -19,6 +22,7 @@ from statistics import NormalDist
 
 import numpy as np
 import pytest
+from statsmodels.tsa.statespace import structural
 
 from torne.contracts.model import ModelInputs, ModelParameters, ResultNature
 from torne.methods.compare import (
@@ -100,7 +104,7 @@ def test_le_modele_declare_son_identite_et_ses_hypotheses():
     spec = MODELE.spec
     assert spec.model_id == "torne.methods.kalman.local_linear_trend"
     assert spec.version == "0.1.0"
-    assert ResultNature.ESTIMATED in spec.natures
+    assert ResultNature.RECONSTRUCTED in spec.natures
     assert ResultNature.PREDICTED in spec.natures
     assert spec.assumptions
     assert spec.domain_of_validity
@@ -111,15 +115,31 @@ def test_le_modele_declare_son_identite_et_ses_hypotheses():
     )
 
 
+def test_le_resultat_reconstruit_un_etat_et_prevoit_une_observation():
+    """La nature se déclare par sortie : l'état est reconstruit, la prévision est prévue.
+
+    Un filtre d'état restitue un état reconstruit **et** émet une prévision :
+    exposer la prévision sous la nature de l'état reconstruit serait faux, donc
+    chaque sortie porte la sienne.
+    """
+    resultat = _executer(SERIE_REFERENCE)
+    assert resultat.nature is ResultNature.RECONSTRUCTED
+    assert resultat.output_nature("level") is ResultNature.RECONSTRUCTED
+    assert resultat.output_nature("slope") is ResultNature.RECONSTRUCTED
+    assert resultat.output_nature("forecast_level") is ResultNature.PREDICTED
+    assert set(resultat.output_natures) == set(resultat.outputs)
+
+
 def test_le_resultat_expose_les_sorties_nommees():
     """Les noms de sorties sont figés : niveau, pente, prévision, intervalle, diagnostics."""
     resultat = _executer(SERIE_REFERENCE)
     assert set(resultat.outputs) == {"level", "slope", "forecast_level"}
-    assert set(resultat.intervals) == {"forecast_level"}
+    assert set(resultat.intervals) == {"forecast_level", "level"}
     assert len(resultat.outputs["level"]) == len(SERIE_REFERENCE)
     assert len(resultat.outputs["slope"]) == len(SERIE_REFERENCE)
     assert len(resultat.outputs["forecast_level"]) == len(SERIE_REFERENCE)
     assert len(resultat.intervals["forecast_level"]) == len(SERIE_REFERENCE)
+    assert len(resultat.intervals["level"]) == len(SERIE_REFERENCE)
     assert set(resultat.diagnostics) == {"n", "log_likelihood", "initial_level", "initial_slope"}
     assert resultat.diagnostics["n"] == len(SERIE_REFERENCE)
     assert resultat.diagnostics["initial_level"] == SERIE_REFERENCE[0]
@@ -149,6 +169,60 @@ def test_la_recursion_de_reference_reproduit_le_filtre():
     demi_largeurs = [(haut - bas) / 2.0 for bas, haut in resultat.intervals["forecast_level"]]
     variances_deduites = [(demi / Z95) ** 2 for demi in demi_largeurs]
     assert variances_deduites == pytest.approx(variances, abs=1e-10)
+
+
+def test_le_filtre_coincide_avec_statsmodels_en_tendance_lineaire_locale():
+    """Oracle indépendant : `statsmodels` (`UnobservedComponents`, tendance linéaire locale).
+
+    Les deux implémentations décrivent le **même** modèle : niveau qui avance de
+    la pente, pente qui dérive, bruit de mesure gaussien de variance connue,
+    innovations de niveau et de pente indépendantes.
+
+    L'alignement porte sur l'initialisation, qui est le seul point de
+    divergence possible. `statsmodels` initialise l'état de façon diffuse par
+    défaut ; TORNE l'initialise exactement (état centré sur la première
+    observation, covariance `diag(R, R)`) et applique la transition **avant**
+    la première observation. On donne donc à `statsmodels` l'état antérieur
+    d'après transition — c'est-à-dire exactement l'état et la covariance dont
+    le filtre de TORNE part — et la comparaison devient une égalité, sans
+    convention résiduelle ni début de série à justifier.
+
+    L'alignement par simple début de série aurait été moins bon : l'écart
+    mesuré entre les deux écritures y dépend de la convention
+    d'initialisation (6,6e-2 à t = 4 sur la série ci-dessous).
+    """
+    rng = np.random.default_rng(5)
+    niveau, pente = 10.0, 0.4
+    valeurs = []
+    for _ in range(60):
+        valeurs.append(niveau + rng.normal(0.0, 1.0))
+        niveau = niveau + pente + rng.normal(0.0, 0.3)
+        pente = pente + rng.normal(0.0, 0.05)
+    serie = tuple(float(v) for v in valeurs)
+
+    resultat = _executer(serie)
+
+    r = PARAMETRES["measurement_variance"]
+    q_niveau = PARAMETRES["level_process_variance"]
+    q_pente = PARAMETRES["slope_process_variance"]
+
+    # État et covariance antérieurs du filtre de TORNE, d'après transition.
+    transition = np.array([[1.0, 1.0], [0.0, 1.0]])
+    covariance = np.diag([r, r])
+    etat = transition @ np.array([serie[0], 0.0])
+    covariance = transition @ covariance @ transition.T + np.diag([q_niveau, q_pente])
+
+    oracle = structural.UnobservedComponents(np.asarray(serie), level="local linear trend")
+    oracle.initialization.set(None, "known", constant=etat, stationary_cov=covariance)
+    filtre = oracle.filter(np.array([r, q_niveau, q_pente]))
+    filtre_statsmodels = np.asarray(filtre.filter_results.filtered_state)
+    etats_predits = np.asarray(filtre.filter_results.predicted_state)
+
+    assert resultat.outputs["level"] == pytest.approx(filtre_statsmodels[0], abs=1e-8)
+    assert resultat.outputs["slope"] == pytest.approx(filtre_statsmodels[1], abs=1e-8)
+    # La prévision de y_{t+1} faite en t est l'état prédit par statsmodels en
+    # t+1 ; la dernière prévision porte donc sur l'observation d'après la série.
+    assert resultat.outputs["forecast_level"] == pytest.approx(etats_predits[0, 1:], abs=1e-8)
 
 
 def test_cas_a_main_deux_observations():
@@ -304,6 +378,54 @@ def test_intervalle_predictif_couvre_environ_95_pour_cent():
         touches = [
             1.0 if bas <= serie[t + 1] <= haut else 0.0
             for t, (bas, haut) in enumerate(intervalles[:-1])
+        ]
+        couvertures.append(float(np.mean(touches)))
+    couverture = float(np.mean(couvertures))
+    assert 0.93 <= couverture <= 0.97
+
+
+def test_intervalle_etat_reconstruit_couvre_l_etat_latent_environ_95_pour_cent():
+    """Calibration de l'intervalle annoncé sur **l'état reconstruit**.
+
+    C'est l'incertitude de l'état filtré, non celle de l'observation : elle
+    doit couvrir l'**état latent**, pas l'observation bruitée. La simulation
+    est celle du test précédent — l'état initial est tiré de la loi
+    antérieure que le filtre suppose, donc le filtre est le filtre de Bayes
+    exact du modèle simulé, et l'intervalle doit couvrir l'état latent.
+
+    Tolérance de +/- 2 points : même justification que ci-dessus (l'écart-type
+    de la couverture moyenne sur 200 répétitions est d'environ 0,0008, soit
+    plus de vingt-cinq écarts-types de la marge).
+    """
+    graine = 20261031
+    rng = np.random.default_rng(graine)
+    r = 1.0
+    q_niveau = 0.05
+    q_pente = 0.01
+    n = 200
+    couvertures: list[float] = []
+    for _ in range(200):
+        niveau = float(rng.normal(0.0, math.sqrt(r)))
+        pente = float(rng.normal(0.0, math.sqrt(r)))
+        serie: list[float] = []
+        niveaux_vrais: list[float] = []
+        for _ in range(n):
+            serie.append(niveau + float(rng.normal(0.0, math.sqrt(r))))
+            niveaux_vrais.append(niveau)
+            niveau = niveau + pente + float(rng.normal(0.0, math.sqrt(q_niveau)))
+            pente = pente + float(rng.normal(0.0, math.sqrt(q_pente)))
+        resultat = _executer(
+            serie,
+            measurement_variance=r,
+            level_process_variance=q_niveau,
+            slope_process_variance=q_pente,
+            initial_level=0.0,
+            initial_slope=0.0,
+        )
+        intervalles = resultat.intervals["level"]
+        touches = [
+            1.0 if bas <= vrai <= haut else 0.0
+            for (bas, haut), vrai in zip(intervalles, niveaux_vrais, strict=True)
         ]
         couvertures.append(float(np.mean(touches)))
     couverture = float(np.mean(couvertures))

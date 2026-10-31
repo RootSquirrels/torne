@@ -5,14 +5,19 @@ valeurs attendues, avec le fichier et la ligne d'origine cités en commentaire.
 Le but n'est pas de re-tester une mathematics connue, mais de prouver que le
 portage n'a rien changé au comportement.
 
-Le seul écart assumé est documenté dans l'en-tête de
-`torne.methods.athanor.calibration` : Athanor appelle `scipy.special.stdtr` pour
-la loi de Student, TORNE n'a pas scipy et réimplémente cette loi par la bêta
-incomplète regularly (la voie déjà vérifiée par Athanor lui-même dans
-`athanor/tests/special_reference.py`). Les valeurs de référence du test
+L'écart qui avait été assumé — Athanor appelle `scipy.special.stdtr` pour la loi
+de Student, TORNE la réimplémentait par la bêta incomplète régulière — a
+disparu : `torne.methods.calibration` appelle désormais `scipy.stats.t.cdf`, et
+`scipy` est une dépendance de runtime. Les valeurs de référence du test
 `athanor/tests/test_calibration.py:91-99` (jeu `sleep` de R, test t apparié
 publié) et `:161-182` (formes fermées et quantiles de table) sont donc
-reproduites ici par cette voie, sans scipy.
+reproduites ici par cette voie, avec une précision supérieure.
+
+Les références indépendantes ajoutees à la suite de l'audit.compare chaque
+primitive à une bibliothèque établie : `scipy.stats` pour la loi de Student, la
+loi de Kolmogorov et la régression linéaire, `statsmodels` pour la variance de
+long terme HAC et l'erreur-type CR1 groupée. `statsmodels` est une dépendance
+de développement seule : le paquet installé n'en dépend pas.
 """
 
 from __future__ import annotations
@@ -21,22 +26,25 @@ import math
 
 import numpy as np
 import pytest
+import statsmodels.api as sm
+from scipy import stats
+from statsmodels.stats.sandwich_covariance import cov_hac, weights_bartlett
 
-from torne.methods.athanor.breaks import bartlett_lags, cusum_break_test, kolmogorov_sf
-from torne.methods.athanor.calibration import (
+from torne.methods.breaks import bartlett_lags, cusum_break_test, kolmogorov_sf
+from torne.methods.calibration import (
     Alternative,
     diebold_mariano,
     newey_west_variance,
     student_t_cdf,
 )
-from torne.methods.athanor.power import (
+from torne.methods.power import (
     mde_from_se,
     minimum_detectable_effect,
     power_at,
     required_units,
     z_alpha,
 )
-from torne.methods.athanor.regression import ols
+from torne.methods.regression import ols
 
 # =====================================================================================================================
 # OLS — `athanor/src/athanor/stats/regression.py`
@@ -296,14 +304,49 @@ def test_dm_avec_des_differences_de_pertes_constantes_donne_une_statistique_infi
     assert resultat.p_value == 0.0
 
 
+def test_dm_sans_retard_est_exactement_le_test_t_apparie_de_scipy():
+    """Référence indépendante : le test apparié de `scipy.stats.ttest_rel`.
+
+    À `lag = 0`, la correction de Harvey, Leybourne & Newbold (1997) réduit la
+    statistique du test de Diebold-Mariano à la statistique t appariée, et la
+    p-valeur à celle que donne `scipy.stats.ttest_rel`. La correspondance est
+    exacte, au-delà de la simple proximité.
+    """
+    rng = np.random.default_rng(17)
+    for n in (10, 30, 200):
+        d = rng.normal(0.4, 1.0, size=n)
+        resultat = diebold_mariano(d, np.zeros(n), alternative=Alternative.TWO_SIDED, lag=0)
+        statistique, p_valeur = stats.ttest_rel(d, np.zeros(n))
+        assert resultat.statistic == pytest.approx(statistique, abs=1e-12)
+        assert resultat.p_value == pytest.approx(p_valeur, abs=1e-12)
+        assert resultat.df == n - 1
+
+
+def test_le_facteur_de_correction_de_petit_echantillon_est_publie():
+    """Le facteur de Harvey, Leybourne & Newbold (1997) fait partie du résultat.
+
+    Il est nécessaire pour que la puissance annoncée soit exprimée dans la
+    même échelle que la statistique du test ; le module `power` s'en sert.
+    """
+    resultat = diebold_mariano(
+        np.arange(20.0), np.zeros(20), alternative=Alternative.TWO_SIDED, lag=0
+    )
+    assert resultat.small_sample_factor == pytest.approx(math.sqrt(19 / 20), rel=1e-12)
+    sans_correction = diebold_mariano(
+        np.arange(20.0), np.zeros(20), alternative=Alternative.TWO_SIDED, small_sample=False
+    )
+    assert sans_correction.small_sample_factor == 1.0
+    assert sans_correction.df is None
+
+
 @pytest.mark.parametrize("t", [-7.0, -1.5, -0.3, 0.0, 0.4, 2.0, 12.0])
 def test_loi_de_student_formes_fermees(t: float):
     """Cas de référence `athanor/tests/test_calibration.py:161-165`.
 
     df = 1 : Cauchy, F(t) = 1/2 + atan(t)/pi ; df = 2 : F(t) = 1/2 + t / (2 racine(2 + t²)).
     """
-    assert student_t_cdf(t, 1) == pytest.approx(0.5 + math.atan(t) / math.pi, abs=1e-14)
-    assert student_t_cdf(t, 2) == pytest.approx(0.5 + t / (2.0 * math.sqrt(2.0 + t * t)), abs=1e-14)
+    assert student_t_cdf(t, 1) == pytest.approx(0.5 + math.atan(t) / math.pi, abs=1e-15)
+    assert student_t_cdf(t, 2) == pytest.approx(0.5 + t / (2.0 * math.sqrt(2.0 + t * t)), abs=1e-15)
 
 
 def test_loi_de_student_quantiles_de_table():
@@ -311,6 +354,9 @@ def test_loi_de_student_quantiles_de_table():
 
     Quantiles des tables usuelles (Abramowitz & Stegun, table 26.10) :
     t_{0,975; 10} = 2,228139, t_{0,995; 30} = 2,749996.
+
+    L'écart résiduel de l'ordre de 1e-8 vient de l'arrondi à six décimales des
+    quantiles publiés, non de l'implémentation.
     """
     assert student_t_cdf(2.228139, 10) == pytest.approx(0.975, abs=2e-8)
     assert student_t_cdf(-2.749996, 30) == pytest.approx(0.005, abs=2e-8)
@@ -460,3 +506,213 @@ def test_puissance_refuse_les_parametres_invalides():
     for appel, motif in cas:
         with pytest.raises(ValueError, match=motif):
             appel()
+
+
+# =====================================================================================================================
+# Références indépendantes — audit de la fondation scientifique
+#
+# Chaque primitive conservée est comparée à une bibliothèque établie. L'audit
+# a conduit à une seule substitution : la loi de Student, réimplémentée en
+# bibliothèque standard, est désormais celle de SciPy. Les autres primitives
+# sont conservées telles quelles, leur comparaison mesurée avec les
+# bibliothèques de référence ne montrant aucun écart significatif.
+# =====================================================================================================================
+
+
+def test_loi_de_student_est_celle_de_scipy():
+    """Référence indépendante : `scipy.stats.t.cdf`.
+
+    La grille couvre les degrés de liberté dégénérés (Cauchy, df = 2), les
+    usuels et la limite normale (df infini). L'écart est nul à la précision
+    machine : la primitive n'est pas réimplémentée.
+    """
+    for t in (-50.0, -7.0, -1.5, -0.3, 0.0, 0.4, 2.0, 12.0, 50.0):
+        for df in (1, 2, 3, 10, 30, 1000, 1e7, math.inf):
+            assert student_t_cdf(t, df) == pytest.approx(float(stats.t.cdf(t, df)), abs=1e-15)
+
+
+def test_loi_de_kolmogorov_est_celle_de_scipy():
+    """Référence indépendante : `scipy.stats.kstwobign.sf` (loi de Kolmogorov)."""
+    for x in np.linspace(0.05, 5.0, 200):
+        assert kolmogorov_sf(float(x)) == pytest.approx(float(stats.kstwobign.sf(x)), abs=1e-14)
+
+
+def test_ols_est_celle_de_scipy():
+    """Référence indépendante : `scipy.stats.linregress`.
+
+    Pente, ordonnée à l'origine et erreur-type sont identiques à la précision
+    machine : les moindres carrés ordinaires de TORNE n'apportent rien de
+    moins juste que la bibliothèque de référence, et n'ont pas à la remplacer.
+    """
+    rng = np.random.default_rng(7)
+    for _ in range(50):
+        n = int(rng.integers(10, 60))
+        x = rng.normal(size=n)
+        y = 2.0 + 0.7 * x + rng.normal(size=n)
+        resultat = ols(x, y)
+        reference = stats.linregress(x, y)
+        assert resultat.slope == pytest.approx(reference.slope, abs=1e-12)
+        assert resultat.intercept == pytest.approx(reference.intercept, abs=1e-12)
+        assert resultat.slope_se == pytest.approx(reference.stderr, abs=1e-12)
+
+
+def test_variance_hac_est_celle_de_statsmodels():
+    """Référence indépendante : `statsmodels.stats.sandwich_covariance.cov_hac`.
+
+    Sur une régression sur constante, `cov_hac` renvoie la variance de la
+    moyenne, soit la variance de long terme divisée par `n` : c'est la
+    grandeur que le test de Diebold-Mariano utilise par observation.
+    """
+    rng = np.random.default_rng(11)
+    for _ in range(50):
+        n = int(rng.integers(20, 400))
+        bruit = rng.normal(size=n)
+        d = 0.3 + np.convolve(bruit, np.ones(4), mode="same") + rng.normal(size=n)
+        lag = int(rng.integers(0, 12))
+        modele = sm.OLS(d, np.ones((n, 1))).fit()
+        reference = float(
+            cov_hac(modele, nlags=lag, weights_func=weights_bartlett, use_correction=False)[0, 0]
+        )
+        assert newey_west_variance(d, lag) == pytest.approx(reference * n, rel=1e-12)
+
+
+def test_erreur_type_cr1_est_celle_de_statsmodels():
+    """Référence indépendante : `statsmodels` en covariance groupée (CR1).
+
+    La correction CR1 de `statsmodels` — `G/(G-1) * (N-1)/(N-K)` — est celle
+    que le module applique ; les deux erreurs-types coïncident à la précision
+    machine.
+    """
+    rng = np.random.default_rng(3)
+    for _ in range(30):
+        n = int(rng.integers(40, 300))
+        g = int(rng.integers(3, 15))
+        grappes = np.repeat(np.arange(g), int(np.ceil(n / g)))[:n]
+        n = grappes.size
+        x = rng.normal(size=n)
+        y = 2.0 + 0.6 * x + rng.normal(size=n)
+        reference = sm.OLS(y, sm.add_constant(x)).fit(
+            cov_type="cluster",
+            cov_kwds={"groups": grappes, "use_correction": True, "df_correction": True},
+        )
+        assert ols(x, y, clusters=grappes).slope_se == pytest.approx(
+            float(reference.bse[1]), rel=1e-12
+        )
+
+
+# =====================================================================================================================
+# Cohérence de la puissance avec le test exécuté
+# =====================================================================================================================
+
+
+def test_la_puissance_annoncee_a_le_mde_vaut_la_puissance_cible():
+    """La puissance annoncée est celle du test dont on annonce l'effet minimal.
+
+    L'effet minimal détectable est défini comme l'effet qui donne exactement
+    la puissance cible : la puissance doit donc, à cet effet, valoir la cible.
+    La route Student le donne par construction ; la route normale le donne à
+    l'approximation usuelle près (elle néglige la queue opposée).
+    """
+    for n in (12, 40, 200):
+        for deff in (1.0, 2.5):
+            mde_student = minimum_detectable_effect(
+                n, 1.0, design_effect=deff, alpha=0.05, power=0.80, df=n - 1
+            )
+            puissance_student = power_at(
+                n, mde_student, 1.0, design_effect=deff, alpha=0.05, df=n - 1
+            )
+            assert puissance_student == pytest.approx(0.80, abs=1e-9)
+
+            mde_normal = minimum_detectable_effect(
+                n, 1.0, design_effect=deff, alpha=0.05, power=0.80
+            )
+            puissance_normal = power_at(n, mde_normal, 1.0, design_effect=deff, alpha=0.05)
+            assert puissance_normal == pytest.approx(0.80, abs=1e-5)
+
+
+def test_la_route_student_tend_vers_l_approximation_normale():
+    """Les deux routes décrivent le même test quand les degrés de liberté divergent.
+
+    La route Student remplace la loi normale par la loi de Student : quand les
+    degrés de liberté tendent vers l'infini, les deux routes coïncident — à
+    l'approximation propre à la route normale près (qui néglige la queue
+    opposée en bilatéral).
+    """
+    for n in (40, 500):
+        mde_normal = minimum_detectable_effect(n, 1.0, alpha=0.05, power=0.80)
+        mde_student = minimum_detectable_effect(n, 1.0, alpha=0.05, power=0.80, df=10**7)
+        assert mde_student == pytest.approx(mde_normal, rel=1e-5)
+        puissance_normal = power_at(n, 0.3, 1.0, alpha=0.05)
+        puissance_student = power_at(n, 0.3, 1.0, alpha=0.05, df=10**7)
+        assert puissance_student == pytest.approx(puissance_normal, abs=1e-6)
+
+
+def test_l_ecart_entre_les_deux_routes_decroit_avec_l_effectif():
+    """L'incohérence corrigée est réelle, et sa taille est mesurable.
+
+    L'approximation normale annonçait un effet minimal détectable plus petit
+    que celui du test de Student effectivement exécuté : elle était donc
+    optimiste, de 16,7 % à n = 8 et de 5,4 % à n = 20. L'écart se referme quand
+    l'effectif grandit, ce qui explique qu'il soit resté inaperçu.
+    """
+    ecarts = {
+        n: minimum_detectable_effect(n, 1.0, alpha=0.05, power=0.80, df=n - 1)
+        / minimum_detectable_effect(n, 1.0, alpha=0.05, power=0.80)
+        - 1.0
+        for n in (8, 20, 120, 500)
+    }
+    assert ecarts[8] == pytest.approx(0.167, abs=0.01)
+    assert ecarts[20] == pytest.approx(0.054, abs=0.01)
+    assert ecarts[120] < 0.01
+    assert ecarts[500] < 0.005
+    assert all(ecarts[n] > ecarts[m] for n, m in ((8, 20), (20, 120), (120, 500)))
+
+
+def test_la_puissance_annoncee_encadre_la_puissance_reelle_du_test_de_diebold_mariano():
+    """Vérification par simulation du lien entre la puissance annoncée et le test.
+
+    Le test de Diebold-Mariano de TORNE est un test de Student à `n - 1` degrés
+    de liberté, assorti de la correction de Harvey, Leybourne & Newbold (1997).
+    La puissance annoncée doit donc décrire ce test. La simulation le confirme
+    par un encadrement mesuré : la puissance annoncée sous la loi de Student
+    est **conservatrice** (inférieure au taux de rejet empirique), tandis que
+    celle de l'approximation normale — l'ancienne route — était **optimiste**
+    (supérieure au taux de rejet empirique). Elle décrivait un test plus
+    puissant que celui exécuté.
+
+    La loi réelle du test est intermédiaire entre les deux : la variance de
+    long terme y est estimée sur l'échantillon, ce qui élargit la loi de la
+    statistique par rapport aux deux approximations.
+    """
+    rng = np.random.default_rng(20261031)
+    n, mu, seuil = 30, 0.30, 0.05
+    lag = bartlett_lags(n)
+    repetitions = 3000
+    rejets = 0
+    for _ in range(repetitions):
+        d = rng.normal(mu, 1.0, size=n)
+        resultat = diebold_mariano(d, np.zeros(n), alternative=Alternative.TWO_SIDED, lag=lag)
+        if resultat.p_value < seuil:
+            rejets += 1
+    empirique = rejets / repetitions
+
+    facteur = diebold_mariano(
+        np.full(n, mu), np.zeros(n), alternative=Alternative.TWO_SIDED, lag=lag
+    ).small_sample_factor
+    annoncee_student = power_at(
+        n,
+        mu * facteur,
+        1.0,
+        design_effect=1.0,
+        alpha=seuil,
+        alternative=Alternative.TWO_SIDED,
+        df=n - 1,
+    )
+    annoncee_normale = power_at(
+        n, mu, 1.0, design_effect=1.0, alpha=seuil, alternative=Alternative.TWO_SIDED
+    )
+
+    assert annoncee_student < empirique < annoncee_normale
+    # L'erreur de Monte-Carlo (≈ 0,9 %) reste inférieure aux deux écarts mesurés.
+    assert empirique - annoncee_student > 0.02
+    assert annoncee_normale - empirique > 0.02

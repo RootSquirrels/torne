@@ -24,6 +24,7 @@ from datetime import UTC, datetime, timedelta
 
 import numpy as np
 
+from torne.contracts.derived import DerivedVariable, Uncertainty
 from torne.contracts.knowledge import ProductStatus
 from torne.contracts.model import ModelInputs, ModelParameters
 from torne.contracts.observation import Observation, RawEvidence, Source
@@ -133,7 +134,7 @@ def main() -> None:
     )
 
     _titre("2.", "Exécution du modèle")
-    issue = execute(MODELE, entree, PARAMETRES, now=INSTANT_PRODUIT)
+    issue = execute(MODELE, entree, PARAMETRES)
     print(f"modèle       : {issue.config.model_id} v{issue.config.model_version}")
     print(f"question     : {MODELE.spec.question}")
     print(f"méthode      : {MODELE.spec.method}")
@@ -182,16 +183,35 @@ def main() -> None:
     print(f"paires      : {comparaison.n_pairs}")
     print(f"conclusion  : {comparaison.conclusion}")
 
-    _titre("5.", "Enregistrement et produit de connaissance")
+    _titre("5.", "Grandeur dérivée, enregistrement et produit de connaissance")
+    etat = DerivedVariable.from_result(
+        result=issue.result,
+        output="level",
+        variable_id="etat-niveau-0001",
+        quantity="niveau",
+        unit="u",
+        inputs=observations,
+        uncertainty=Uncertainty.from_interval(
+            "intervalle de confiance à 95 % sur l'état filtré",
+            issue.result.intervals["level"][-1],
+        ),
+        valid_time=observations[-1].temporal.valid_time,
+    )
+    print(f"grandeur dérivée : {etat.variable_id}")
+    print(f"nature           : {etat.nature} — l'état latent reconstruit, pas l'observation")
+    print(f"calculée le      : {etat.temporal.known_at:%Y-%m-%d %H:%M:%S} (instant du calcul)")
+    print(f"incertitude      : {etat.uncertainty.form.value} — {etat.uncertainty.statement}")
+
     enregistrement = build_record(
         issue,
         record_id="enregistrement-0001",
         input_observations=observations,
         evidence=[preuve],
         sources=[SOURCE],
-        produced_at=INSTANT_PRODUIT,
+        produced_at=issue.result.produced_at,
         evaluation=rapport.as_dict(),
         inputs=entree,
+        derived_variables=[etat],
     )
     lignee = verify_lineage(enregistrement)
     print(f"enregistrement : {enregistrement.record_id}")

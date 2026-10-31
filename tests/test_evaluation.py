@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import pytest
@@ -39,6 +40,28 @@ def serie_anti_fuite(longueur: int) -> tuple[float, ...]:
 def prevoir(train: tuple[float, ...]) -> tuple[float, ...]:
     """Prédicteur de test : reconduit la dernière valeur du bloc d'entraînement."""
     return (train[-1],) * 2
+
+
+def prevoir_pas(pas: int) -> Callable[[tuple[float, ...]], tuple[float, ...]]:
+    """Prédicteur qui renvoie un nombre de valeurs égal au pas du pli.
+
+    Les plis de pas différents n'exigent pas le même nombre de prévisions :
+    le prédicteur doit s'ajuster, sinon l'évaluation le refuse.
+    """
+
+    def predicteur(train: tuple[float, ...]) -> tuple[float, ...]:
+        return (0.0,) * pas
+
+    return predicteur
+
+
+def pertes_autocorrelees(longueur: int) -> tuple[float, ...]:
+    """Pertes autocorrélées, construites sans hasard.
+
+    La série est une sinusoïde lente : les pertes consécutives sont très
+    corrélées, comme le sont les erreurs de marche avant.
+    """
+    return tuple(math.sin(0.2 * index) for index in range(longueur))
 
 
 # --- Découpages -------------------------------------------------------------
@@ -488,3 +511,111 @@ def test_le_rapport_admet_une_vue_serialisable():
     assert vue["baseline_metrics"]["persistence"]["rmse"]["n_used"] == 6
     # la vue est ce qu'un enregistreur écrit : elle est JSON-sérialisable
     assert json.loads(json.dumps(vue))["metrics"]["bias"]["n_used"] == 6
+
+
+# --- Incertitude des métriques ----------------------------------------------
+
+
+def test_chaque_metrique_porte_son_intervalle_de_confiance():
+    """Une métrique n'est plus un nombre nu : elle porte son incertitude."""
+    rapport = rmse((1.0, 2.0, 3.0, 4.0), (1.5, 2.0, 3.5, 3.0))
+
+    assert rapport.uncertainty is not None
+    assert rapport.uncertainty.form.value == "interval"
+    assert rapport.uncertainty.interval is not None
+    bas, haut = rapport.uncertainty.interval
+    assert bas <= rapport.value <= haut
+    assert rapport.n_effective is not None
+    assert rapport.n_effective <= rapport.n_used
+    assert "taille effective" in rapport.uncertainty.statement
+
+
+def test_une_metrique_sans_deux_points_n_a_pas_d_intervalle():
+    """Moins de deux points : l'incertitude est absente, jamais inventée."""
+    rapport = rmse((1.0,), (2.0,))
+
+    assert rapport.uncertainty is None
+    assert rapport.n_effective is None
+    assert rapport.n_used == 1
+
+
+def test_la_dependance_temporelle_elargit_l_intervalle_et_reduit_la_taille_effective():
+    """Des pertes autocorrélées : l'intervalle IID serait trop serré.
+
+    L'intervalle HAC est comparé à l'intervalle IID que l'on peut recalculer à
+    la main : le premier doit être plus large, et la taille effective doit
+    tomber sous le nombre de points.
+    """
+    pertes = pertes_autocorrelees(60)
+    rapport = bias(pertes, (0.0,) * len(pertes))
+
+    assert rapport.uncertainty is not None
+    assert rapport.uncertainty.interval is not None
+    bas, haut = rapport.uncertainty.interval
+
+    n = len(pertes)
+    moyenne = math.fsum(pertes) / n
+    variance_iid = math.fsum((perte - moyenne) ** 2 for perte in pertes) / n
+    demi_largeur_iid = 1.959963984540054 * math.sqrt(variance_iid / n)
+
+    assert (haut - bas) / 2 > demi_largeur_iid
+    assert rapport.n_effective is not None
+    assert rapport.n_effective < rapport.n_used
+
+
+def test_une_valeur_non_finite_est_refusee_par_la_metrique():
+    """Un `NaN` n'est pas une mesure : la métrique le refuse au lieu de rendre `NaN`."""
+    with pytest.raises(ValueError, match="n'est pas finie"):
+        rmse((1.0, math.nan), (1.0, 2.0))
+
+
+def test_un_intervalle_de_couverture_non_fini_est_refuse():
+    """Une borne infinie n'est pas une borne : elle est refusée."""
+    with pytest.raises(ValueError, match="bornes finies"):
+        coverage((1.0, 2.0), ((0.0, math.inf), (0.0, 3.0)))
+
+
+# --- Reproductibilité du rapport --------------------------------------------
+
+
+def test_le_rapport_permet_de_rejouer_les_plis():
+    """Le rapport retient le pas des plis : la décomposition est rejouable."""
+    valeurs = serie_anti_fuite(10)
+    rapport = evaluate_walk_forward(valeurs, prevoir, initial_size=4, step=2, now=INSTANT)
+
+    assert rapport.step == 2
+    plis = walk_forward(valeurs, initial_size=rapport.split.train_end, step=rapport.step)
+    assert [pli.test_end for pli in plis] == [6, 8, 10]
+    assert rapport.split.test == tuple(valeurs[4:10])
+
+
+def test_deux_evaluations_de_meme_periode_mais_de_plis_differents_ne_sont_pas_confondues():
+    """Série constante : mêmes métriques, mêmes références, plis différents.
+
+    Sans le pas des plis dans le rapport, les deux évaluations seraient
+    indiscernables — et le rapport dirait avoir évalué la même chose.
+    """
+    valeurs = (5.0,) * 10
+    rapport_a = evaluate_walk_forward(valeurs, prevoir_pas(2), initial_size=4, step=2, now=INSTANT)
+    rapport_b = evaluate_walk_forward(valeurs, prevoir_pas(1), initial_size=4, step=1, now=INSTANT)
+
+    assert rapport_a.metrics == rapport_b.metrics
+    assert rapport_a.baseline_metrics == rapport_b.baseline_metrics
+    assert rapport_a.split == rapport_b.split
+    assert rapport_a.step == 2
+    assert rapport_b.step == 1
+    assert rapport_a != rapport_b
+
+
+def test_les_points_de_la_serie_hors_de_tout_pli_sont_comptes():
+    """Un point que la découpe n'atteint pas n'est pas perdu en silence."""
+    valeurs = serie_anti_fuite(11)
+    rapport = evaluate_walk_forward(valeurs, prevoir_pas(3), initial_size=4, step=3, now=INSTANT)
+
+    assert rapport.split.test_end == 10
+    assert rapport.n_excluded == 1
+
+    complet = evaluate_walk_forward(
+        serie_anti_fuite(10), prevoir_pas(3), initial_size=4, step=3, now=INSTANT
+    )
+    assert complet.n_excluded == 0

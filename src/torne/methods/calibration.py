@@ -12,16 +12,19 @@ Origine
 - Code tiers      : aucun en-tête de licence tierce dans le fichier d'origine.
                    Le fichier d'origine appelait `scipy.special.stdtr` pour la
                    loi de Student : c'est un **appel de bibliothèque**, non du
-                   code repris, et TORNE n'a pas scipy comme dépendance runtime
-                   (`pyproject.toml` : `numpy` seul). La loi de Student est donc
-                   réimplémentée ici en bibliothèque standard, par la voie de la
-                   bêta incomplète régulière (fraction continue de Lentz
-                   modifiée, Numerical Recipes §6.4) — exactement l'oracle pur
-                   d'Athanor lui-même, `athanor/tests/special_reference.py`,
-                   que le projet Athanor a conservé et vérifié contre
-                   `scipy.special.stdtr` à 5e-12 sur une grille
-                   (`athanor/tests/test_calibration.py:176-182`).
-- Dépendances    : `numpy` et la bibliothèque standard uniquement.
+                   code repris. TORNE appelle aujourd'hui `scipy.stats.t.cdf`
+                   pour la même primitive, et `scipy` est une dépendance de
+                   runtime (`pyproject.toml`). La réimplémentation en
+                   bibliothèque standard qui avait été substituée à l'appel
+                   (bêta incomplète régulière par fraction continue de Lentz,
+                   Numerical Recipes §6.4) est **retirée** : son écart mesuré
+                   à `scipy.stats.t.cdf` atteignait 7,9e-10 en valeur absolue
+                   sur une grille de (t, ddl), là où SciPy est exact à la
+                   précision machine. Reproduire une primitive mathématique
+                   disponible et éprouvée n'est pas justifié
+                   (`docs/PROGRAMME.md`, règle de réutilisation des
+                   bibliothèques scientifiques).
+- Dépendances    : `numpy`, `scipy` et la bibliothèque standard.
 - Référence       : Diebold & Mariano (1995), « Comparing predictive
                    accuracy », *Journal of Business & Economic Statistics* 13(3),
                    253-263 ; variance de long terme : Newey & West (1987), « A
@@ -57,16 +60,13 @@ from statistics import NormalDist
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
+from scipy import stats
 
 # Type alias redéfini localement (voir « Portage » ci-dessus) : dans Athanor,
 # `IntArray` vient de `athanor.stats.resampling`.
 IntArray = NDArray[np.int64]
 
 _NORMAL = NormalDist()
-
-_CF_MAX_ITER = 10_000
-_CF_EPS = 1e-15
-_CF_TINY = 1e-300
 
 
 class Alternative(StrEnum):
@@ -101,7 +101,13 @@ class DieboldMarianoResult:
 
     `variance` est la variance de long terme de `d` (par observation) ; `df`
     est le nombre de degrés de liberté de la loi de Student employée
-    (`None` = loi normale asymptotique).
+    (`None` = loi normale asymptotique) ; `small_sample_factor` est le facteur
+    multiplicatif de la correction de Harvey, Leybourne & Newbold (1997)
+    effectivement appliqué à la statistique (`1.0` si elle ne l'est pas).
+
+    Le facteur est publié parce que la puissance et l'effet minimal détectable
+    du test doivent être exprimés dans la même échelle que la statistique :
+    voir `torne.methods.power` et `torne.methods.compare`.
     """
 
     mean_diff: float
@@ -112,6 +118,7 @@ class DieboldMarianoResult:
     lag: int
     df: int | None
     alternative: Alternative
+    small_sample_factor: float = 1.0
 
 
 def diebold_mariano(
@@ -186,60 +193,22 @@ def diebold_mariano(
     if var_mean <= 0 and mean_d == 0:
         p = 1.0  # prévisions identiques : aucune preuve dans aucun sens
     return DieboldMarianoResult(
-        mean_d, variance, stat, min(1.0, max(0.0, p)), n, lag, df, alternative
+        mean_d, variance, stat, min(1.0, max(0.0, p)), n, lag, df, alternative, factor
     )
-
-
-def _beta_continued_fraction(a: float, b: float, x: float) -> float:
-    """Fraction continue de Lentz modifiée (Numerical Recipes §6.4) pour la bêta incomplète."""
-    qab, qap, qam = a + b, a + 1.0, a - 1.0
-    c = 1.0
-    d = 1.0 - qab * x / qap
-    d = 1.0 / (d if abs(d) > _CF_TINY else _CF_TINY)
-    h = d
-    for m in range(1, _CF_MAX_ITER + 1):
-        m2 = 2 * m
-        aa = m * (b - m) * x / ((qam + m2) * (a + m2))
-        d = 1.0 + aa * d
-        d = 1.0 / (d if abs(d) > _CF_TINY else _CF_TINY)
-        c = 1.0 + aa / c
-        c = c if abs(c) > _CF_TINY else _CF_TINY
-        h *= d * c
-        aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
-        d = 1.0 + aa * d
-        d = 1.0 / (d if abs(d) > _CF_TINY else _CF_TINY)
-        c = 1.0 + aa / c
-        c = c if abs(c) > _CF_TINY else _CF_TINY
-        delta = d * c
-        h *= delta
-        if abs(delta - 1.0) < _CF_EPS:
-            return h
-    raise ArithmeticError(f"bêta incomplète : pas de convergence (a={a}, b={b}, x={x})")
-
-
-def _regularized_incomplete_beta(x: float, a: float, b: float) -> float:
-    """Bêta incomplète régularisée `I_x(a, b)`, par fraction continue (Numerical Recipes §6.4)."""
-    if x <= 0.0:
-        return 0.0
-    if x >= 1.0:
-        return 1.0
-    log_front = (
-        math.lgamma(a + b) - math.lgamma(a) - math.lgamma(b) + a * math.log(x) + b * math.log1p(-x)
-    )
-    front = math.exp(log_front)
-    if x < (a + 1.0) / (a + b + 2.0):
-        return front * _beta_continued_fraction(a, b, x) / a
-    return 1.0 - front * _beta_continued_fraction(b, a, 1.0 - x) / b
 
 
 def student_t_cdf(t: float, df: float) -> float:
     """`P(T <= t)` pour `T` de Student à `df` degrés de liberté (`df` infini = loi normale).
 
-    Voie retenue : `P(|T| > |t|) = I_{df/(df+t²)}(df/2, 1/2)`, la bêta incomplète
-    régulière étant calculée par fraction continue de Lentz modifiée. C'est la
-    réimplémentation en bibliothèque standard de `scipy.special.stdtr` utilisée
-    par Athanor, dont l'exactitude est vérifiée par
-    `athanor/tests/test_calibration.py:161-182`.
+    La primitive vient de `scipy.stats.t.cdf`, l'implémentation de référence de
+    l'écosystème : elle est exacte à la précision machine, y compris pour
+    `df = 1` (Cauchy), `df = 2` et `df` infini (loi normale). La réimplémentation
+    en bibliothèque standard qui existait auparavant (bêta incomplète régulière
+    par fraction continue de Lentz, Numerical Recipes §6.4) a été retirée : son
+    écart à SciPy atteignait 7,9e-10 en valeur absolue, et reproduire une
+    primitive mathématique disponible et éprouvée n'est pas justifié.
+
+    `df` doit être strictement positif ; `t` peut être infini ou `NaN`.
     """
     if df <= 0:
         raise ValueError("df doit être > 0")
@@ -247,10 +216,7 @@ def student_t_cdf(t: float, df: float) -> float:
         return math.nan
     if math.isinf(t):
         return 1.0 if t > 0 else 0.0
-    if math.isinf(df):
-        return _NORMAL.cdf(t)
-    tail = 0.5 * _regularized_incomplete_beta(df / (df + t * t), df / 2.0, 0.5)
-    return 1.0 - tail if t > 0 else tail
+    return float(stats.t.cdf(t, df))
 
 
 __all__ = [

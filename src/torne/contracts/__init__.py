@@ -15,5 +15,7 @@ Répartition :
 - `model` — le contrat de la frontière « Modèles » ;
 - `fingerprint` — l'empreinte canonique d'une structure de données ;
 - `observation` — Source, Raw Evidence, Observation (propriété : intégration) ;
+- `derived` — la grandeur dérivée : règle de calcul, temporalité propre,
+  lignée et qualification d'incertitude ;
 - `knowledge` — provenance et produit de connaissance (propriété : intégration).
 """

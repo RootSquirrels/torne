@@ -1,13 +1,13 @@
 """Rapport d'évaluation reproductible : modèle, références, découpe.
 
 Le rapport est l'enregistrement de ce qui a été évalué : l'identité du modèle,
-la découpe (rejouable par ses indices), les métriques du modèle, les métriques
-des trois références calculées **sur les mêmes plis**, et l'instant
-d'évaluation.
+la découpe (rejouable par ses indices), le pas des plis, les métriques du
+modèle, les métriques des trois références calculées **sur les mêmes plis**,
+et l'instant d'évaluation.
 
 Aucune dépendance n'est cachée : l'horodatage est injectable, le prédicteur
 est un argument explicite, et le contenu du rapport ne provient que des
-modules `splits`, `metrics` et `baselines`.
+modules `splits`, `metrics`, `baselines` et `uncertainty`.
 """
 
 from __future__ import annotations
@@ -29,11 +29,14 @@ class EvaluationReport:
     """Résultat d'une évaluation, avec les métriques du modèle et des références.
 
     `split` enregistre les indices de découpe : la **période** évaluée est
-    rejouable à partir du rapport. La décomposition en pli, elle, ne l'est pas :
-    le rapport ne retient pas le `step` du walk-forward, et il faudrait y revenir
-    pour reconstruire les pli un à un. `evaluated_at` est l'instant
-    d'évaluation, injectable pour qu'un test soit déterministe ; il porte
-    toujours un fuseau (INV-15). `comparison` accueille un résultat de
+    rejouable à partir du rapport. `step` enregistre le pas des plis du
+    walk-forward : avec `split`, il rend la décomposition en plis rejouable
+    elle aussi, et distingue deux évaluations de même période mais de plis
+    différents. `n_excluded` compte les points de la série qui ne tombent dans
+    aucun pli — ni entraînement, ni test : ils ne sont pas évalués, et le
+    rapport le dit au lieu de les perdre en silence. `evaluated_at` est
+    l'instant d'évaluation, injectable pour qu'un test soit déterministe ; il
+    porte toujours un fuseau (INV-15). `comparison` accueille un résultat de
     comparaison calculé ailleurs (test de Diebold-Mariano, par exemple) : son
     contenu est libre et sérialisable, et il ne crée aucune dépendance entre
     modules.
@@ -44,10 +47,16 @@ class EvaluationReport:
     split: Split
     metrics: Mapping[str, MetricReport]
     baseline_metrics: Mapping[str, Mapping[str, MetricReport]]
+    step: int
+    n_excluded: int
     evaluated_at: datetime
     comparison: Mapping[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
+        if self.step < 1:
+            raise ValueError(f"step doit valoir au moins 1, il vaut {self.step}")
+        if self.n_excluded < 0:
+            raise ValueError(f"n_excluded ne peut pas être négatif, il vaut {self.n_excluded}")
         object.__setattr__(self, "metrics", MappingProxyType(dict(self.metrics)))
         object.__setattr__(
             self,
@@ -76,6 +85,8 @@ class EvaluationReport:
             baseline_metrics={
                 name: dict(reports) for name, reports in self.baseline_metrics.items()
             },
+            step=self.step,
+            n_excluded=self.n_excluded,
             evaluated_at=self.evaluated_at,
             comparison={**self.comparison, **comparison},
         )
@@ -91,14 +102,27 @@ class EvaluationReport:
             "model_id": self.model_id,
             "model_version": self.model_version,
             "split": asdict(self.split),
-            "metrics": {name: asdict(report) for name, report in self.metrics.items()},
+            "step": self.step,
+            "n_excluded": self.n_excluded,
+            "metrics": {name: _metric_as_dict(report) for name, report in self.metrics.items()},
             "baseline_metrics": {
-                name: {metric: asdict(report) for metric, report in reports.items()}
+                name: {metric: _metric_as_dict(report) for metric, report in reports.items()}
                 for name, reports in self.baseline_metrics.items()
             },
             "evaluated_at": self.evaluated_at.isoformat(),
             "comparison": dict(self.comparison),
         }
+
+
+def _metric_as_dict(report: MetricReport) -> dict[str, object]:
+    """Vue sérialisable d'une métrique, incertitude comprise.
+
+    L'incertitude est rendue par sa propre vue : c'est un objet du contrat,
+    et son énumération doit devenir une chaîne.
+    """
+    data = asdict(report)
+    data["uncertainty"] = report.uncertainty.as_dict() if report.uncertainty is not None else None
+    return data
 
 
 def evaluate_walk_forward(
@@ -125,6 +149,10 @@ def evaluate_walk_forward(
 
     Les métriques sont calculées sur les points test de tous les plis réunis,
     dans l'ordre chronologique. `now` injectable rend le rapport déterministe.
+
+    Le rapport retient le `step` du walk-forward et le nombre de points de la
+    série qui ne tombent dans aucun pli : les plis sont rejouables à partir du
+    rapport, et les points écartés sont comptés au lieu d'être perdus.
     """
     series = tuple(values)
     if validity is not None and len(validity) != len(series):
@@ -189,6 +217,8 @@ def evaluate_walk_forward(
         split=split,
         metrics=metrics,
         baseline_metrics=baseline_metrics,
+        step=step,
+        n_excluded=len(series) - last.test_end,
         evaluated_at=datetime.now(UTC) if now is None else to_utc(now, name="now"),
     )
 

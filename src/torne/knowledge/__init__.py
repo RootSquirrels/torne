@@ -3,8 +3,8 @@
 Ce package est la forme exécutable de la frontière « Produits de connaissance »
 (`docs/ARCHITECTURE.md` §4) et de la préoccupation transversale « provenance »
 (§6.1). Il relie une exécution de modèle aux objets qui portent la preuve —
-source, preuve brute, observation — et permet de remonter du résultat publié
-jusqu'aux preuves brutes.
+source, preuve brute, observation, grandeur dérivée — et permet de remonter du
+résultat publié jusqu'aux preuves brutes.
 
 Répartition :
 

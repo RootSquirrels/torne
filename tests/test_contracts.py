@@ -302,7 +302,7 @@ def test_la_nature_du_resultat_doit_etre_decleree_par_le_modele():
     with pytest.raises(ValueError, match="nature"):
         ModelResult(
             spec=spec,
-            nature=ResultNature.OBSERVED,
+            nature=ResultNature.PREDICTED,
             parameters=ModelParameters({}),
             produced_at=_instant("2026-10-05T08:00:00+00:00"),
         )

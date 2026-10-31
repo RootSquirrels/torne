@@ -10,7 +10,9 @@ Trois règles structurantes, toutes vérifiables :
 1. **Aucune erreur masquée.** Les exceptions du modèle remontent intactes. Le
    runner ne fabrique jamais de résultat par défaut, ne rattrape rien, ne
    remplace rien par une valeur nulle : un échec reste un échec, et il est
-   visible.
+   visible. Un résultat inexploitable — sortie non finie, ou résultat qui
+   n'est pas celui du modèle exécuté — est de même refusé et jamais rendu :
+   une défaillance ne passe pas pour un résultat.
 2. **Aucun état global caché.** La graine est transmise au modèle, qui fabrique
    son propre générateur (`numpy.random.default_rng(seed)`). Le runner n'appelle
    jamais `random.seed()` ni `numpy.random.seed()` : l'état aléatoire global de
@@ -44,7 +46,12 @@ from ..contracts.model import (
     ModelResult,
 )
 from ..contracts.time import to_utc
-from .errors import ConfigurationMismatchError, InvalidInputError, InvalidParameterError
+from .errors import (
+    ConfigurationMismatchError,
+    InvalidInputError,
+    InvalidParameterError,
+    InvalidResultError,
+)
 
 _VERSION_INCONNUE = "inconnue"
 
@@ -162,6 +169,62 @@ def _valider_parametres(model: Model, params: ModelParameters) -> None:
         )
 
 
+def _valider_resultat(model: Model, result: object) -> ModelResult:
+    """Vérifie que le résultat rendu est bien celui du modèle exécuté, et qu'il est fini.
+
+    Deux défaillances ne doivent jamais passer pour un résultat :
+
+    - un **résultat non fini** — une sortie ou une borne d'intervalle `NaN` ou
+      infinie n'est pas une mesure, et la rendre comme telle fabriquerait un
+      résultat à partir d'un échec ;
+    - un **résultat qui ne vient pas du modèle exécuté** — la configuration
+      annonce le modèle et sa version ; si le résultat en annonce un autre,
+      la configuration ment sur ce qui a été exécuté, et la reproduction ne
+      rejouerait pas la même chose.
+
+    Les diagnostics ne sont pas contrôlés : une vraisemblance dégénérée peut
+    légitimement valoir `-inf`. Seuls les **résultats** doivent être finis.
+    """
+    if not isinstance(result, ModelResult):
+        raise InvalidResultError(
+            f"le modèle « {model.spec.model_id} » n'a pas renvoyé un ModelResult "
+            f"(reçu {type(result).__name__})"
+        )
+
+    if result.spec.model_id != model.spec.model_id or result.spec.version != model.spec.version:
+        raise ConfigurationMismatchError(
+            f"le résultat annonce le modèle « {result.spec.model_id} » version "
+            f"« {result.spec.version} », le modèle exécuté est « {model.spec.model_id} » "
+            f"version « {model.spec.version} »"
+        )
+
+    for nom, valeurs in result.outputs.items():
+        for indice, valeur in enumerate(valeurs):
+            if not _est_fini(valeur):
+                raise InvalidResultError(
+                    f"sortie « {nom} » : la valeur à l'indice {indice} n'est pas finie ({valeur!r})"
+                )
+
+    for nom, paires in result.intervals.items():
+        for indice, paire in enumerate(paires):
+            for position, borne in enumerate(paire):
+                if not _est_fini(borne):
+                    raise InvalidResultError(
+                        f"intervalle « {nom} » : la borne {position} de l'intervalle "
+                        f"{indice} n'est pas finie ({borne!r})"
+                    )
+
+    return result
+
+
+def _est_fini(valeur: object) -> bool:
+    """Dit si une valeur est un nombre fini ; une valeur qui n'est pas un nombre ne l'est pas."""
+    try:
+        return math.isfinite(valeur)
+    except TypeError:
+        return False
+
+
 def execute(
     model: Model,
     inputs: ModelInputs,
@@ -173,9 +236,14 @@ def execute(
     """Exécute `model` sur `inputs` avec `params`, et rend l'issue complète.
 
     La séquence est : validation des entrées, validation des paramètres,
-    construction de la configuration, appel du modèle, horodatage. Les erreurs
-    du modèle ne sont pas rattrapées : elles remontent intactes, et rien n'est
-    rendu à la place.
+    construction de la configuration, appel du modèle, **validation du
+    résultat**, horodatage. Les erreurs du modèle ne sont pas rattrapées :
+    elles remontent intactes, et rien n'est rendu à la place.
+
+    Un résultat inexploitable — sortie non finie, ou résultat qui n'est pas
+    celui du modèle exécuté — n'est pas rendu non plus : il est refusé par
+    `InvalidResultError` ou `ConfigurationMismatchError`, pour qu'une
+    défaillance ne passe jamais pour un résultat.
 
     `seed` est transmise au modèle telle quelle : le runner ne tire aucun
     nombre aléatoire et ne touche pas à l'état aléatoire global.
@@ -197,7 +265,7 @@ def execute(
     )
 
     started_at = _instant(now)
-    result = model.run(inputs, params, seed=seed)
+    result = _valider_resultat(model, model.run(inputs, params, seed=seed))
     ended_at = _instant(now)
 
     return ExecutionOutcome(

@@ -5,9 +5,10 @@ des hypothèses et des limites déclarées. Ce module fixe la **forme** de ces
 éléments ; il ne fixe aucune méthode, aucun moteur, aucune interface de
 service, aucun registre.
 
-Un résultat porte toujours la mention de ce qu'il est : `OBSERVED`, `ESTIMATED`,
-`PREDICTED`, `SIMULATED` ou `DERIVED`. Un modèle ne transforme jamais une
-estimation en observation, ni une simulation en observation.
+Un résultat porte toujours la mention de ce qu'il est : `ESTIMATED`,
+`RECONSTRUCTED`, `PREDICTED`, `SIMULATED` ou `DERIVED`. Un modèle ne transforme
+jamais une estimation en observation, ni une simulation en observation : une
+observation de source a son propre objet, et son propre statut de qualité.
 
 « Pas de configuration globale cachée » : les paramètres, les entrées, la
 graine et l'empreinte de la configuration sont des **arguments explicites**.
@@ -28,10 +29,27 @@ ParameterValue = float | int | str | bool | None
 
 
 class ResultNature(StrEnum):
-    """Nature d'un résultat : ce que le résultat est, pas ce qu'il vaut."""
+    """Nature d'une grandeur dérivée (contrat §2.4).
 
-    OBSERVED = "observed"
+    Une **observation de source** n'a pas de nature ici : c'est l'objet
+    `Observation` lui-même, qui porte son propre statut de qualité (§3.7).
+    Une grandeur dérivée, elle, est l'une des cinq natures ci-dessous — et
+    elles ne se confondent pas :
+
+    - `ESTIMATED` — une estimation statistique ;
+    - `RECONSTRUCTED` — un état reconstruit à partir d'observations ;
+    - `PREDICTED` — une prévision ;
+    - `SIMULATED` — une simulation ;
+    - `DERIVED` — une autre grandeur calculée.
+
+    Une même exécution peut produire des grandeurs de natures différentes : un
+    filtre d'état restitue un état reconstruit **et** émet des prévisions. C'est
+    pourquoi la nature se déclare **par sortie** (`ModelResult.output_natures`),
+    et pas seulement au niveau du résultat.
+    """
+
     ESTIMATED = "estimated"
+    RECONSTRUCTED = "reconstructed"
     PREDICTED = "predicted"
     SIMULATED = "simulated"
     DERIVED = "derived"
@@ -104,7 +122,14 @@ class ModelInputs:
 
 @dataclass(frozen=True, slots=True)
 class ModelResult:
-    """Résultat typé d'une exécution de modèle."""
+    """Résultat typé d'une exécution de modèle.
+
+    `output_natures` déclare la nature de **chaque sortie**. Une sortie non
+    déclarée prend la nature du résultat — ce qui convient quand toutes les
+    sorties sont de même nature, et ne convient plus dès qu'elles diffèrent :
+    dans ce cas, les natures doivent être déclarées une à une. C'est ce qui
+    empêche d'exposer une prévision sous la nature d'un état reconstruit.
+    """
 
     spec: ModelSpec
     nature: ResultNature
@@ -113,6 +138,7 @@ class ModelResult:
     outputs: Mapping[str, tuple[float, ...]] = field(default_factory=dict)
     intervals: Mapping[str, tuple[tuple[float, float], ...]] = field(default_factory=dict)
     diagnostics: Mapping[str, float | int | str | bool] = field(default_factory=dict)
+    output_natures: Mapping[str, ResultNature] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -126,6 +152,23 @@ class ModelResult:
             MappingProxyType({name: tuple(pairs) for name, pairs in self.intervals.items()}),
         )
         object.__setattr__(self, "diagnostics", MappingProxyType(dict(self.diagnostics)))
+        if self.output_natures:
+            if set(self.output_natures) != set(self.outputs):
+                raise ValueError(
+                    "les natures déclarées ne correspondent pas aux sorties : "
+                    f"sorties {sorted(self.outputs)}, natures {sorted(self.output_natures)}"
+                )
+            object.__setattr__(
+                self,
+                "output_natures",
+                MappingProxyType(dict(self.output_natures)),
+            )
+        else:
+            object.__setattr__(
+                self,
+                "output_natures",
+                MappingProxyType(dict.fromkeys(self.outputs, self.nature)),
+            )
         if self.nature not in self.spec.natures:
             raise ValueError(
                 f"nature de résultat « {self.nature} » absente des natures déclarées "
@@ -135,6 +178,10 @@ class ModelResult:
     def output(self, name: str) -> tuple[float, ...]:
         """Renvoie une sortie nommée. Lève `KeyError` si elle n'existe pas."""
         return self.outputs[name]
+
+    def output_nature(self, name: str) -> ResultNature:
+        """Renvoie la nature d'une sortie nommée."""
+        return self.output_natures[name]
 
     def interval(self, name: str) -> tuple[tuple[float, float], ...]:
         """Renvoie les intervalles d'une sortie nommée."""

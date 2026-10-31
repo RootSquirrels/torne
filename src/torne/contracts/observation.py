@@ -20,7 +20,11 @@ Trois règles structurantes, toutes vérifiables :
    `MissingReason` viennent de `torne.contracts.validity`. L'observation ne
    décide pas de la validité d'un point par elle-même : elle porte l'état, et
    l'absence est **qualifiée** (INV-18).
-3. **Les invariants sont appliqués à la construction.** Une observation
+3. **Le statut de qualité n'est pas réinventé non plus.** `QualityStatus` est
+   le vocabulaire **fermé et minimal** de §3.7 : une observation provisoire est
+   conservée et porte son statut (INV-21), qui voyage avec elle jusqu'au
+   produit de connaissance.
+4. **Les invariants sont appliqués à la construction.** Une observation
    impossible est refusée à la construction, pas signalée plus tard : c'est ce
    qui rend la règle testable sans état global ni journal.
 
@@ -35,9 +39,38 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 from datetime import datetime
+from enum import StrEnum
 
 from .time import TemporalStamp, to_utc
 from .validity import MissingReason, PointValidity
+
+
+class QualityStatus(StrEnum):
+    """Statut de qualité d'une valeur de source (contrat §3.7).
+
+    Le vocabulaire est **fermé et minimal** : cinq valeurs, et rien d'autre.
+
+    - `DECLARED` — la source déclare la valeur telle quelle ;
+    - `SOURCE_ESTIMATED` — la source déclare une valeur qu'elle a estimée ;
+    - `PROVISIONAL` — la valeur est provisoire ;
+    - `APPROVED` — la valeur est approuvée ;
+    - `UNKNOWN` — la source n'a rien déclaré sur le statut de la valeur.
+
+    Ce vocabulaire est celui de la **valeur**, non celui de la source : le
+    statut de qualité d'une `Source` (`Source.quality_status`) est une autre
+    chose, et son raccordement à ce vocabulaire est différé au gate P1 (§6.2) —
+    dire qu'un « provisional » USGS équivaut à « provisoire » est une
+    affirmation sur la source, pas sur le contrat.
+
+    `UNKNOWN` est le choix sûr : une source qui ne dit rien n'est pas une
+    source qui approuve.
+    """
+
+    DECLARED = "declared"
+    SOURCE_ESTIMATED = "source_estimated"
+    PROVISIONAL = "provisional"
+    APPROVED = "approved"
+    UNKNOWN = "unknown"
 
 
 def _exiger_texte(valeur: str, nom: str) -> str:
@@ -119,8 +152,9 @@ class Observation:
     """Ce que la source a mesuré ou rapporté, à cet instant et dans ses termes (§2.3).
 
     L'observation est le seul garant du **contenu sémantique** : sa valeur,
-    son unité, son référentiel spatial, son état de validité, sa temporalité,
-    et son rattachement à une preuve brute identifiable.
+    son unité, son référentiel spatial, son état de validité, son statut de
+    qualité, sa temporalité, et son rattachement à une preuve brute
+    identifiable.
 
     Les invariants appliqués à la construction :
 
@@ -135,7 +169,10 @@ class Observation:
     - `evidence_id` est non vide : une observation sans preuve brute
       identifiable n'est pas traçable (INV-25) ;
     - `revision_of` est différent de `observation_id` : une observation n'est
-      pas la révision d'elle-même.
+      pas la révision d'elle-même ;
+    - `quality_status` est un statut du vocabulaire fermé de §3.7 : une
+      observation provisoire est conservée et **porte son statut** (INV-21),
+      qui voyage avec elle jusqu'au produit de connaissance.
 
     L'absence n'est jamais remplacée par zéro, jamais par une estimation et
     jamais par une interpolation : elle est qualifiée.
@@ -153,6 +190,7 @@ class Observation:
     spatial_ref: str = "non_spatial"
     key: str | None = None
     revision_of: str | None = None
+    quality_status: QualityStatus = QualityStatus.UNKNOWN
 
     def __post_init__(self) -> None:
         _exiger_texte(self.observation_id, "Observation.observation_id")
@@ -168,6 +206,8 @@ class Observation:
             raise TypeError("Observation.validity doit être une PointValidity")
         if self.missing_reason is not None and not isinstance(self.missing_reason, MissingReason):
             raise TypeError("Observation.missing_reason doit être une MissingReason")
+        if not isinstance(self.quality_status, QualityStatus):
+            raise TypeError("Observation.quality_status doit être une QualityStatus")
 
         if self.value is not None and not isinstance(self.value, (int, float)):
             raise TypeError("Observation.value doit être un nombre ou None")
@@ -194,4 +234,4 @@ class Observation:
                 raise ValueError("une observation ne peut pas être la révision d'elle-même")
 
 
-__all__ = ["Observation", "RawEvidence", "Source"]
+__all__ = ["Observation", "QualityStatus", "RawEvidence", "Source"]

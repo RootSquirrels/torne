@@ -12,7 +12,8 @@ Trois règles structurantes :
 2. **Un produit n'est publiable que si sa lignée est complète.** La lignée est
    ici une **suite de références** (`ProvenanceRef`), pas une chaîne
    d'objets : elle permet de remonter du résultat publié jusqu'aux preuves
-   brutes (INV-27, INV-29).
+   brutes (INV-27, INV-29). Elle cite les observations, les grandeurs dérivées,
+   les preuves brutes et les sources.
 3. **Un produit ne se réécrit pas** (INV-31). Une correction produit une
    version **nouvelle** ; l'ancienne reste consultable. C'est la version
    portée par le produit qui l'exprime — jamais une mutation.
@@ -21,17 +22,22 @@ Le produit porte une incertitude **qualifiée en clair** (une chaîne, jamais un
 nombre) : le contrat impose de décrire l'incertitude selon ce qui est
 réellement connu, et un scalaire ne dit pas de quoi il s'agit
 (`docs/RESEARCH_AND_VALIDATION.md` §6).
+
+Le produit porte aussi le **statut de qualité de ses entrées**
+(`input_statuses`) : un produit qui consomme des observations provisoires le
+dit, et ne présente pas l'ensemble comme s'il était acquis (§3.7, INV-22).
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass
 from datetime import date, datetime
 from enum import Enum, StrEnum
 from types import MappingProxyType
 
 from .model import ResultNature
+from .observation import QualityStatus
 from .time import to_utc
 
 
@@ -41,6 +47,7 @@ class ProvenanceKind(StrEnum):
     SOURCE = "source"
     EVIDENCE = "evidence"
     OBSERVATION = "observation"
+    DERIVED_VARIABLE = "derived_variable"
     MODEL = "model"
     PARAMETER = "parameter"
     EVALUATION = "evaluation"
@@ -95,6 +102,14 @@ class KnowledgeProduct:
     d'établissement, un statut, un domaine de validité, une incertitude
     qualifiée en clair, la lignée complète et un résumé.
 
+    Il porte aussi la **qualification de ses entrées** (`input_statuses`) : le
+    statut de qualité de chaque observation et de chaque grandeur dérivée
+    qu'il consomme (§3.7). Un produit qui consomme des observations
+    provisoires le dit ; il ne présente pas l'ensemble comme s'il était acquis
+    (INV-22). La qualification est **obligatoire** pour toute entrée citée :
+    un produit qui ne dit pas le statut de ce qu'il consomme ne peut pas être
+    construit.
+
     Il ne garantit pas que le produit soit vrai, ni qu'il reste vrai, ni qu'il
     soit réutilisable hors de son domaine de validité. Il n'est pas un
     registre : il ne catalogue pas l'existant (`docs/ARCHITECTURE.md` §4).
@@ -109,6 +124,7 @@ class KnowledgeProduct:
     uncertainty: str
     lineage: tuple[ProvenanceRef, ...]
     summary: Mapping[str, object]
+    input_statuses: Mapping[str, QualityStatus] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not isinstance(self.product_id, str) or not self.product_id.strip():
@@ -137,6 +153,80 @@ class KnowledgeProduct:
         )
         object.__setattr__(self, "lineage", tuple(self.lineage))
         object.__setattr__(self, "summary", MappingProxyType(dict(self.summary)))
+        object.__setattr__(self, "input_statuses", MappingProxyType(dict(self.input_statuses)))
+        self._verifier_qualification_des_entrees()
+
+    def _verifier_qualification_des_entrees(self) -> None:
+        """Vérifie que toute entrée citée porte son statut de qualité (§3.7).
+
+        C'est la forme vérifiable d'INV-22 : le produit qui consomme des
+        observations provisoires et approuvées les **distingue**, et il ne
+        peut pas être construit sans les distinguer.
+        """
+        for identifiant, statut in self.input_statuses.items():
+            if not isinstance(statut, QualityStatus):
+                raise TypeError(
+                    "KnowledgeProduct.input_statuses doit porter des QualityStatus, "
+                    f"« {identifiant} » porte « {type(statut).__name__} »"
+                )
+        citees: dict[str, ProvenanceKind] = {}
+        for ref in self.lineage:
+            if ref.kind not in (ProvenanceKind.OBSERVATION, ProvenanceKind.DERIVED_VARIABLE):
+                continue
+            if ref.identifier in citees:
+                raise ValueError(
+                    f"« {ref.identifier} » est cité comme {citees[ref.identifier].value} "
+                    f"et comme {ref.kind.value} : deux entrées distinctes ne peuvent pas "
+                    "porter le même identifiant"
+                )
+            citees[ref.identifier] = ref.kind
+        for identifiant, kind in citees.items():
+            if identifiant not in self.input_statuses:
+                raise ValueError(
+                    f"l'entrée citée « {identifiant} » ({kind.value}) ne porte pas son "
+                    "statut de qualité : un produit dit ce qu'il consomme (§3.7)"
+                )
+        for identifiant in self.input_statuses:
+            if identifiant not in citees:
+                raise ValueError(f"le statut « {identifiant} » ne correspond à aucune entrée citée")
+
+    @property
+    def provisional_inputs(self) -> tuple[str, ...]:
+        """Identifiants des entrées provisoires consommées par le produit."""
+        return tuple(
+            sorted(
+                identifiant
+                for identifiant, statut in self.input_statuses.items()
+                if statut is QualityStatus.PROVISIONAL
+            )
+        )
+
+    @property
+    def unknown_status_inputs(self) -> tuple[str, ...]:
+        """Identifiants des entrées dont le statut de qualité est inconnu."""
+        return tuple(
+            sorted(
+                identifiant
+                for identifiant, statut in self.input_statuses.items()
+                if statut is QualityStatus.UNKNOWN
+            )
+        )
+
+    @property
+    def approved_inputs(self) -> tuple[str, ...]:
+        """Identifiants des entrées approuvées consommées par le produit."""
+        return tuple(
+            sorted(
+                identifiant
+                for identifiant, statut in self.input_statuses.items()
+                if statut is QualityStatus.APPROVED
+            )
+        )
+
+    @property
+    def has_provisional_inputs(self) -> bool:
+        """Le produit consomme-t-il au moins une information provisoire ?"""
+        return bool(self.provisional_inputs)
 
     def as_dict(self) -> dict[str, object]:
         """Vue sérialisable du produit : dictionnaires ordinaires, aucun proxy.
@@ -155,6 +245,11 @@ class KnowledgeProduct:
             "domain_of_validity": self.domain_of_validity,
             "uncertainty": self.uncertainty,
             "lineage": [ref_vers_dict(ref) for ref in self.lineage],
+            "input_statuses": {
+                identifiant: statut.value
+                for identifiant, statut in sorted(self.input_statuses.items())
+            },
+            "provisional_inputs": list(self.provisional_inputs),
             "summary": to_serialisable(self.summary),
         }
 

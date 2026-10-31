@@ -24,6 +24,7 @@ from datetime import UTC, datetime, timedelta
 import numpy as np
 import pytest
 
+from torne.contracts.derived import DerivedVariable, Uncertainty
 from torne.contracts.knowledge import ProductStatus
 from torne.contracts.model import ModelInputs, ModelParameters, ResultNature
 from torne.contracts.observation import Observation, RawEvidence, Source
@@ -149,7 +150,7 @@ def test_la_chaine_complete_parcourt_chaque_maillon(serie, rapport):
     entrees = ModelInputs(series={"y": tuple(valeurs)})
 
     # 1. Exécution du modèle sur les observations.
-    issue = execute(MODELE, entrees, PARAMETRES, now=DEBUT + (NB_POINTS + 10) * JOUR)
+    issue = execute(MODELE, entrees, PARAMETRES)
     assert issue.result.outputs["level"]
     assert len(issue.result.outputs["level"]) == NB_POINTS
     assert issue.config.model_version == MODELE.spec.version
@@ -159,21 +160,40 @@ def test_la_chaine_complete_parcourt_chaque_maillon(serie, rapport):
     assert rapport.metrics["rmse"].n_used == NB_POINTS - TAILLE_ENTRAINEMENT
     assert set(rapport.baseline_metrics) >= {"persistence", "mean", "drift"}
 
-    # 3. Enregistrement de l'exécution, rattaché à sa preuve.
+    # 3. La grandeur dérivée : l'état reconstruit, avec son propre calcul,
+    #    sa propre temporalité et son incertitude.
+    etat = DerivedVariable.from_result(
+        result=issue.result,
+        output="level",
+        variable_id="etat-niveau-0001",
+        quantity="niveau",
+        unit="u",
+        inputs=observations,
+        uncertainty=Uncertainty.from_interval(
+            "intervalle de confiance à 95 % sur l'état filtré",
+            issue.result.intervals["level"][-1],
+        ),
+        valid_time=observations[-1].temporal.valid_time,
+    )
+    assert etat.nature is ResultNature.RECONSTRUCTED
+    assert etat.temporal.known_at == issue.result.produced_at
+
+    # 4. Enregistrement de l'exécution, rattaché à sa preuve.
     enregistrement = build_record(
         issue,
         record_id="enregistrement-0001",
         input_observations=observations,
         evidence=[PREUVE],
         sources=[SOURCE],
-        produced_at=DEBUT + (NB_POINTS + 10) * JOUR,
+        produced_at=issue.result.produced_at,
         evaluation=rapport.as_dict(),
         inputs=entrees,
+        derived_variables=[etat],
     )
     lignee = verify_lineage(enregistrement)
     assert lignee.ok, f"lignée incohérente : {lignee.problems}"
 
-    # 4. Produit de connaissance : il dit ce qu'il est, et n'est pas une observation.
+    # 5. Produit de connaissance : il dit ce qu'il est, et n'est pas une observation.
     produit = enregistrement.to_product(
         product_id="produit-0001",
         version="1.0.0",
@@ -181,17 +201,21 @@ def test_la_chaine_complete_parcourt_chaque_maillon(serie, rapport):
         domain_of_validity="séquence régulière, bruit de mesure gaussien de variance connue",
         uncertainty="variance d'observation déclarée ; incertitude de l'état filtré non calibrée",
     )
-    assert produit.nature is ResultNature.ESTIMATED
-    assert produit.nature is not ResultNature.OBSERVED
+    # La nature du produit est celle du résultat de l'exécution : un état
+    # reconstruit n'est pas une estimation, et n'est jamais une observation.
+    assert produit.nature is issue.result.nature
+    assert produit.nature is ResultNature.RECONSTRUCTED
     assert produit.version == "1.0.0"
-    assert produit.produced_at == DEBUT + (NB_POINTS + 10) * JOUR
+    assert produit.produced_at == issue.result.produced_at
 
-    # 5. La lignée permet de remonter du produit jusqu'aux preuves brutes.
+    # 6. La lignée permet de remonter du produit jusqu'aux preuves brutes.
     genres = {ref.kind.value for ref in produit.lineage}
     assert {"model", "observation", "evidence", "source", "parameter"} <= genres
     identifiants = {ref.identifier for ref in produit.lineage}
     assert PREUVE.evidence_id in identifiants
     assert SOURCE.source_id in identifiants
+    # La grandeur dérivée est citée : la lignée passe par elle.
+    assert etat.variable_id in identifiants
 
 
 def test_le_resultat_est_reproductible_depuis_sa_configuration(serie):

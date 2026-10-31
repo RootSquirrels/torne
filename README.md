@@ -51,10 +51,12 @@ de lui.
 | **Capacité d'évaluation** : séparation temporelle stricte, marche avant, références, métriques, couverture d'intervalles, comparaison appariée | Modèles économiques ou financiers |
 | **Preuve et provenance** : source, preuve brute, observation, enregistrement d'exécution, produit de connaissance versionné | Connecteurs, secrets, magasin brut |
 | **Une méthode scientifique réelle et vérifiée** : filtre de Kalman en espace d'état « tendance linéaire locale » | D'autres modèles, d'autres domaines |
-| **Quatre primitives d'`athanor.stats` extraites et attribuées** : OLS + CR1, Diebold-Mariano apparié + HAC, CUSUM, puissance | Les huit autres primitives, non nécessaires ici |
-| Paquet Python installable et construisible ; une dépendance runtime (`numpy`), au premier import réel | Dépendances de stockage, de connecteurs, d'outillage |
+| **Quatre primitives statistiques intégrées sous des noms TORNE** : OLS + CR1, Diebold-Mariano apparié + HAC, CUSUM, puissance — avec l'origine tracée en tête de module | Les huit autres primitives d'Athanor, non nécessaires ici |
+| Paquet Python installable et construisible ; deux dépendances runtime (`numpy`, `scipy`), chacune au premier import réel | Dépendances de stockage, de connecteurs, d'outillage |
 | Point d'entrée console qui énonce l'état du paquet | Reconstruction d'états sur données réelles, assimilation |
-| 193 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
+| **Les cinq objets du contrat, exécutables** : source, preuve brute, observation, grandeur dérivée, produit de connaissance | Règles temporelles propres à chaque source |
+| **Oracles indépendants** : `statsmodels` (dépendance de développement) confronte le filtre d'état, la variance HAC et les écarts-types groupés | D'autres oracles : SciPy pour les distributions, une base de référence pour l'hydrologie |
+| 256 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
 | Environnement verrouillé (`uv.lock` versionné) et gate de qualité exécuté sur Python 3.12 | Exécution de la CI : le workflow GitHub Actions est écrit, il n'a pas encore tourné |
 | **Matrice de réutilisation consolidée** : trois audits d'archéologie, une décision par composant | Première application financière, edge démontré, capacité de déploiement |
 | **Proposition argumentée du premier vertical slice** (Mississippi) et ses conditions d'échec | — |
@@ -100,7 +102,7 @@ garde-fou contre la dérive des dépendances.
 Le gate tient en cinq commandes. Elles ont toutes été exécutées et ont toutes passé le
 31 octobre 2026 sur Python 3.12. Les sorties réelles du **socle initial** sont dans
 `docs/P0-RAPPORT.md` ; après la mission 001, le gate est rejoué à l'identique et passe de nouveau,
-avec 193 tests au lieu de 2.
+avec 256 tests au lieu de 2.
 
 | Commande | Ce qu'elle garantit |
 |---|---|
@@ -157,9 +159,9 @@ torne/
 ├── .github/workflows/ci.yml # gate de qualité en GitHub Actions
 ├── src/torne/
 │   ├── __init__.py         # version et point d'entrée console provisoire
-│   ├── contracts/          # contrats fondamentaux, exécutables : temps, validité, modèle, preuve, provenance
+│   ├── contracts/          # contrats fondamentaux, exécutables : temps, validité, modèle, observation, grandeur dérivée, produit
 │   ├── execution/          # exécution d'un modèle : configuration, reproductibilité, rejeu
-│   ├── methods/            # méthodes scientifiques : filtre d'état, comparaisons, primitives d'Athanor
+│   ├── methods/            # méthodes scientifiques : filtre d'état, comparaison, régression, CUSUM, puissance
 │   ├── evaluation/         # séparation temporelle, métriques, références, rapport
 │   └── knowledge/          # enregistrement d'exécution, lignée, produit de connaissance
 ├── tests/                  # tests des contrats, des maillons, et test d'intégration bout en bout
@@ -197,5 +199,19 @@ d'état. Quatre primitives d'`athanor.stats` ont été extraites et attribuées.
 est testée de bout en bout (`tests/test_end_to_end.py`) et rejouable
 (`experiments/mission_001_demo.py`).
 
-Non fait : aucun connecteur, aucune source réelle qualifiée, aucun modèle économique ou
-financier, aucune application. **Aucune performance sur le monde réel n'est démontrée.**
+**31 octobre 2026 — alignement sur les fondations scientifiques et nettoyage du namespace.**
+Le paquet de référence V2.0 (`docs/08-SCIENTIFIC-COMPUTING-FOUNDATION-AND-EVALUATION.md`,
+ADR-021, SPEC-010) a été appliqué, non recopié. Le namespace `athanor` a disparu du paquet :
+les quatre primitives sont des modules TORNE, et la provenance reste en tête de module. La loi de
+Student vient désormais de **SciPy** — elle était réimplémentée, ce qu'ADR-021 interdit
+explicitement. `statsmodels` est ajouté comme **dépendance de développement seulement** : il sert
+d'oracle indépendant au filtre d'état (3,6e-10), à la variance HAC (3,5e-15) et aux écarts-types
+groupés CR1 (4,6e-15). L'audit a trouvé une **incohérence de puissance** — l'approximation
+normale était optimiste de 16,7 % à n=8 —, corrigée sur la loi de Student et validée par
+Monte-Carlo. Le contrat est désormais complet : les **cinq objets** existent en code, la grandeur
+dérivée porte sa propre temporalité (le `KNOWN_AT` du calcul, pas celui de la source), et les
+six catégories ne se confondent plus — un état reconstruit n'est pas une estimation, et une
+observation de source a son propre objet et son propre statut de qualité.
+
+Non fait : aucun connecteur, aucun modèle économique ou financier, aucune application, aucun
+moteur par domaine, aucun registre. **Aucune performance sur le monde réel n'est démontrée.**

@@ -20,6 +20,7 @@ from datetime import datetime
 
 import pytest
 
+from torne.contracts.derived import DerivedVariable, Uncertainty
 from torne.contracts.knowledge import KnowledgeProduct, ProductStatus, ProvenanceKind
 from torne.contracts.model import (
     ModelInputs,
@@ -28,7 +29,7 @@ from torne.contracts.model import (
     ModelSpec,
     ResultNature,
 )
-from torne.contracts.observation import Observation, RawEvidence, Source
+from torne.contracts.observation import Observation, QualityStatus, RawEvidence, Source
 from torne.contracts.time import PublicationState, TemporalStamp
 from torne.contracts.validity import MissingReason, PointValidity
 from torne.evaluation.report import evaluate_walk_forward
@@ -108,6 +109,7 @@ def _observation(**champs: object) -> Observation:
         "validity": PointValidity.VALID,
         "spatial_ref": "station:1234",
         "key": "niveau",
+        "quality_status": QualityStatus.APPROVED,
     }
     defauts.update(champs)
     return Observation(**defauts)  # type: ignore[arg-type]
@@ -166,6 +168,7 @@ def _record(
     preuves: tuple[RawEvidence, ...] | None = None,
     sources: tuple[Source, ...] | None = None,
     evaluation: dict[str, object] | None = None,
+    variables: tuple[DerivedVariable, ...] = (),
 ):
     return build_record(
         _issue(),
@@ -175,6 +178,7 @@ def _record(
         sources=sources if sources is not None else (SOURCE,),
         evaluation=evaluation,
         inputs=ENTREES,
+        derived_variables=variables,
     )
 
 
@@ -471,7 +475,12 @@ def test_une_revision_posterieure_est_admissible():
 
 
 def test_un_resultat_estime_ne_produit_pas_un_produit_observe():
-    """Jamais présenter une sortie de modèle comme une observation directe."""
+    """La nature d'un produit n'est jamais déclarée par l'appelant.
+
+    Une observation de source n'a plus de nature dans le vocabulaire des
+    grandeurs dérivées : elle a son propre objet, et son propre statut de
+    qualité. Un produit ne peut donc pas se présenter comme une observation.
+    """
     record = _record()
 
     with pytest.raises(ValueError, match="nature"):
@@ -481,7 +490,7 @@ def test_un_resultat_estime_ne_produit_pas_un_produit_observe():
             status=ProductStatus.USABLE,
             domain_of_validity="stations du bassin moyen, campagne 2026",
             uncertainty="incertitude de mesure déclarée par la source",
-            nature=ResultNature.OBSERVED,
+            nature=ResultNature.RECONSTRUCTED,
         )
 
 
@@ -543,6 +552,84 @@ def test_le_produit_ne_modifie_pas_l_enregistrement():
 
 
 # --------------------------------------------------------------------------
+# Grandeurs dérivées et qualification des entrées
+# --------------------------------------------------------------------------
+
+
+def _variable(**champs: object) -> DerivedVariable:
+    defauts: dict[str, object] = {
+        "variable_id": "var-niveau",
+        "quantity": "niveau filtré",
+        "unit": "m",
+        "nature": ResultNature.RECONSTRUCTED,
+        "method": "Filtre de Kalman en espace d'état",
+        "method_version": "1.0.0",
+        "parameters": PARAMETRES,
+        "computed_at": _instant(EXECUTION),
+        "uncertainty": Uncertainty.from_interval("état filtré, intervalle à 95 %", (3.2, 3.3)),
+        "inputs": (_observation(),),
+        "value": 3.27,
+        "valid_time": _instant(EXPRESSION),
+        "spatial_ref": "station:1234",
+        "key": "niveau",
+    }
+    defauts.update(champs)
+    return DerivedVariable(**defauts)  # type: ignore[arg-type]
+
+
+def test_la_ligne_cite_les_grandeurs_derivees_de_l_enregistrement():
+    """La lignée cite les grandeurs dérivées au même titre que les observations."""
+    variable = _variable()
+    refs = _record(variables=(variable,)).lineage()
+
+    variables = [ref for ref in refs if ref.kind is ProvenanceKind.DERIVED_VARIABLE]
+    assert [ref.identifier for ref in variables] == [variable.variable_id]
+    assert variables[0].revision == variable.method_version
+
+
+def test_le_produit_cite_les_grandeurs_derivees_qu_il_publie():
+    """Le produit cite les grandeurs dérivées, et les qualifie."""
+    variable = _variable()
+    produit = _produit(_record(variables=(variable,)))
+
+    variables = [ref for ref in produit.lineage if ref.kind is ProvenanceKind.DERIVED_VARIABLE]
+    assert [ref.identifier for ref in variables] == [variable.variable_id]
+    assert produit.input_statuses[variable.variable_id] is variable.status
+
+
+def test_le_produit_qualifie_les_entrees_qu_il_consomme():
+    """§3.7 : le produit dit le statut de qualité de ce qu'il consomme."""
+    provisoire = _observation(
+        observation_id="obs-provisoire",
+        quality_status=QualityStatus.PROVISIONAL,
+    )
+    approuvee = _observation(observation_id="obs-approuvee")
+    produit = _produit(_record(observations=(provisoire, approuvee)))
+
+    assert produit.input_statuses["obs-provisoire"] is QualityStatus.PROVISIONAL
+    assert produit.input_statuses["obs-approuvee"] is QualityStatus.APPROVED
+    assert produit.has_provisional_inputs
+    assert produit.provisional_inputs == ("obs-provisoire",)
+
+
+def test_un_produit_ne_peut_pas_omettre_le_statut_d_une_entree_citee():
+    """Une entrée citée sans statut : le produit n'est pas publiable (§3.7)."""
+    record = _record()
+    with pytest.raises(ValueError, match="statut de qualité"):
+        KnowledgeProduct(
+            product_id="produit-niveau",
+            version="1.0.0",
+            nature=ResultNature.ESTIMATED,
+            produced_at=_instant(EXECUTION),
+            status=ProductStatus.USABLE,
+            domain_of_validity="stations du bassin moyen, campagne 2026",
+            uncertainty="incertitude de mesure déclarée par la source",
+            lineage=record.lineage(),
+            summary={},
+        )
+
+
+# --------------------------------------------------------------------------
 # Sérialisation
 # --------------------------------------------------------------------------
 
@@ -601,4 +688,5 @@ def test_le_produit_refuse_une_incertitude_non_qualifiee():
             uncertainty="   ",
             lineage=record.lineage(),
             summary={},
+            input_statuses={"obs-2026-10-01": QualityStatus.APPROVED},
         )

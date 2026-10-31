@@ -12,8 +12,9 @@ statistiques :
 
 Les primitives utilisées (`diebold_mariano`, `newey_west_variance`,
 `cusum_break_test`, `power_at`, `minimum_detectable_effect`, `ols`) sont les
-portages d'Athanor réécrits dans `torne.methods.athanor` : voir l'en-tête de
-chaque module pour l'origine exacte.
+portages d'un dépôt historique privé, réécrits dans `torne.methods` : voir
+l'en-tête de chaque module pour l'origine exacte (dépôt, commit, licence,
+référence scientifique).
 
 Prudence assumée
 ----------------
@@ -22,6 +23,12 @@ une absence de test. `compare_forecasts` distingue donc explicitement trois
 conclusions — « différence détectée », « pas de différence détectée » et « pas de
 puissance » — et ne dit jamais « significatif » sans préciser la taille de
 l'effet mesurée.
+
+La puissance et l'effet minimal détectable annoncés décrivent **le test
+exécuté** : la même loi que celle de la p-valeur — Student à `n - 1` degrés de
+liberté, avec la correction de Harvey, Leybourne & Newbold (1997) — et non
+l'approximation normale, qui décrirait un autre test et annoncerait un effet
+minimal détectable plus petit que celui que le test peut détecter.
 """
 
 from __future__ import annotations
@@ -32,10 +39,10 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .athanor.breaks import bartlett_lags, cusum_break_test
-from .athanor.calibration import Alternative, diebold_mariano, newey_west_variance
-from .athanor.power import minimum_detectable_effect, power_at
-from .athanor.regression import ols
+from .breaks import bartlett_lags, cusum_break_test
+from .calibration import Alternative, diebold_mariano, newey_west_variance
+from .power import minimum_detectable_effect, power_at
+from .regression import ols
 
 _ALPHA = 0.05
 _TARGET_POWER = 0.80
@@ -102,7 +109,7 @@ def compare_forecasts(
     `d_t = perte_modèle(t) - perte_référence(t)`, avec variance de long terme
     HAC de Newey-West (fenêtre de Bartlett automatique de Newey & West 1994,
     `floor(4 (n/100)^(2/9))`). La correction de petit échantillon de Harvey,
-    Leybourne & Newbold (1997) est conservée, comme dans le portage d'Athanor.
+    Leybourne & Newbold (1997) est conservée, comme dans le portage d'origine.
 
     La conclusion distingue trois cas, et jamais « significatif » sans la
     taille de l'effet :
@@ -144,27 +151,42 @@ def compare_forecasts(
 
     # Puissance du test à l'effet observé : la variance HAC sert d'écart-type
     # effectif, et l'écart-type ordinaire des différences de pertes de « deff ».
+    #
+    # La puissance et l'effet minimal détectable décrivent **le test exécuté** :
+    # même loi que celle de la p-value (Student à `test.df` degrés de liberté,
+    # ou normale si la correction de petit échantillon est désactivée) et même
+    # facteur de correction de Harvey, Leybourne & Newbold (1997). La statistique
+    # du test vaut `mean_diff * facteur / erreur-type de la moyenne` : l'effet
+    # porté par la non-centralité est donc l'écart moyen multiplié par ce
+    # facteur, et l'effet minimal détectable se rapporte à l'écart moyen
+    # lui-même — d'où la division par le facteur en aval.
     variance_iid = newey_west_variance(differences, 0)
     power: float | None = None
     mde = 0.0
     if variance_iid > 0.0:
         sd = math.sqrt(variance_iid)
         design_effect = test.variance / variance_iid
+        facteur = test.small_sample_factor
         power = power_at(
             n,
-            mean_diff,
+            mean_diff * facteur,
             sd,
             design_effect=design_effect,
             alpha=_ALPHA,
             alternative=Alternative.TWO_SIDED,
+            df=test.df,
         )
-        mde = minimum_detectable_effect(
-            n,
-            sd,
-            design_effect=design_effect,
-            alpha=_ALPHA,
-            power=_TARGET_POWER,
-            alternative=Alternative.TWO_SIDED,
+        mde = (
+            minimum_detectable_effect(
+                n,
+                sd,
+                design_effect=design_effect,
+                alpha=_ALPHA,
+                power=_TARGET_POWER,
+                alternative=Alternative.TWO_SIDED,
+                df=test.df,
+            )
+            / facteur
         )
 
     relative = ""
@@ -220,7 +242,7 @@ def detect_regime_change(
     statistique vaut `max |S_k| / (sigma_lr sqrt(n))` et sa loi asymptotique est
     celle du supremum du pont brownien. La variance de long terme est celle de
     Bartlett avec fenêtre automatique de Newey & West (1994) (`lags = None` dans
-    le portage d'Athanor) : c'est l'option prudente sous autocorrélation, qui
+    le portage d'origine) : c'est l'option prudente sous autocorrélation, qui
     est le cas attendu des résidus d'un filtre.
 
     `threshold` est le seuil de décision **sur la p-valeur**. Un test non
