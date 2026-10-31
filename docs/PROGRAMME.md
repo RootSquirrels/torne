@@ -49,7 +49,7 @@ raisonnement juste.
 | **P0** | `uv sync --locked`, `uv run pytest -q`, `uv run ruff check .`, `uv run ruff format --check .` et `uv build` passent sur un environnement propre, et le verrou est versionné. **Aucune phase de développement métier ne commence avant.** |
 | **P1** | Les sources réellement disponibles sont connues, qualifiées et datées. **Aucune conception générique de stockage ou de connecteur ne s'impose avant.** |
 | **P2** | Les contrats d'objets et de temporalité sont écrits, testés, et le point de vue à la décision est implémenté. |
-| **P3** | La première expérience physique est **définie** : question falsifiable, sources et témoins qualifiés, pré-enregistrement écrit et prêt à geler. **Aucun calcul sur les données de l'expérience n'a lieu avant que le pré-enregistrement soit gelé.** |
+| **P3** | *Remplacé le 31 octobre 2026 par la séquence S2→S5 ci-dessous.* Le pré-enregistrement d'une expérience ne peut précéder la capacité à observer le domaine qui la rendrait possible. |
 
 ## Répartition
 
@@ -197,47 +197,132 @@ et la liste explicite des points qui dépendent d'une source précise — donc d
 
 Aucun schéma de stockage. Aucun connecteur. Aucune table.
 
-# P3 — Définition de la première expérience physique
+# S2 → S5 — La séquence du programme
 
-**Rôle :** Senior Hydrological Data Scientist / Research Governance Officer.
-**Objectif :** définir la première expérience physique de TORNE — question, périmètre, sources, témoins,
-protocole, critères d'arrêt — **avant** tout calcul sur ses données.
+**Réordonnancement du 31 octobre 2026, décidé par le propriétaire.**
 
-Cette phase ne construit rien. Elle décide **ce qui sera mesuré**, **avec quoi**, **contre quoi**, et
-**ce qui ferait échouer l'expérience**.
+## 1. Ce qui a été corrigé
 
-## Périmètre
+Le programme précédant enchaînait : *trouver une question scientifique → rechercher les données qui
+permettent d'y répondre → construire le système autour de cette expérience*. C'est la séquence de la
+démarche **confirmatoire** : hypothèse précise, variables et seuils fixés, protocole pré-enregistré,
+puis tests.
 
-1. **Critère de sélection, relu.** Le critère MISSISSIPPI/RHIN — un témoin économique public à fréquence
-   infra-mensuelle — est **relativisé** : il devient un coût du terrain, plus le critère de sélection. Le
-   critère de sélection est **T1** (cible latente, non publiée), **T2** (juge indépendant) et
-   **identifiabilité**, selon ADR-014, ADR-023 et SPEC-003 §10.
-2. **Choix de l'expérience**, argued et documenté, avec ce qu'elle démontre et ce qu'elle ne démontre pas.
-3. **Inventaire initial des sources et des témoins**, avec pour chacune son statut de publication
-   (établie / bornée / inconnue) et son statut de vérification (`[FAIT]`, `[INFÉRENCE]`, `[CLAIMÉ]`,
-   `[INCONNU]`).
-4. **Protocole de validation et critères d'arrêt**, y compris l'hypothèse nulle : un résultat négatif
-   est un résultat.
-5. **Pré-enregistrement**, conforme à `protocol/PREREGISTRATION-TEMPLATE.md` et
-   `protocol/PREREG_PHYSIQUE.md` du paquet de référence V2.0.
+Elle a une contrepartie qui manquait : la démarche **exploratoire** — collecter des observations,
+comprendre les sources, examiner les relations, découvrir des régularités, des lacunes et des
+phénomènes potentiellement intéressants. Un pré-enregistrement n'est pas inutile : il est
+indispensable avant l'analyse confirmatoire. Mais il ne doit pas empêcher l'exploration préalable des
+données, et il n'a pas à la précéder.
 
-## Règles
+Le risque n'était pas théorique : pré-enregistrer une expérience précise avant d'avoir un système
+d'acquisition opérationnel et des sources réelles intégrées revenait à laisser les contraintes d'une
+seule expérience déterminer prématurément toute l'architecture de la plateforme.
 
-- **Aucun calcul avant le gel.** ADR-012 §8.1 : « Aucun résultat confirmatoire sans preregistration
-  gelée. » Le pré-enregistrement s'écrit avant l'acquisition, et sa date de gel est consignée.
-- **Les inconnues sont nommées, pas comblées.** Un champ non applicable porte `N/A` avec justification.
-  Une source injoignable est *inconnue*, pas *indisponible*.
+**La séquence devient :** construire une capacité d'observation du monde → acquérir et comprendre des
+sources hétérogènes → reconstruire des états physiques → découvrir les connaissances que ces
+reconstructions rendent possibles → formuler et tester des hypothèses.
+
+Cela ne signifie pas que l'acquisition est le but. L'acquisition n'est que la première étape. Le cœur
+de la plateforme reste la transformation de données disparates en connaissances physiques nouvelles.
+
+## 2. Trois niveaux, et ce qui les sépare
+
+| Niveau | Responsabilité | Ne sait pas |
+|---|---|---|
+| **Socle transversal** | récupérer (API, fichiers, flux, catalogues), gérer pagination et authentification, conserver les réponses brutes, leurs empreintes, les paramètres d'acquisition, les dates, les versions et les erreurs | ce que les données signifient |
+| **Couche sémantique** | comprendre ce qui a été collecté : objets, unités, référentiels, relations — les contrats restent communs, chaque domaine définit les siens | comment interroger un fournisseur |
+| **Couche scientifique** | transformer les observations en connaissances : reconstructions, estimations, états latents, détection de régimes, relations physiques, simulations, incertitudes, validation indépendante | comment le réseau a été interrogé |
+
+**Un adaptateur de source ne doit pas savoir reconstruire un état physique. Un modèle physique ne doit
+pas savoir interroger l'API d'un fournisseur particulier.** Les deux fonctionnent ensemble par des
+contrats explicites, et par rien d'autre.
+
+Ce que cela interdit : cinquante connecteurs abstraits construits à l'avance, et une usine à gaz de
+framework. Ce que cela impose : un socle générique, puis **quelques intégrations concrètes
+représentatives**, choisies pour leur diversité — assez pour découvrir les vrais besoins, pas plus.
+
+## 3. Les quatre sprints
+
+### Sprint 2 — Acquisition Foundation
+
+**Objectif :** TORNE sait réellement acquérir et conserver des informations du monde physique.
+
+Construire la capacité transversale de récupération et de conservation des sources, et implémenter les
+premières intégrations réelles, avec des données brutes, des métadonnées et une provenance
+irréprochable.
+
+*Portée :* le socle transversal (transport, pagination, authentification, conservation, empreintes,
+journal d'acquisition) ; quelques adaptateurs de source concrets ; une démonstration d'acquisition
+réelle, pas simulée.
+*Hors portée :* l'interprétation des données, les objets de domaine, tout modèle physique.
+
+### Sprint 3 — Physical Data Observatory
+
+**Objectif :** pouvoir regarder le monde à travers les données réellement disponibles, et comprendre ce
+que l'on sait et ce que l'on ignore.
+
+Constituer une première collection de sources physiques et en explorer les couvertures temporelles et
+spatiales, les qualités, les révisions, les recouvrements et les relations entre observations.
+
+*Ce que ce sprint produit :* un inventaire, des fiches de sources avec leur statut de publication
+(établie / bornée / inconnue, `docs/CONTRATS_FONDAMENTAUX.md` §3.11), la carte de ce qui est
+reconstituable et de ce qui ne l'est pas, et les **questions scientifiques que ces données rendent
+possibles** — découvertes à partir de ce qu'on observe, pas imposées d'avance.
+
+### Sprint 4 — Domain Intelligence Foundation
+
+**Objectif :** passer de données brutes à des représentations physiques cohérentes et réutilisables.
+
+Construire les premières représentations sémantiques et méthodes de reconstruction d'un domaine
+physique, et **les tester sur plusieurs systèmes comparables**, pas sur un seul actif.
+
+*Principe de transférabilité :* il ne s'agit pas de construire un modèle d'un fleuve pour le recopier
+sur d'autres, mais de construire un socle hydrologique réutilisable et des instanciations propres à
+chaque système fluvial. Un modèle ajusté sur un fleuve doit être évalué sur d'autres sans supposer que
+ses paramètres restent valides ; la preuve la plus nette est un ajustement sur plusieurs fleuves puis
+un test sur un bassin **entièrement laissé de côté**. C'est la différence entre réutiliser du code et
+démontrer une capacité scientifique générale.
+
+### Sprint 5 — Scientific Discovery & First Knowledge Products
+
+**Objectif :** produire une première connaissance nouvelle, vérifiable et publiable sous forme de
+Knowledge Product.
+
+Identifier plusieurs questions intéressantes **à partir de ce que TORNE sait réellement observer**,
+sélectionner les plus prometteuses, pré-enregistrer les expériences, construire les premiers modèles et
+évaluer les résultats indépendamment.
+
+*C'est ici, et seulement ici, que le pré-enregistrement prend sa valeur complète : il est écrit avant
+l'analyse confirmatoire, et il n'a pas empêché l'exploration qui l'a rendu possible.*
+
+## 4. Ce qui reste vrai de la proposition antérieure
+
+`TORNE-EXP-001` — cohérence inter-agences de l'état hydrologique du Rhin — **n'est pas abandonnée** :
+elle passe en **piste de recherche documentée**, statut `planned`. Son pré-enregistrement
+(`docs/PRE-ENREGISTREMENT-001.md`) est conservé tel quel, avec ses inconnues nommées.
+
+Ce n'est plus l'expérience fondatrice de TORNE pour l'instant : c'est une **hypothèse documentée** que
+l'observatoire des sources pourra confirmer, nuancer ou infirmer. Un pré-enregistrement écrit à l'avance
+et jamais consulté n'a rien prouvé ; un pré-enregistrement consulté après exploration reste
+pré-enregistré, et c'est ce qui lui vaut.
+
+## 5. Règles, inchangées
+
 - **Aucun juge dépendant.** Un produit public qui fournit déjà la grandeur cible est une référence ou un
   juge, jamais la découverte ; un témoin qui dérive du mécanisme qu'il doit confirmer est proscrit.
-- **Aucune acquisition massive, aucun moteur physique.** La charge d'ingénierie attendue est
-  l'**ingestion et la provenance**, pas l'architecture : le dépôt n'a pas de connecteur, et P3 n'en crée
-  aucun.
+- **Les inconnues sont nommées, pas comblées.** Une source injoignable est *inconnue*, pas
+  *indisponible* ; un champ non applicable porte `N/A` avec justification.
+- **Une absence reste une absence**, de la donnée au rapport.
+- **Aucun résultat confirmatoire sans pré-enregistrement gelé** (ADR-012 §8.1).
+- **Chaque sprint est guidé par une vision scientifique générale.** Ne pas attendre la fin de la
+  séquence pour réfléchir : ce qui est différé, c'est l'*hypothèse précise*, pas la pensée.
 
-## Livrable
+## 6. Ce qui est livré au 31 octobre 2026
 
-`docs/SLICE-PREMIER.md` (choix et périmètre, mis à jour) et `docs/PRE-ENREGISTREMENT-001.md`
-(pré-enregistrement). Les documents existants sont mis à jour en priorité ; un nouveau document de
-protocole n'est créé que s'il est nécessaire à la conduite de l'expérience — ici, il l'est.
+P0, P1 et P2 sont passés. Le socle d'acquisition (Sprint 2) est **commencé** : les contrats du socle
+transversal sont écrits et testés, et le transport, le fetcher et la conservation des preuves brutes
+sont implémentés. Les adaptateurs de source concrets et la démonstration d'acquisition réelle font
+partie du même sprint et sont en cours.
 
-Les décisions qui relèvent du périmètre — choix de l'expérience, correction du paquet de référence —
-sont formulées comme des **recommandations argumentées**, pas comme des faits acquis.
+Aucun résultat scientifique n'est produit. Aucune performance sur le monde réel n'est démontrée. Le
+dépôt n'a toujours pas d'observation réelle : il a maintenant la capacité d'en obtenir.

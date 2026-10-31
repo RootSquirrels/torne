@@ -49,6 +49,10 @@ une décision structurante, non évidente et susceptible d'évoluer. Les choix d
 | 2026-10-31 | **La latence `available_transport_capacity` de SPEC-003 §131 est proposée comme correction**, non comme réinterprétation. | Elle « exige flotte, cargaison, restrictions et comportement des opérateurs » : la distribution des tirants d'eau de la flotte et le mix de cargaison ne sont pas accessibles publiquement (l'AIS fluvial européen n'est pas un flux ouvert, aucune donnée commerciale de flotte n'est dans le périmètre). Cette latence n'est donc **pas identifiable** depuis des sources publiques. La correction proposée la remplace, dans le même bassin, par une grandeur qui l'est : la dispersion inter-agences de l'état. C'est une modification du **paquet de référence**, qui reste en lecture seule : elle est proposée au propriétaire, elle n'est pas appliquée. | Proposé — décision du propriétaire en attente |
 | 2026-10-31 | **La règle d'établissement de `KNOWN_AT` par source est écrite** : quatre classes, et la classe détermine l'admissibilité. | Le blocage « la procédure de calcul de `usable_at` : c'est la décision qui manque le plus » était réel, mais il était mal formulé : ce n'est pas une règle manquante, c'est une **instanciation** manquante. La règle est désormais explicite (`docs/CONTRATS_FONDAMENTAUX.md` §3.11) : **P** publication horodatée → établie ; **B** borne de publication → bornée ; **C** cycle de publication documenté → bornée à l'instant le plus précoce possible du cycle ; **N** aucune publication → inconnue, donc **non admise** en reconstitution point-in-time. La revue transversale a établi que ce motif est général et non propre à un fournisseur : API sans horodatage de livraison, catalogue satellitaire retraité, historique rempli a posteriori. Le repli `usable_at = INGESTED_AT` reste **écarté**. Une source dont le cycle est supposé mais non vérifié est de classe N. | Actif |
 | 2026-10-31 | **Le pré-enregistrement précède le premier calcul**, et il est créé à l'état `planned` avec ses inconnues nommées. | ADR-012 §8.1 : « Aucun résultat confirmatoire sans preregistration gelée. » Le pré-enregistrement est donc rédigé maintenant, avant toute acquisition, en suivant `protocol/PREREGISTRATION-TEMPLATE.md` et `protocol/PREREG_PHYSIQUE.md` du paquet de référence. Il porte l'état `planned` et non `preregistered` parce que cinq conditions de gel ne sont pas remplies (§A.4) — et parce qu'un pré-enregistrement qui masquerait ses inconnues serait pire qu'un pré-enregistrement qui les nomme. Les champs non applicables portent `N/A` **avec justification**, jamais supprimés. | Actif |
+| 2026-10-31 | **Le programme est réordonné : la démarche exploratoire précède la démarche confirmatoire.** | La séquence « trouver une question → chercher les données → construire le système autour » est celle de la démarche **confirmatoire**. Elle a fait pré-enregistrer une expérience précise avant que TORNE ne sache acquérir une seule donnée réelle : le risque n'était pas théorique, les contraintes d'une seule expérience allaient déterminer prématurément toute l'architecture. La séquence devient « capacité d'observation → sources comprises → états reconstruits → questions possibles → hypothèses testées ». Un pré-enregistrement reste indispensable avant l'analyse confirmatoire, mais il ne doit pas empêcher l'exploration préalable : c'est la distinction, pas l'abolition, qui est retenue. | Actif |
+| 2026-10-31 | **`TORNE-EXP-001` passe en piste de recherche documentée, statut `planned`.** | Son travail n'est pas jeté : pré-enregistrement, sources, témoins, hypothèse nulle et conditions de gel sont conservés tels quels. Mais ce n'est pas l'expérience fondatrice. Deux raisons, l'une du propriétaire et l'autre de fond : (i) sans socle d'acquisition ni sources intégrées, pré-enregistrer une expérience précise revient à laisser ses contraintes dicter l'architecture ; (ii) l'affirmation elle-même démontre surtout une **capacité de réconciliation et d'audit des systèmes de mesure**, et le nombre de jours de basses eaux reste une grandeur dérivée dépendante d'un seuil opérationnel — pas une propriété physique universelle du fleuve. L'ambition qui la remplace est une représentation progressive de l'état hydrologique : état hydrométrique, dynamique du réseau, état physique spatial, régimes et événements. | Actif |
+| 2026-10-31 | **Trois niveaux, séparés par des contrats explicites : socle transversal, couche sémantique, couche scientifique.** | Un adaptateur de source ne doit pas savoir reconstruire un état physique ; un modèle physique ne doit pas savoir interroger l'API d'un fournisseur. Ils fonctionnent ensemble par des contrats, et par rien d'autre. Cela interdit les cinquante connecteurs abstraits construits à l'avance comme le framework de connecteurs universel — et impose, à l'inverse, un socle générique puis **quelques intégrations concrètes représentatives**, choisies pour leur diversité, assez pour découvrir les vrais besoins. Le socle transversal acquiert et conserve ; il ne sait pas ce que les données signifient. | Actif |
+| 2026-10-31 | **La transférabilité doit être démontrée, pas supposée.** | Réutiliser du code n'est pas démontrer une capacité scientifique générale. Un modèle ajusté sur un fleuve doit être évalué sur d'autres sans supposer que ses paramètres restent valides ; la preuve la plus nette est un ajustement sur plusieurs fleuves puis un test sur un bassin **entièrement laissé de côté**. C'est le test que le dépôt n'a pas encore passé, et c'est ce qui distingue une plateforme d'un modèle recopié. | Actif |
 
 ## Points ouverts
 
@@ -80,19 +84,26 @@ Ces points ne sont pas tranchés et ne doivent pas être présentés comme acqui
   (`docs/CONTRATS_FONDAMENTAUX.md` §3.11, classes P/B/C/N). Restent à fixer les conventions
   temporelles **propres à chaque source** : le gate P1 les a délimitées, il ne les a pas fixées —
   c'est là que se joue la suite, et cela exige d'**interroger** chaque source, pas de la supposer.
-- **Choix de la première expérience** : **recommandé, non décidé**. `TORNE-EXP-001` est la
-  recommandation argumentée (`docs/SLICE-PREMIER.md`), et `docs/PRE-ENREGISTREMENT-001.md` est écrit
-  à l'état `planned`. La décision appartient au propriétaire.
+- **Choix de la première expérience** : **en attente, et c'est un choix fait.** `TORNE-EXP-001` est
+  une piste de recherche documentée (statut `planned`), pas l'expérience fondatrice. Le programme a été
+  réordonné : la capacité à observer un domaine physique passe avant le choix d'une expérience
+  (`docs/PROGRAMME.md`, séquence S2→S5). L'expérience sera **découverte** à partir de ce que TORNE
+  saura réellement observer, et non imposée d'avance.
+- **Sources réelles intégrées** : **aucune à ce jour.** Le dépôt a désormais la capacité d'en obtenir
+  (socle transversal d'acquisition), mais aucune donnée réelle n'est encore conservée. C'est le
+  chantier du Sprint 2, puis l'observatoire du Sprint 3.
+- **Transférabilité multi-bassins** : **non démontrée.** Un ajustement sur plusieurs fleuves puis un
+  test sur un bassin entièrement laissé de côté : c'est le test qui distingue une capacité scientifique
+  générale d'un modèle recopié. Il ne peut pas avoir lieu avant le Sprint 4.
 - **Source néerlandaise du Rhin** : **inconnue**. Injoignable depuis ce poste ; « injoignable ici »
-  n'est pas « indisponible ». C'est l'inconnue bloquante unique de l'expérience 001 : elle décide du
-  classement entre candidats.
+  n'est pas « indisponible ». C'est l'inconnue bloquante unique de la piste 001.
 - **Revue d'art antérieur sur la dispersion inter-agences** : **non faite**. Les affirmations «
   personne ne publie cette grandeur harmonisée » sont **inférées** de l'inspection des catalogues
   de sources, pas d'une revue systématique de la littérature. C'est le maillon faible du dossier,
   et il est peu coûteux à fermer.
-- **Classes effectives des sources de l'expérience 001** : **non instanciées**. Chaque source retenue
-  doit être classée P/B/C/N **par vérification** ; `Hub'EAU v2` est vérifiée et porte une sémantique
-  temporelle explicite, mais son cycle de publication par valeur doit encore être établi.
+- **Classes effectives des sources** : **non instanciées**. Chaque source retenue doit être classée
+  P/B/C/N **par vérification** ; une source dont le cycle de publication est supposé mais non vérifié
+  est de classe N.
 - **Registre d'unités et référentiel spatial** : absent de tous les dépôts audités. À créer de zéro, avec une
   géométrie et un CRS — le « géospatial » de l'ancien BORÉE n'est qu'un ensemble de chaînes de caractères.
 - **Point d'entrée console `torne`** : provisoire. Il énonce l'état du paquet et sera remplacé par le premier slice

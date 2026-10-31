@@ -1,8 +1,22 @@
 # TORNE — Pré-enregistrement 001
 
-**État : `planned` — non gelé.** Les conditions de gel sont en §A.4. Ce document est rédigé
-**avant** tout calcul sur les données de l'expérience : il ne le sera plus jamais après.
-Il suit le gabarit `protocol/PREREGISTRATION-TEMPLATE.md` et la fiche
+**État : `planned` — non gelé, et en attente.**
+**Ce pré-enregistrement n'est pas l'expérience fondatrice de TORNE pour l'instant.** Il est conservé
+tel quel, avec ses inconnues nommées, comme **piste de recherche documentée** : le programme a été
+réordonné le 31 octobre 2026 pour construire d'abord la capacité à observer un domaine physique
+(`docs/PROGRAMME.md`, séquence S2→S5).
+
+**Ce que cela change, et ce que cela ne change pas.** Un pré-enregistrement est indispensable avant
+l'analyse confirmatoire ; il ne doit pas empêcher l'exploration préalable des données, et il n'a pas à
+la précéder. L'exploration qui rendra cette hypothèse confirmable ou réfutable est **explicitement
+autorisée** — et elle n'est pas une analyse confirmatoire : elle ne teste pas H1 (§B.3), elle ne fixe
+aucun seuil, et elle ne consomme pas la période réservée (§C.5). Un pré-enregistrement consulté après
+exploration reste pré-enregistré ; c'est ce qui lui vaut. Ce qui est interdit reste interdit : la
+réservation de données, la définition du seuil, et le choix des variantes se font **avant** la lecture
+de la période test, et toute dérogation crée un amendement append-only (ADR-012 §4).
+
+Ce document est rédigé **avant** tout calcul sur les données de l'expérience : il ne le sera plus
+jamais après. Il suit le gabarit `protocol/PREREGISTRATION-TEMPLATE.md` et la fiche
 `protocol/PREREG_PHYSIQUE.md` du paquet de référence V2.0.
 
 **Convention de libellé.** `[FAIT]` vérifié par exécution ou lecture directe de la source ;
@@ -45,12 +59,14 @@ raisonnement complet est dans `docs/SLICE-PREMIER.md`.
 
 Ce pré-enregistrement ne passe à `preregistered` qu'une fois :
 
-1. les **tests d'accès** leveurs (§C.4) rendus, avec leur verdict ;
-2. l'**instanciation par source** de la procédure `usable_at` (`docs/CONTRATS_FONDAMENTAUX.md`
-   §3.10) écrite pour chaque source retenue ;
-3. la **revue de l'art antérieur** sur la dispersion inter-agences hydrométriques consultée (§B.5) ;
-4. les **seuils et définitions** de §D et §G figés, avec les variantes autorisées énumérées ;
-5. le **commit du code** qui exécutera l'expérience relevé.
+1. le **socle d'acquisition** est opérationnel et les sources de l'expérience sont intégrées — sans
+   cela, il n'y a rien à explorer ni à confirmer ;
+2. les **tests d'accès** leveurs (§C.4) rendus, avec leur verdict ;
+3. l'**instanciation par source** de la procédure `usable_at` (`docs/CONTRATS_FONDAMENTAUX.md`
+   §3.10 et §3.11) écrite pour chaque source retenue ;
+4. la **revue de l'art antérieur** sur la dispersion inter-agences hydrométriques consultée (§B.5) ;
+5. les **seuils et définitions** de §D et §G figés, avec les variantes autorisées énumérées ;
+6. le **commit du code** qui exécutera l'expérience relevé.
 
 Un changement ultérieur de population, d'admissibilité temporelle, de définition physique, de
 juge, d'estimand ou de critère de décision crée un **amendement append-only** et une nouvelle

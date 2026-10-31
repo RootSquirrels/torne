@@ -6,9 +6,28 @@ présumée démontrée.**
 
 ## 1. La thèse
 
-TORNE transforme des données hétérogènes du monde réel en représentations, variables, modèles et
-connaissances nouvelles ; ces connaissances peuvent ensuite alimenter plusieurs applications,
-dont la recherche d'un avantage financier.
+**TORNE construit des représentations du monde physique à partir de sources hétérogènes, en
+reconstruisant les états que ces sources ne décrivent qu'imparfaitement. Il identifie les relations,
+les contraintes et les phénomènes qui ne sont pas directement visibles dans les observations
+individuelles, puis produit des connaissances traçables, quantifiées et validables indépendamment.**
+
+Une conséquence en découle, et elle est contraignante : **TORNE ne cherche pas une question
+scientifique intéressante pour justifier son existence.** Il développe une capacité suffisamment forte
+pour faire **émerger** des questions auxquelles les outils et les sources pris isolément ne savent pas
+répondre. La séquence est donc : capacité d'observation → sources comprises → états reconstruits →
+questions possibles → hypothèses testées. Et non l'inverse.
+
+### 1.1 Trois choses à ne pas confondre
+
+| | Ce que c'est | Exemple |
+|---|---|---|
+| **TORNE, la plateforme** | sa capacité à acquérir, comprendre, rapprocher, reconstruire et documenter des informations sur le monde physique | le socle transversal d'acquisition, les contrats, la lignée |
+| **Les domaines de connaissance** | hydrologie, énergie, météorologie, logistique, agriculture, industrie, infrastructures | ce qu'un domaine définit comme objets, unités, référentiels, relations |
+| **Les expériences scientifiques** | des questions particulières auxquelles TORNE répond à partir de ses données et de ses modèles | la divergence inter-agences de l'état du Rhin |
+
+Un programme qui les confond construit une plateforme sur mesure d'une expérience. TORNE les
+distingue, et les rapports de résultat les distinguent encore : une affirmation physique n'est jamais
+une affirmation financière, et le statut financier est vide quand aucun marché n'est observé.
 
 Deux enjeux coexistent et ne sont pas mutuellement conditionnels.
 
@@ -120,9 +139,12 @@ masquerait l'échec d'un enjeu par la réussite de l'autre est interdit.
   affirmation de performance y serait mensongère.
 - **Périmètre.** La vision est large ; le programme d'exécution ne doit pas l'être simultanément.
   Le premier slice vertical doit démontrer un chemin complet sur un domaine limité.
-- **Terrain.** Le premier terrain est en cours de sélection par l'agent principal. Le paquet de
-  référence V2.0 étudie notamment le Rhin et le Mississippi comme candidats ; aucun n'est arrêté
-  dans ce dépôt.
+- **Terrain.** Le premier terrain n'est pas arrêté. Une revue transversale a comparé sept candidats
+  d'expérience sur six domaines et a retenu `TORNE-EXP-001` (cohérence inter-agences de l'état
+  hydrologique du Rhin) comme **piste de recherche documentée**, statut `planned`. Elle n'est pas
+  l'expérience fondatrice : le programme a été réordonné pour construire d'abord la capacité à observer
+  un domaine physique, puis découvrir les questions à partir de ce qu'on observe réellement
+  (`docs/PROGRAMME.md`, séquence S2→S5).
 - **Données.** Priorité aux sources publiques, dont l'historique, la qualité documentaire et les
   droits de conservation conditionnent le choix du terrain.
 - **Dépendance aux tiers.** Une source qui disparaît, se révise ou change de format dégrade les
