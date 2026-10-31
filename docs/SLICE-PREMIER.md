@@ -140,3 +140,38 @@ propre document plutôt qu'un contournement dans le slice.
   https://www.ams.usda.gov/services/transportation-analysis/gtr-datasets
 - Paquet de référence conceptuelle V2.0 : `docs/03-INITIAL-SOURCE-CATALOGUE.md`, `docs/06-PUBLIC-DECISION-GAP-TRIAL-PLAN.md`,
   `docs/02-DATA-LAKE-AND-PHYSICAL-RECONSTRUCTION.md`, `docs/04-OPERATING-PLAN-AND-BUDGET.md`.
+
+## 9. Ce que la qualification des sources a changé
+
+La mission P1 (`docs/MISSISSIPPI_DATA_SOURCES.md`, 920 lignes, neuf sources vérifiées sur requêtes réelles) confirme le
+choix du bassin et durcit la proposition. Cinq points changent la façon dont le slice doit être écrit.
+
+**1. Le jeu de données minimal existe et il est borné.** Six sources, fenêtre commune **2004-01-07 → 2026-10-27**
+(22 ans), trois stations USGS vérifiées comme porteuses de séries quotidiennes (St. Paul 1892, Chester 1942, Thebes
+1933), plus deux séries USDA de prix et une de volumes. La fenêtre commence exactement au premier point des séries de
+prix : aucune troncature n'est nécessaire.
+
+**2. Il y a un piège d'identification, et il est structurel.** Les taux d'amont manquent en hiver — 729 des 774
+absences sont des fermetures sur Twin Cities et Mid-Mississippi. Or c'est cette absence qui fait monter le prix en
+aval : « l'amont a été fermé » ne peut pas servir de variable explicative quand l'indicateur de prix amont est
+lui-même manquant **par construction**. L'identification devra reposer sur des variations intra-amont ou sur des
+comparaisons entre semaines, jamais sur la présence/absence seule. C'est le point à écrire dans le pré-enregistré.
+
+**3. L'alignement naïf sur la date produirait un résultat faux.** L'hydrologie est publiée à J+1, le prix de la
+semaine à J+4 environ, les volumes à J+5 : le décalage de publication de 4 à 5 jours est structurel. Il doit être
+modélisé, pas absorbé par un alignement sur `date`. Les deux séries USDA n'ont d'ailleurs pas la même fin de semaine :
+les taux sont datés **mardi**, les mouvements **samedi**.
+
+**4. Deux séries de prix coexistent, et le choix n'est pas neutre.** `deqi-uken` donne sept zones en pourcentage du
+barème de 1976 ; `7spn-fbua` donne 26 tronçons **déjà en dollars par tonne**. La réconciliation est exacte pour 24
+tronçons sur 26 testés ; deux résistent (Desoto Landing–Hurricane Point, Letsworth–Greenville) et attendent le
+fichier « Rate Data by Segment ». Recommandation de P1 : `7spn-fbua` en série de référence, `deqi-uken` en complément.
+
+**5. Une question bloquante reste ouverte, et elle n'est pas technique.** La valeur `rate` est un **moyennage sur un
+nombre de jours qui n'est documenté nulle part** : les dénominateurs 3, 7, 16 et 28 observés dans les valeurs le
+laissent deviner, mais c'est une déduction. Sans la confirmation écrite d'USDA/AMS, on risque de modéliser un
+artefact de moyenne. Cette question passe **avant** l'écriture du moindre connecteur.
+
+S'y ajoutent trois ruptures méthodologiques relevées par P1 (granularité des taux, convention de fin de semaine,
+périodes manquantes) et treize vérifications impossibles à mener depuis ce poste, listées dans le rapport de P1.
+
