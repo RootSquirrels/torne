@@ -23,6 +23,9 @@ avant de connaître les données réellement disponibles ; ce document respecte 
 
 Il n'est **pas** une spécification d'implémentation non plus : aucune brique n'est décrite comme acquise, et
 aucune affirmation de ce document ne repose sur du code de TORNE — le dépôt n'en contient pas encore.
+*(Mise à jour du 31 octobre 2026 : le dépôt contient désormais une forme exécutable de ces contrats,
+dans `src/torne/contracts/`. Ce document reste la **source** : le code en est l'application, et il ne
+lui ajoute aucune brique.)*
 
 ### 0.1 Ce qui est vérifié et ce qui est cité
 

@@ -45,19 +45,35 @@ de lui.
 
 | Construit aujourd'hui | Envisagé, pas implémenté |
 |---|---|
-| Socle documentaire : vision, architecture, doctrine de validation, journal de décisions | Modèles physiques, opérationnels, économiques ou financiers |
-| Paquet Python installable et construisible, sans aucun code métier | Connecteurs vers des sources réelles, acquisition de données |
-| Point d'entrée console qui énonce l'état du paquet | Reconstruction d'états, assimilation de données, simulation |
-| Tests de fumée, linting, formatage | Produits de connaissance versionnés, cartographie, lecture par API |
+| Socle documentaire : vision, architecture, doctrine de validation, journal de décisions | Connecteurs vers des sources réelles, acquisition de données |
+| **Contrats fondamentaux exécutables** : cinq objets, trois dimensions temporelles, invariants appliqués à la construction | Règles temporelles propres à chaque source, et les six décisions bloquantes à lever avant le premier connecteur |
+| **Capacité d'exécution** : entrées et paramètres explicites, graine contrôlée, configuration reproductible, rejeu depuis la configuration | Simulation d'évolutions, modèles physiques opérationnels |
+| **Capacité d'évaluation** : séparation temporelle stricte, marche avant, références, métriques, couverture d'intervalles, comparaison appariée | Modèles économiques ou financiers |
+| **Preuve et provenance** : source, preuve brute, observation, enregistrement d'exécution, produit de connaissance versionné | Connecteurs, secrets, magasin brut |
+| **Une méthode scientifique réelle et vérifiée** : filtre de Kalman en espace d'état « tendance linéaire locale » | D'autres modèles, d'autres domaines |
+| **Quatre primitives d'`athanor.stats` extraites et attribuées** : OLS + CR1, Diebold-Mariano apparié + HAC, CUSUM, puissance | Les huit autres primitives, non nécessaires ici |
+| Paquet Python installable et construisible ; une dépendance runtime (`numpy`), au premier import réel | Dépendances de stockage, de connecteurs, d'outillage |
+| Point d'entrée console qui énonce l'état du paquet | Reconstruction d'états sur données réelles, assimilation |
+| 193 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
 | Environnement verrouillé (`uv.lock` versionné) et gate de qualité exécuté sur Python 3.12 | Exécution de la CI : le workflow GitHub Actions est écrit, il n'a pas encore tourné |
 | **Matrice de réutilisation consolidée** : trois audits d'archéologie, une décision par composant | Première application financière, edge démontré, capacité de déploiement |
-| **Proposition argumentée du premier vertical slice** (Mississippi) et ses conditions d'échec | Toute extraction de code des dépôts historiques, bloquée par la licence d'Athanor |
+| **Proposition argumentée du premier vertical slice** (Mississippi) et ses conditions d'échec | — |
 
-**Aucune performance n'est démontrée.** Aucun modèle n'existe dans ce dépôt : aucune puissance
-prédictive, aucun alpha, aucune rentabilité, aucune position « state of the art » ne peut être
-revendiquée. Toute affirmation chiffrée dans les documents de ce dépôt est une méthode ou un
-objectif, jamais un résultat. Les documents présents décrivent une architecture et ses
-conditions de validité, pas des capacités.
+**Aucune performance n'est démontrée sur le monde réel.** Le dépôt contient désormais un modèle
+scientifique — un filtre de Kalman en espace d'état — dont **l'implémentation** est vérifiée :
+concordance à 1e-10 avec une implémentation de référence indépendante, cas à deux observations
+calculé à la main, propriétés d'un estimateur d'état contrôlées sur un processus synthétique dont
+l'état latent est connu par construction, et intervalle prédictif dont la couverture empirique
+retrouve le 95 % nominal. Cela établit que **le code est correct**, pas qu'il prédit quoi que ce
+soit du monde réel : la série de démonstration est synthétique. Les sources
+réelles, elles, **sont qualifiées** — le gate P1 a établi dix sources, leurs
+stations et leurs paramètres (`docs/MISSISSIPPI_DATA_SOURCES.md`) — mais la
+mission 001 n'implémente pas de connecteur, et les règles temporelles par
+source restent à fixer avant d'écrire le premier. La démonstration avait en
+outre besoin d'un état latent **connu par construction**, ce qu'aucune série
+publique ne donne. L'évaluation conduite compare le modèle à des références sur
+ces mêmes données synthétiques — un écart observé, sous la puissance du test
+disponible. Aucun chiffre de ce dépôt n'est une performance revendicable.
 
 ## Installation et tests
 
@@ -82,7 +98,9 @@ garde-fou contre la dérive des dépendances.
 ## Qualité
 
 Le gate tient en cinq commandes. Elles ont toutes été exécutées et ont toutes passé le
-31 octobre 2026 sur Python 3.12 ; les sorties réelles sont dans `docs/P0-RAPPORT.md`.
+31 octobre 2026 sur Python 3.12. Les sorties réelles du **socle initial** sont dans
+`docs/P0-RAPPORT.md` ; après la mission 001, le gate est rejoué à l'identique et passe de nouveau,
+avec 193 tests au lieu de 2.
 
 | Commande | Ce qu'elle garantit |
 |---|---|
@@ -105,10 +123,16 @@ poussée.
 | [`docs/RESEARCH_AND_VALIDATION.md`](docs/RESEARCH_AND_VALIDATION.md) | cinq modes de validation et hiérarchie des affirmations |
 | [`docs/REUSE_AUDIT.md`](docs/REUSE_AUDIT.md) | **matrice de réutilisation consolidée** : une décision par composant, le blocage de licence, les doublons à ne pas réimplémenter, ce qu'il faut extraire en premier |
 | [`docs/SLICE-PREMIER.md`](docs/SLICE-PREMIER.md) | proposition argumentée du premier vertical slice (Mississippi), critères de succès et conditions d'échec |
+| [`docs/MISSISSIPPI_DATA_SOURCES.md`](docs/MISSISSIPPI_DATA_SOURCES.md) | **qualification des sources du Mississippi** : neuf sources, schémas réels, état de chaque API, ruptures méthodologiques, jeu de données minimal — et ce qu'il ne permet pas de mesurer |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | journal daté des décisions prises et des points ouverts |
+| [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | le programme d'ingénierie : les gates P0/P1/P2, les principes, la répartition du travail |
+| [`docs/CONTRATS_FONDAMENTAUX.md`](docs/CONTRATS_FONDAMENTAUX.md) | les cinq objets, les trois dimensions temporelles, 34 invariants vérifiables |
+| [`docs/P0-RAPPORT.md`](docs/P0-RAPPORT.md) | le rapport du socle de build : sorties réelles des cinq commandes, décisions, limites |
+| [`docs/MISSISSIPPI_DATA_SOURCES.md`](docs/MISSISSIPPI_DATA_SOURCES.md) | **qualification des sources** (gate P1) : dix sources, stations, paramètres, pièges méthodologiques, décisions bloquantes avant tout connecteur |
 | [`docs/audit/ATHANOR.md`](docs/audit/ATHANOR.md) | audit d'`athanor` : estimateurs, juge, machine à états, licence, doublons |
 | [`docs/audit/CRIN.md`](docs/audit/CRIN.md) | audit de SquirrelBetting / C.R.I.N. : discipline expérimentale, métriques, ce qui est hippique |
 | [`docs/audit/LEGACY-BOREE.md`](docs/audit/LEGACY-BOREE.md) | audit de l'ancien BORÉE : point-in-time, lac, scellés, anti-fuite, ce qui est électrique |
+| [`docs/audit/REVUE-CONSISTENCE.md`](docs/audit/REVUE-CONSISTENCE.md) | revue indépendante de la matrice de réutilisation : 25 écarts relevés et corrigés |
 | [`experiments/README.md`](experiments/README.md) | ce qui a le droit d'être jetable |
 
 La spécification conceptuelle de TORNE est le paquet de référence
@@ -131,14 +155,21 @@ torne/
 ├── README.md               # ce document
 ├── .gitignore
 ├── .github/workflows/ci.yml # gate de qualité en GitHub Actions
-├── src/torne/__init__.py   # version et point d'entrée console provisoire
-├── tests/test_package.py   # tests de fumée
+├── src/torne/
+│   ├── __init__.py         # version et point d'entrée console provisoire
+│   ├── contracts/          # contrats fondamentaux, exécutables : temps, validité, modèle, preuve, provenance
+│   ├── execution/          # exécution d'un modèle : configuration, reproductibilité, rejeu
+│   ├── methods/            # méthodes scientifiques : filtre d'état, comparaisons, primitives d'Athanor
+│   ├── evaluation/         # séparation temporelle, métriques, références, rapport
+│   └── knowledge/          # enregistrement d'exécution, lignée, produit de connaissance
+├── tests/                  # tests des contrats, des maillons, et test d'intégration bout en bout
 ├── docs/                   # vision, architecture, validation, audit de réutilisation, décisions
 └── experiments/            # explorations jetables, hors paquet
 ```
 
 Il n'y a ni moteur, ni service, ni registre, ni répertoire vide : ils apparaîtront lorsqu'un
-besoin concret les justifiera.
+besoin concret les justifiera. Les quatre sous-paquets correspondent à quatre responsabilités
+réellement exercées, pas à des couches prévues pour l'avenir.
 
 ## État du projet
 
@@ -154,5 +185,17 @@ Actions qui rejoue ce gate est écrit, mais **n'a pas encore été exécuté**.
 En cours : consolidation de la matrice de réutilisation à partir des trois rapports
 d'archéologie, et choix du premier slice vertical.
 
-Non fait : aucun code métier, aucun connecteur, aucun modèle. **Aucune performance n'est
-démontrée.**
+**31 octobre 2026 — mission 001 livrée : exécution, évaluation, preuve.** Le dépôt n'est plus
+un socle documentaire. Il contient une capacité d'exécution (entrées et paramètres explicites,
+graine contrôlée, configuration conservée, rejeu depuis la configuration), une capacité
+d'évaluation (séparation temporelle stricte, marche avant, références, métriques, comparaison
+appariée), la preuve et la provenance (source, preuve brute, observation, enregistrement,
+produit de connaissance versionné), et **une méthode scientifique réelle** : un filtre de Kalman
+en espace d'état « tendance linéaire locale », vérifié contre une implémentation de référence
+indépendante, contre un cas calculé à la main et contre les propriétés attendues d'un estimateur
+d'état. Quatre primitives d'`athanor.stats` ont été extraites et attribuées. La chaîne complète
+est testée de bout en bout (`tests/test_end_to_end.py`) et rejouable
+(`experiments/mission_001_demo.py`).
+
+Non fait : aucun connecteur, aucune source réelle qualifiée, aucun modèle économique ou
+financier, aucune application. **Aucune performance sur le monde réel n'est démontrée.**

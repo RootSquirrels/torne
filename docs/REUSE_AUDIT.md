@@ -229,6 +229,13 @@ besoin qu'une fois.
 
 ## 8. Ce qu'il faut extraire en premier
 
+*(Mise à jour du 31 octobre 2026, après la mission 001 : le point 1 est **partiellement fait**.
+Quatre primitives d'`athanor.stats` ont été extraites et attribuées dans
+`src/torne/methods/athanor/` — `regression` (OLS + CR1), `calibration` (Diebold-Mariano apparié
++ HAC), `breaks` (CUSUM) et `power` (puissance). Les huit autres primitives de la liste restent
+non extraites : la mission 001 n'en avait pas besoin. Le point 2 — contrat d'ingestion et magasin
+brut point-in-time — reste entièrement à faire et attend le gate P1.)*
+
 Par ordre de valeur par unité de coût :
 
 1. **Le noyau statistique** (`athanor.stats` : e-processus, e-LOND, multiplicité, sur-apprentissage, puissance,

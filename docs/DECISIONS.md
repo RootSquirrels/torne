@@ -23,29 +23,41 @@ une décision structurante, non évidente et susceptible d'évoluer. Les choix d
 | 2026-10-31 | **`known_at` désigne la publication dans la source**, et non notre ingestion. | Piège de nommage vérifié dans le code d'Athanor : `athanor.kernel.clock` appelle `known_at` l'instant de **notre** ingestion. Reprendre le magasin tel quel inverserait la sémantique point-in-time **sans qu'aucun test ne casse**. La table de correspondance est posée dans `docs/CONTRATS_FONDAMENTAUX.md` ; le nom d'Athanor est refusé. | Actif |
 | 2026-10-31 | **`usable_at` est une fonction dérivée, jamais un champ stocké** : `max(KNOWN_AT, INGESTED_AT)`. | Un `usable_at` stocké se dégrade silencieusement : il devient un fait figé au lieu d'une règle. La dérivation rend la sémantique visible et la permet de changer sans migration. | Actif |
 | 2026-10-31 | **Le volet hippique, PMU, pool odds, Kelly, settlement et les 43 adaptateurs de domaine sont écartés.** | Aucun rapport avec la reconstitution d'états physiques. Trois *principes* sont conservés : le règlement au moment de vérité, l'évaluation sur l'information disponible à la décision, la discipline de gate. | Actif |
+| 2026-10-31 | **Mission 001 livrée : exécution, évaluation, preuve et provenance.** | Le dépôt cesse d'être un socle documentaire. La chaîne `preuve brute → observation → exécution du modèle → résultat typé → évaluation hors échantillon → comparaison appariée → enregistrement → produit de connaissance → rejeu` existe et est testée de bout en bout (`tests/test_end_to_end.py`). La méthode démontrée est un **filtre de Kalman en espace d'état « tendance linéaire locale »** : réelle, déterministe, vérifiée contre une implémentation de référence indépendante (concordance à 1e-10), contre un cas calculé à la main, et contre les propriétés attendues d'un estimateur d'état. | Actif |
+| 2026-10-31 | **`numpy` devient la première dépendance runtime**, au premier import réel. | La règle du programme (« une bibliothèque s'installe quand un module du dépôt l'importe réellement ») est satisfaite pour la première fois : le filtre d'état et les estimateurs repris d'`athanor` importent `numpy`. Aucune autre dépendance n'est ajoutée. | Actif |
+| 2026-10-31 | **`scipy.special.stdtr` est réimplémenté** (bêta incomplète régularisée, fraction continue de Lentz, Numerical Recipes §6.4) plutôt que d'ajouter `scipy`. | L'appel `scipy` d'`athanor` est une dépendance de bibliothèque, pas du code copié : il ne crée aucune obligation de licence tierce. La réimplémentation est vérifiée contre les formes fermées à 1e-14 et contre les quantiles tabulés à 2e-8 — précision atteinte : 1,1e-16 et 1,3e-8 — et contre l'oracle que `athanor` conserve lui-même dans `athanor/tests/special_reference.py`. Ajouter une dépendance lourde pour une seule fonction ne se justifie pas. | Actif |
+| 2026-10-31 | **Quatre primitives d'`athanor.stats` sont extraites** : `regression` (OLS + CR1), `calibration` (Diebold-Mariano apparié + HAC de Newey-West), `breaks` (CUSUM), `power` (MDE, puissance). | Extraction minimale, pas copieuse : la mission 001 n'a besoin que d'un estimateur de tendance, d'un test apparié, d'un détecteur de rupture et de la puissance du test — cette dernière étant ce qui permet de dire « pas de puissance » au lieu de « pas d'effet ». Les huit autres restent hors du dépôt, chacune pour une raison : `resampling` (métrique de ratio et bootstrap par grappes, conventions d'Athanor), `evalues` (e-processus, cadre de paris bornés), `online_fdr` (flux de tests séquentiels), `multiplicity` (familles de tests simultanés), `overfitting` (sélection parmi des modèles candidats), `intervals` (intervalles postérieurs de proportion), `variance_reduction` (CUPED, exige des variables de contrôle), `scoring` (scoring de classement). `spreads.py` est `ADAPT` dans `docs/REUSE_AUDIT.md`, pas l'une des douze. **Traçabilité** : origine `athanor@6dacc87`, chemins exacts, propriétaire, et en-tête d'attribution dans chaque module extrait. | Actif |
+| 2026-10-31 | **Aucune obligation de licence tierce** dans les quatre modules extraits d'`athanor`. | `athanor` ne contient ni `LICENSE`, ni `COPYING`, ni `NOTICE`, ni champ `license` : c'est un dépôt privé du propriétaire, réutilisable sans réserve (`docs/PROGRAMME.md:24-31`). La recherche de `Copyright`, `Licensed under`, `BSD`, `MIT`, `Apache`, `GPL`, `Adapté de` et `Porté de` sur `src/athanor/stats/*.py` ne renvoie que des citations scientifiques, pas d'en-têtes de licence. La chaîne de provenance est interne au propriétaire : `athanor` ← `SquirrelBetting/crin/calibration.py` ← `squirrel/calibration.py`. | Actif |
+| 2026-10-31 | **`INGESTED_AT < KNOWN_AT` est signalé et non exploité**, plutôt que refusé à la construction. | Le contrat (§3.2) qualifie ce cas d'erreur, non d'exploit : la donnée est douteuse et doit être **signalée**. `TemporalStamp.has_temporal_incoherence` porte le signal, et `usable_at` vaut alors `None` — l'information n'est donc jamais admise en reconstitution point-in-time. La refuser à la construction supprimerait la possibilité même de la signaler. | Actif |
+| 2026-10-31 | **Les règles de lint sont épinglées explicitement** dans `pyproject.toml`. | Les règles par défaut de `ruff` varient d'une version à l'autre : un gate ne doit pas changer de verdict parce qu'une dépendance a été mise à jour. La sélection est donc écrite, pas héritée. | Actif |
+| 2026-10-31 | **La démonstration de la mission 001 porte sur des données synthétiques** ; l'acquisition de sources réelles reste hors mission. | Le gate P1 est passé : dix sources sont qualifiées, stations et paramètres figés (`docs/MISSISSIPPI_DATA_SOURCES.md`). La mission 001 n'implémente pourtant **pas** de connecteur, et le document P1 pose lui-même six décisions bloquantes à lever avant d'en écrire le premier. La série de démonstration est synthétique, mais son **état latent est connu par construction** : c'est ce qui permet de juger l'estimation contre la vérité, ce qu'aucune série publique ne permettrait sans qualification préalable des règles temporelles par source. Le jeu réel publié d'Anscombe sert de référence vérifiée pour l'estimateur OLS. | Actif |
 
 ## Points ouverts
 
 Ces points ne sont pas tranchés et ne doivent pas être présentés comme acquis.
 
-- **Licence d'Athanor** : le dépôt `athanor@6dacc87` ne contient **aucun fichier de licence**. Tant que ce point n'est
-  pas réglé, les décisions `REUSE` de `docs/REUSE_AUDIT.md` signifient « à réutiliser après clarification ». C'est le
-  blocage numéro un.
-- **`uv.lock`** : non généré au premier commit. `uv` a été installé depuis (0.13.6, portée utilisateur) ; le verrou est
-  produit par `uv lock` puis commité, `uv.lock` étant volontairement versionné.
-- **Installation, tests et linting** : non exécutés au premier commit, faute d'`uv` sur le poste de construction. Les
-  commandes attendues sont `uv sync --locked`, `uv run pytest -q`, `uv run ruff check .`, `uv run ruff format --check .`
-  et `uv build`.
+- **Licence d'Athanor** : **close** (voir plus bas « Statut juridique d'`athanor` »). Le dépôt `athanor@6dacc87` ne
+  contient **aucun fichier de licence**, et aucun des modules repris n'en porte non plus : c'est la condition même
+  de la réutilisation, et elle est désormais vérifiée module par module dans les en-têtes d'attribution.
+- **`uv.lock`** : généré et commité dès le socle P0, volontairement versionné. Il a été mis à jour par la mission
+  001, qui a ajouté `numpy` comme première dépendance runtime.
+- **Installation, tests et linting** : le gate est exécuté et vert à chaque commit (cinq commandes,
+  `uv sync --locked`, `uv run pytest -q`, `uv run ruff check .`, `uv run ruff format --check .`, `uv build`).
+  Il ne tourne qu'en local et dans la CI GitHub Actions, qui n'a pas encore été exécutée.
 - **Licence du dépôt TORNE** : non choisie. Le dépôt est privé ; aucune licence n'est ajoutée automatiquement, la
   politique de propriété intellectuelle est gérée séparément.
 - **Statut juridique d'`athanor`** : **close**. Dépôt privé du propriétaire : son code est réutilisable sans réserve,
   et les décisions `REUSE` de `docs/REUSE_AUDIT.md` sont actionnables. Ce qui reste demandé, c'est de la **traçabilité** :
   chaque brique reprise laisse une trace de son origine dans ce journal.
-- **Procédure de calcul de `usable_at`** : c'est la décision qui manque le plus. Sans elle, la sémantique
-  point-in-time n'est pas implémentable, et le slice ne peut pas démarrer.
+- **Procédure de calcul de `usable_at`** : **tranchée et implémentée**. La règle est
+  `max(KNOWN_AT, INGESTED_AT)`, dérivée et jamais stockée (`src/torne/contracts/time.py`), avec
+  les trois états de publication — établie, bornée, inconnue — et le refus d'admettre une
+  publication inconnue. Restent à définir les conventions temporelles **propres à chaque source** :
+  le gate P1 les a délimitées, il ne les a pas fixées — c'est là que se joue la suite.
 - **Registre d'unités et référentiel spatial** : absent de tous les dépôts audités. À créer de zéro, avec une
   géométrie et un CRS — le « géospatial » de l'ancien BORÉE n'est qu'un ensemble de chaînes de caractères.
 - **Point d'entrée console `torne`** : provisoire. Il énonce l'état du paquet et sera remplacé par le premier slice
   vertical ; il ne contient aucun code métier.
-- **Temporalité** : les conventions temporelles propres à TORNE restent à définir. Les règles du protocole scellé
-  Borée H3 sont hors périmètre et ne sont pas reprises.
+- **Temporalité** : la sémantique **générique** est implémentée et testée (trois dimensions, `usable_at` dérivé,
+  révisions, réimport d'archive, publication inconnue). Les conventions temporelles **propres à une source** restent à
+  définir au gate P1. Les règles du protocole scellé Borée H3 sont hors périmètre et ne sont pas reprises.

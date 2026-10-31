@@ -1,0 +1,490 @@
+"""Tests de l'évaluation : découpage, anti-fuite, métriques, reproductibilité.
+
+La forme canonique du test d'anti-fuite est celle du store synthétique
+(`boree/tests/fabrique.py`, INV-32/33) : **la valeur d'un point est son propre
+index**, de sorte qu'une fuite temporelle se lise comme un nombre faux et non
+comme une subtilité de code.
+
+Les valeurs attendues des métriques sont recalculées à la main et écrites
+explicitement : elles ne sont pas produites par la fonction testée.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+from datetime import UTC, datetime
+
+import pytest
+
+from torne.contracts.validity import PointValidity
+from torne.evaluation.baselines import drift_forecast, mean_forecast, persistence_forecast
+from torne.evaluation.metrics import bias, coverage, evaluate_all, mae, rmse
+from torne.evaluation.report import evaluate_walk_forward
+from torne.evaluation.splits import temporal_split, walk_forward
+
+INSTANT = datetime(2026, 10, 31, 12, 0, tzinfo=UTC)
+
+
+def serie_anti_fuite(longueur: int) -> tuple[float, ...]:
+    """Série synthétique anti-fuite : la valeur d'un point est son propre index.
+
+    Forme canonique du store synthétique : une fuite temporelle se lit alors
+    comme un **nombre faux** (une valeur trop grande), pas comme une
+    subtilité de code.
+    """
+    return tuple(float(index) for index in range(longueur))
+
+
+def prevoir(train: tuple[float, ...]) -> tuple[float, ...]:
+    """Prédicteur de test : reconduit la dernière valeur du bloc d'entraînement."""
+    return (train[-1],) * 2
+
+
+# --- Découpages -------------------------------------------------------------
+
+
+def test_temporal_split_par_train_size_est_strictement_chronologique():
+    valeurs = serie_anti_fuite(10)
+    coupe = temporal_split(valeurs, train_size=4)
+    assert coupe.train == (0.0, 1.0, 2.0, 3.0)
+    assert coupe.test == (4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+    assert coupe.train_end == 4
+    assert coupe.test_start == 4
+    assert coupe.test_end == 10
+
+
+def test_temporal_split_par_fraction_est_strictement_chronologique():
+    valeurs = serie_anti_fuite(10)
+    coupe = temporal_split(valeurs, train_fraction=0.4)
+    # le seuil retenu est la partie entière de 10 * 0.4
+    assert coupe.train_end == 4
+    assert coupe.test_start == 4
+    assert coupe.train == valeurs[:4]
+    assert coupe.test == valeurs[4:]
+
+
+def test_temporal_split_ne_melange_rien():
+    valeurs = serie_anti_fuite(10)
+    coupe = temporal_split(valeurs, train_size=6)
+    assert len(coupe.train) == coupe.train_end
+    assert len(coupe.test) == coupe.test_end - coupe.test_start
+    assert coupe.train_end == coupe.test_start
+    assert coupe.train[-1] < coupe.test[0]
+
+
+def test_temporal_split_refuse_deux_seuils():
+    with pytest.raises(ValueError, match="exclusifs"):
+        temporal_split(serie_anti_fuite(10), train_size=4, train_fraction=0.4)
+
+
+def test_temporal_split_refuse_l_absence_de_seuil():
+    with pytest.raises(ValueError, match="train_size ou train_fraction"):
+        temporal_split(serie_anti_fuite(10))
+
+
+def test_temporal_split_refuse_un_bloc_de_test_vide():
+    with pytest.raises(ValueError, match="au moins un point"):
+        temporal_split(serie_anti_fuite(4), train_size=4)
+
+
+def test_temporal_split_refuse_un_bloc_d_entrainement_vide():
+    with pytest.raises(ValueError, match="train_size doit valoir au moins 1"):
+        temporal_split(serie_anti_fuite(4), train_size=0)
+
+
+# --- Walk-forward -----------------------------------------------------------
+
+
+def test_walk_forward_chaque_pli_a_train_end_egal_test_start():
+    valeurs = serie_anti_fuite(10)
+    plis = walk_forward(valeurs, initial_size=4, step=2)
+    assert len(plis) == 3
+    for pli in plis:
+        assert pli.train_end == pli.test_start
+        assert pli.test_end - pli.test_start == 2
+        assert pli.test == valeurs[pli.test_start : pli.test_end]
+
+
+def test_walk_forward_le_train_est_strictement_anterieur_au_test():
+    for pli in walk_forward(serie_anti_fuite(10), initial_size=4, step=2):
+        # les valeurs sont les index : la valeur dit de quel point elle vient
+        assert max(pli.train) < pli.test_start
+        assert min(pli.test) >= pli.test_start
+
+
+def test_walk_forward_le_train_cumulatif_contient_toutes_les_valeurs_anterieures():
+    valeurs = serie_anti_fuite(10)
+    for pli in walk_forward(valeurs, initial_size=4, step=2):
+        # un train cumulatif, pas une fenêtre glissante
+        assert pli.train == valeurs[: pli.train_end]
+        assert len(pli.train) == pli.train_end
+
+
+def test_walk_forward_refuse_une_serie_sans_pli_complet():
+    with pytest.raises(ValueError, match="aucun pli"):
+        walk_forward(serie_anti_fuite(3), initial_size=2, step=5)
+
+
+# --- Anti-fuite par la donnée -----------------------------------------------
+
+
+def test_anti_fuite_aucun_point_du_test_n_entra_dans_un_train():
+    valeurs = serie_anti_fuite(10)
+    for pli in walk_forward(valeurs, initial_size=4, step=2):
+        assert pli.train == valeurs[: pli.train_end]
+        assert pli.test == valeurs[pli.test_start : pli.test_end]
+        # toute valeur du train est antérieure au début du test
+        assert max(pli.train) < pli.test_start
+
+
+def test_le_controle_anti_fuite_detecte_une_fuite_construite():
+    """Le contrôle n'est pas vide : un train qui déborde sur le test serait vu."""
+    valeurs = serie_anti_fuite(10)
+    fuite = valeurs[:6]  # un train qui englobe la période test
+    assert max(fuite) >= 4
+
+
+def test_modifier_le_futur_ne_change_pas_les_previsions_passees():
+    valeurs = serie_anti_fuite(12)
+    modifies = [*valeurs[:6], *(-1000.0 - index for index in range(6, 12))]
+    plis_a = walk_forward(valeurs, initial_size=4, step=2)
+    plis_b = walk_forward(modifies, initial_size=4, step=2)
+    assert len(plis_a) == len(plis_b)
+    for pli_a, pli_b in zip(plis_a, plis_b, strict=True):
+        if pli_a.train_end > 6:
+            continue  # ce pli voit le futur modifié : il doit changer
+        assert pli_a.train == pli_b.train
+        assert prevoir(pli_a.train) == prevoir(pli_b.train)
+        assert persistence_forecast(pli_a.train, 2) == persistence_forecast(pli_b.train, 2)
+        assert mean_forecast(pli_a.train, 2) == mean_forecast(pli_b.train, 2)
+        assert drift_forecast(pli_a.train, 2) == drift_forecast(pli_b.train, 2)
+
+
+def test_les_plis_anterieurs_sont_inchanges_apres_modification_du_futur():
+    valeurs = serie_anti_fuite(12)
+    modifies = [*valeurs[:6], *(-1000.0 - index for index in range(6, 12))]
+    blocs_a: list[tuple[float, ...]] = []
+    blocs_b: list[tuple[float, ...]] = []
+
+    def predicteur_a(train: tuple[float, ...]) -> tuple[float, ...]:
+        blocs_a.append(train)
+        return prevoir(train)
+
+    def predicteur_b(train: tuple[float, ...]) -> tuple[float, ...]:
+        blocs_b.append(train)
+        return prevoir(train)
+
+    evaluate_walk_forward(valeurs, predicteur_a, initial_size=4, step=2, now=INSTANT)
+    evaluate_walk_forward(modifies, predicteur_b, initial_size=4, step=2, now=INSTANT)
+
+    assert len(blocs_a) == len(blocs_b)
+    for bloc_a, bloc_b in zip(blocs_a, blocs_b, strict=True):
+        if len(bloc_a) <= 6:
+            assert bloc_a == bloc_b
+            # la prédiction du passé ne dépend que du train : elle est inchangée
+            assert prevoir(bloc_a) == prevoir(bloc_b)
+
+
+def test_une_reference_ajustee_sur_le_train_ignore_la_periode_test():
+    valeurs = serie_anti_fuite(10)
+    pli = walk_forward(valeurs, initial_size=4, step=2)[0]
+    # la période test n'existe pas : la série s'arrête à la fin du train
+    sans_test = valeurs[: pli.train_end]
+    for reference in (persistence_forecast, mean_forecast, drift_forecast):
+        assert reference(pli.train, 2) == reference(sans_test, 2)
+
+
+# --- Métriques --------------------------------------------------------------
+
+
+def test_rmse_mae_et_biais_sont_recalcules_a_la_main():
+    """actual = (1, 2, 3), predicted = (1, 2, 5) ; erreurs signées (0, 0, -2)."""
+    # RMSE = sqrt((0 + 0 + 4) / 3) = sqrt(4/3)
+    assert rmse((1, 2, 3), (1, 2, 5)).value == pytest.approx(math.sqrt(4 / 3))
+    # MAE = (0 + 0 + 2) / 3 = 2/3
+    assert mae((1, 2, 3), (1, 2, 5)).value == pytest.approx(2 / 3)
+    # biais = (0 + 0 - 2) / 3 = -2/3
+    assert bias((1, 2, 3), (1, 2, 5)).value == pytest.approx(-2 / 3)
+
+
+def test_biais_d_un_ecart_unique_vaut_moins_un_tiers():
+    """actual = (1, 2, 3), predicted = (1, 2, 4) ; erreurs (0, 0, -1)."""
+    assert bias((1, 2, 3), (1, 2, 4)).value == pytest.approx(-1 / 3)
+
+
+def test_le_biais_est_negatif_quand_le_modele_sur_predit():
+    assert bias((1, 2, 3), (2, 3, 4)).value < 0
+    assert bias((2, 3, 4), (1, 2, 3)).value > 0
+
+
+def test_couverture_compte_les_points_couverts():
+    """actual = (1, 2, 3) ; intervalles ((0, 2), (1, 3), (0, 10)).
+
+    1 ∈ [0, 2], 2 ∈ [1, 3] et 3 ∈ [0, 10] : les trois points sont couverts.
+    """
+    rapport = coverage((1, 2, 3), ((0, 2), (1, 3), (0, 10)))
+    assert rapport.value == pytest.approx(1.0)
+    assert rapport.n_used == 3
+    assert rapport.n_total == 3
+
+
+def test_couverture_partielle_vaut_deux_tiers():
+    """actual = (1, 2, 3) ; intervalles ((0, 2), (1, 3), (0, 2)).
+
+    1 ∈ [0, 2] et 2 ∈ [1, 3] sont couverts, 3 ∉ [0, 2] ne l'est pas : 2/3.
+    """
+    rapport = coverage((1, 2, 3), ((0, 2), (1, 3), (0, 2)))
+    assert rapport.value == pytest.approx(2 / 3)
+    assert rapport.n_used == 3
+
+
+def test_exclusions_comptees_qualifient_chaque_point_ecarte():
+    validite = [
+        PointValidity.VALID,
+        PointValidity.MISSING,
+        PointValidity.INVALID,
+        PointValidity.OUT_OF_DOMAIN,
+        PointValidity.VALID,
+    ]
+    rapport = rmse((1, 2, 3, 4, 5), (1, 2, 0, 0, 5), validite)
+    assert rapport.n_total == 5
+    assert rapport.n_used == 2
+    assert rapport.n_missing == 1
+    assert rapport.n_invalid == 1
+    assert rapport.n_out_of_domain == 1
+    total = rapport.n_used + rapport.n_missing + rapport.n_invalid + rapport.n_out_of_domain
+    assert total == rapport.n_total
+    # seuls les points valides entrent dans le calcul : erreurs (0, 0) → RMSE nul
+    assert rapport.value == pytest.approx(0.0)
+
+
+def test_une_absence_n_est_pas_un_zero():
+    validite = [PointValidity.VALID, PointValidity.MISSING, PointValidity.VALID]
+    rapport = rmse((1, 2, 3), (1, 2, 5), validite)
+    # seuls (1, 1) et (3, 5) entrent : erreurs (0, -2) → RMSE = sqrt(4/2)
+    assert rapport.value == pytest.approx(math.sqrt(4 / 2))
+    # si le point manquant était traité comme un zéro, l'erreur serait nulle
+    # et le RMSE vaudrait sqrt(4/3) : la valeur observée tranche
+    assert rapport.value != pytest.approx(math.sqrt(4 / 3))
+    assert rapport.n_missing == 1
+    assert rapport.n_used == 2
+
+
+def test_une_metrique_sans_point_valide_vaut_nan_et_non_zero():
+    validite = [PointValidity.MISSING, PointValidity.INVALID]
+    rapport = rmse((1, 2), (1, 2), validite)
+    assert math.isnan(rapport.value)
+    assert rapport.n_used == 0
+    assert rapport.n_total == 2
+
+
+def test_evaluate_all_renvoie_les_quatre_metriques():
+    rapports = evaluate_all((1, 2, 3), (1, 2, 5), intervals=((0, 2), (1, 3), (0, 10)))
+    assert list(rapports) == ["rmse", "mae", "bias", "coverage"]
+
+
+def test_les_sequences_de_longueurs_differentes_sont_refusees():
+    with pytest.raises(ValueError, match="un point chacun"):
+        rmse((1, 2, 3), (1, 2))
+
+
+def test_une_validite_de_longueur_incoherente_est_refusee():
+    with pytest.raises(ValueError, match="un état par point"):
+        rmse((1, 2, 3), (1, 2, 3), [PointValidity.VALID])
+
+
+# --- Rapport ----------------------------------------------------------------
+
+
+def test_deux_evaluations_identiques_donnent_le_meme_rapport():
+    valeurs = serie_anti_fuite(10)
+    rapport_a = evaluate_walk_forward(valeurs, prevoir, initial_size=4, step=2, now=INSTANT)
+    rapport_b = evaluate_walk_forward(valeurs, prevoir, initial_size=4, step=2, now=INSTANT)
+    assert rapport_a == rapport_b
+    assert rapport_a.evaluated_at == INSTANT
+    assert dict(rapport_a.metrics) == dict(rapport_b.metrics)
+    assert dict(rapport_a.baseline_metrics) == dict(rapport_b.baseline_metrics)
+
+
+def test_le_rapport_enregistre_la_decoupe_pour_rejeu():
+    valeurs = serie_anti_fuite(10)
+    rapport = evaluate_walk_forward(valeurs, prevoir, initial_size=4, step=2, now=INSTANT)
+    assert rapport.split.train_end == rapport.split.test_start
+    assert rapport.split.train == valeurs[: rapport.split.train_end]
+    assert rapport.split.test == valeurs[rapport.split.test_start : rapport.split.test_end]
+    assert rapport.split.test_end == 10
+
+
+def test_le_modele_et_les_references_sont_evalues_sur_les_memes_plis():
+    rapport = evaluate_walk_forward(
+        serie_anti_fuite(10), prevoir, initial_size=4, step=2, now=INSTANT
+    )
+    assert set(rapport.baseline_metrics) == {"persistence", "mean", "drift"}
+    compteurs = {nom: (r.n_total, r.n_used) for nom, r in rapport.metrics.items()}
+    for rapports in rapport.baseline_metrics.values():
+        for nom, rapport_reference in rapports.items():
+            assert (rapport_reference.n_total, rapport_reference.n_used) == compteurs[nom]
+
+
+def test_les_metriques_des_references_se_recalculent_a_la_main():
+    valeurs = serie_anti_fuite(10)
+    rapport = evaluate_walk_forward(valeurs, prevoir, initial_size=4, step=2, now=INSTANT)
+    plis = walk_forward(valeurs, initial_size=4, step=2)
+    actuals: list[float] = []
+    prevus: list[float] = []
+    for pli in plis:
+        actuals.extend(pli.test)
+        prevus.extend(persistence_forecast(pli.train, 2))
+    attendu = rmse(tuple(actuals), tuple(prevus))
+    assert rapport.baseline_metrics["persistence"]["rmse"] == attendu
+
+
+def test_les_points_ecartes_sont_comptes_dans_le_rapport():
+    validite = [PointValidity.VALID] * 10
+    validite[5] = PointValidity.MISSING
+    rapport = evaluate_walk_forward(
+        serie_anti_fuite(10), prevoir, initial_size=4, step=2, validity=validite, now=INSTANT
+    )
+    # trois plis de deux points test : six points, dont un écarté
+    assert rapport.metrics["rmse"].n_total == 6
+    assert rapport.metrics["rmse"].n_used == 5
+    assert rapport.metrics["rmse"].n_missing == 1
+
+
+def test_un_predicteur_qui_renvoie_trop_de_valeurs_est_refuse():
+    with pytest.raises(ValueError, match="doit renvoyer 2 valeurs"):
+        evaluate_walk_forward(
+            serie_anti_fuite(10),
+            lambda train: (train[-1],) * 3,
+            initial_size=4,
+            step=2,
+            now=INSTANT,
+        )
+
+
+def test_une_reference_inapplicable_est_signalee():
+    with pytest.raises(ValueError, match="dérive"):
+        evaluate_walk_forward(serie_anti_fuite(10), prevoir, initial_size=1, step=2, now=INSTANT)
+
+
+def test_un_horodatage_naif_est_refuse():
+    with pytest.raises(ValueError, match="fuseau"):
+        evaluate_walk_forward(
+            serie_anti_fuite(10),
+            prevoir,
+            initial_size=4,
+            step=2,
+            now=datetime(2026, 10, 31, 12, 0),
+        )
+
+
+# --------------------------------------------------------------------------
+# Définitions des références
+#
+# Ces tests épinglent la **définition** de chaque référence, par des valeurs
+# calculées à la main et écrites en clair. Sans eux, une référence qui
+# renverrait autre chose que ce qu'elle annonce passerait tous les autres
+# tests : le test « les métriques des références se recalculent à la main »
+# réutilise `persistence_forecast` lui-même, et ne vérifie donc que le
+# raccordement, pas la définition.
+# --------------------------------------------------------------------------
+
+# Sur cet historique, les trois références donnent trois valeurs distinctes :
+# une référence qui confondrait deux définitions serait détectée.
+HISTORIQUE = (2.0, 4.0, 6.0)
+
+
+def test_la_persistance_reconduit_la_derniere_valeur():
+    """Persistance : la dernière valeur observée, reconduite sur l'horizon.
+
+    Attendu, écrit à la main : dernier = 6,0 → (6,0 ; 6,0 ; 6,0).
+    """
+    assert persistence_forecast(HISTORIQUE, 3) == (6.0, 6.0, 6.0)
+
+
+def test_la_moyenne_reconduit_la_moyenne_de_l_historique():
+    """Moyenne : (2 + 4 + 6) / 3 = 4,0 → (4,0 ; 4,0).
+
+    Attendu, écrit à la main : la moyenne n'est ni la dernière valeur (6,0)
+    ni la première (2,0).
+    """
+    assert mean_forecast(HISTORIQUE, 2) == (4.0, 4.0)
+
+
+def test_la_derive_reconduit_la_derniere_valeur_ajoutee_de_la_pente():
+    """Dérive : pente = (6 - 2) / (3 - 1) = 2,0 ; puis 6 + 1x2 = 8,0 et 6 + 2x2 = 10,0.
+
+    Attendu, écrit à la main : la dérive n'est ni la persistance (6,0) ni la
+    moyenne (4,0).
+    """
+    assert drift_forecast(HISTORIQUE, 2) == (8.0, 10.0)
+
+
+def test_les_trois_references_sont_distinctes_sur_le_meme_historique():
+    """Aucune des trois références ne se confond avec une autre.
+
+    C'est ce test qui rend signifiante la comparaison du modèle à ses
+    références : si les trois renvoyaient la même chose, la comparaison ne
+    comparerait rien.
+    """
+    assert len({persistence_forecast(HISTORIQUE, 1)[0], mean_forecast(HISTORIQUE, 1)[0]}) == 2
+    assert len({persistence_forecast(HISTORIQUE, 1)[0], drift_forecast(HISTORIQUE, 1)[0]}) == 2
+    assert len({mean_forecast(HISTORIQUE, 1)[0], drift_forecast(HISTORIQUE, 1)[0]}) == 2
+
+
+def test_la_pente_de_la_derive_est_calculee_sur_les_extremes():
+    """Dérive sur deux points seulement : pente = (4 - 0) / 1 = 4,0.
+
+    Attendu, écrit à la main : 4 + 1x4 = 8,0 puis 4 + 2x4 = 12,0.
+    """
+    assert drift_forecast((0.0, 4.0), 2) == (8.0, 12.0)
+
+
+def test_les_references_exigent_un_bloc_non_vide():
+    """Une référence ne s'ajuste pas sur un historique vide."""
+    for reference in (persistence_forecast, mean_forecast, drift_forecast):
+        with pytest.raises(ValueError, match="vide"):
+            reference((), 1)
+
+
+def test_les_references_exigent_un_horizon_d_au_moins_un():
+    """Un horizon nul ne veut rien dire."""
+    for reference in (persistence_forecast, mean_forecast, drift_forecast):
+        with pytest.raises(ValueError, match="horizon"):
+            reference(HISTORIQUE, 0)
+
+
+def test_la_derive_refuse_un_historique_d_un_seul_point():
+    """Une dérive n'est pas estimable sur un point : la référence le dit."""
+    with pytest.raises(ValueError, match="dérive"):
+        drift_forecast((2.0,), 1)
+
+
+def test_l_horodatage_par_defaut_est_un_instant_aware():
+    rapport = evaluate_walk_forward(serie_anti_fuite(10), prevoir, initial_size=4, step=2)
+    assert rapport.evaluated_at.tzinfo is not None
+
+
+def test_with_comparison_attache_un_resultat_calcule_a_ailleurs():
+    rapport = evaluate_walk_forward(
+        serie_anti_fuite(10), prevoir, initial_size=4, step=2, now=INSTANT
+    )
+    compare = rapport.with_comparison({"diebold_mariano": {"statistique": -2.1, "p_valeur": 0.03}})
+    assert compare.comparison["diebold_mariano"] == {"statistique": -2.1, "p_valeur": 0.03}
+    assert rapport.comparison == {}
+    assert compare.metrics == rapport.metrics
+
+
+def test_le_rapport_admet_une_vue_serialisable():
+    rapport = evaluate_walk_forward(
+        serie_anti_fuite(10), prevoir, initial_size=4, step=2, now=INSTANT
+    )
+    vue = rapport.as_dict()
+    assert vue["model_id"] == ""
+    assert vue["evaluated_at"] == "2026-10-31T12:00:00+00:00"
+    assert vue["split"]["train_end"] == 4
+    assert vue["metrics"]["rmse"]["n_total"] == 6
+    assert vue["baseline_metrics"]["persistence"]["rmse"]["n_used"] == 6
+    # la vue est ce qu'un enregistreur écrit : elle est JSON-sérialisable
+    assert json.loads(json.dumps(vue))["metrics"]["bias"]["n_used"] == 6

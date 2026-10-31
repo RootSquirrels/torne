@@ -1,8 +1,12 @@
 # TORNE — Architecture
 
 **Quatre frontières, responsabilités transversales — 31 octobre 2026**
-**Statut : vue de responsabilité. Ce document ne décrit aucune implémentation : le dépôt ne
-contient à ce jour aucun modèle, aucun service, aucun registre.**
+**Statut : vue de responsabilité. Ce document ne décrit aucune implémentation : il fixe où passe
+chaque responsabilité, pas comment elle est rendue.**
+*(Mise à jour du 31 octobre 2026 : la formule « le dépôt ne contient à ce jour aucun modèle » est
+périmée. La mission 001 a implémenté un premier modèle — un filtre de Kalman en espace d'état — et
+avec lui l'exécution, l'évaluation, la preuve et la provenance. Ce document reste la vue de
+responsabilité : les frontières n'ont pas bougé, et aucune de ces briques ne les franchit.)*
 
 ## 1. Le modèle mental
 
