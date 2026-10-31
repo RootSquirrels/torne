@@ -1,0 +1,61 @@
+# Intégration continue TORNE : verrou respecté, ruff, pytest, construction du paquet.
+# Structure inspirée de l'infrastructure de référence du propriétaire
+# (boree/.gitea/workflows/ci.yml) : version d'uv épinglée, synchronisation depuis le
+# verrou, ruff, pytest. Aucun secret, aucune étape « application » : TORNE n'a pas
+# d'interface. Le workflow reproduit le gate P0 à l'identique.
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # uv épinglé : la version qui a produit le verrou commité (revision 5).
+      UV_VERSION: "0.13.6"
+      # Version de référence du projet : 3.12, le plancher déclaré (requires-python).
+      UV_PYTHON: "3.12"
+      # On emploie le Python posé par setup-python, sans téléchargement managé.
+      UV_PYTHON_PREFERENCE: "only-system"
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: uv
+        run: |
+          curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # Synchronisation depuis le verrou : si pyproject.toml et uv.lock divergent,
+      # cette commande échoue et rien d'autre ne s'exécute.
+      - name: dépendances (verrou tel quel)
+        run: uv sync --locked
+
+      - name: ruff
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: pytest
+        run: uv run pytest -q
+
+      - name: construction du paquet
+        run: uv build
+
+      # Construire ne prouve pas que l'artefact s'installe : on l'installe dans un
+      # environnement jetable, hors du dépôt, et on vérifie l'import et le script
+      # console.
+      - name: le paquet construit s'installe et s'importe
+        run: |
+          uv venv --python 3.12 "$RUNNER_TEMP/verif"
+          uv pip install --python "$RUNNER_TEMP/verif/bin/python" "$(ls dist/*.whl)"
+          "$RUNNER_TEMP/verif/bin/python" -c "import torne; print(torne.__version__)"
+          "$RUNNER_TEMP/verif/bin/torne"

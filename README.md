@@ -46,9 +46,10 @@ de lui.
 | Construit aujourd'hui | Envisagé, pas implémenté |
 |---|---|
 | Socle documentaire : vision, architecture, doctrine de validation, journal de décisions | Modèles physiques, opérationnels, économiques ou financiers |
-| Paquet Python installable, sans aucun code métier | Connecteurs vers des sources réelles, acquisition de données |
+| Paquet Python installable et construisible, sans aucun code métier | Connecteurs vers des sources réelles, acquisition de données |
 | Point d'entrée console qui énonce l'état du paquet | Reconstruction d'états, assimilation de données, simulation |
-| Tests de fumée et configuration de linting | Produits de connaissance versionnés, cartographie, lecture par API |
+| Tests de fumée, linting, formatage | Produits de connaissance versionnés, cartographie, lecture par API |
+| Environnement verrouillé (`uv.lock` versionné) et gate de qualité exécuté sur Python 3.12 | Exécution de la CI : le workflow GitHub Actions est écrit, il n'a pas encore tourné |
 | **Matrice de réutilisation consolidée** : trois audits d'archéologie, une décision par composant | Première application financière, edge démontré, capacité de déploiement |
 | **Proposition argumentée du premier vertical slice** (Mississippi) et ses conditions d'échec | Toute extraction de code des dépôts historiques, bloquée par la licence d'Athanor |
 
@@ -60,20 +61,40 @@ conditions de validité, pas des capacités.
 
 ## Installation et tests
 
-Le dépôt utilise `uv`, qui gère l'environnement Python et le verrou des dépendances.
+Le dépôt utilise `uv`, qui gère l'environnement Python et le verrou des dépendances. La version
+de référence est **Python 3.12**, le plancher déclaré par le projet.
 
 ```bash
-uv sync --frozen        # installe l'environnement à partir de uv.lock
-uv run pytest           # exécute la suite de tests
-uv run ruff check .     # contrôle de style et de correction automatique
+uv sync --locked              # installe l'environnement à partir de uv.lock, sans le modifier
+uv run pytest -q              # exécute la suite de tests
+uv run ruff check .           # contrôle de style et d'erreurs
+uv run ruff format --check .  # contrôle de formatage
+uv build                      # construit la sdist et le wheel
 ```
 
-> **Ces commandes n'ont pas été exécutées sur le poste de construction.**
-> Ce poste ne disposait ni de `uv` ni des dépendances Python : l'installation, l'exécution des
-> tests et le linting n'ont donc pas pu être vérifiés. Le fichier `uv.lock` n'a pas pu être
-> généré et reste à produire (`uv lock`) avant le premier commit.
+Si `uv` n'est pas dans le `PATH`, l'appeler par son chemin absolu ou l'ajouter au `PATH` de la
+commande.
 
 `uv.lock` est volontairement versionné : c'est lui qui rend l'environnement reproductible.
+`uv sync --locked` échoue si le verrou ne correspond plus à `pyproject.toml` : c'est le premier
+garde-fou contre la dérive des dépendances.
+
+## Qualité
+
+Le gate tient en cinq commandes. Elles ont toutes été exécutées et ont toutes passé le
+31 octobre 2026 sur Python 3.12 ; les sorties réelles sont dans `docs/P0-RAPPORT.md`.
+
+| Commande | Ce qu'elle garantit |
+|---|---|
+| `uv sync --locked` | L'environnement correspond exactement au verrou versionné, et le verrou est à jour vis-à-vis de `pyproject.toml`. |
+| `uv run pytest -q` | La suite de tests passe. |
+| `uv run ruff check .` | Aucune erreur de lint (style, imports, modernité). |
+| `uv run ruff format --check .` | Le code est formaté selon la règle du projet. |
+| `uv build` | La sdist et le wheel se construisent : le paquet est publiable. |
+
+`.github/workflows/ci.yml` (GitHub Actions) rejoue ce gate à l'identique, sur Python 3.12.
+**Ce workflow est écrit mais n'a pas encore été exécuté** : il ne tournera qu'à la première
+poussée.
 
 ## Documents de référence
 
@@ -106,9 +127,10 @@ strictement inchangés.
 ```text
 torne/
 ├── pyproject.toml          # paquet, dépendances minimales, configuration pytest et ruff
-├── uv.lock                 # à générer (uv absent du poste de construction)
+├── uv.lock                 # verrou des dépendances, versionné
 ├── README.md               # ce document
 ├── .gitignore
+├── .github/workflows/ci.yml # gate de qualité en GitHub Actions
 ├── src/torne/__init__.py   # version et point d'entrée console provisoire
 ├── tests/test_package.py   # tests de fumée
 ├── docs/                   # vision, architecture, validation, audit de réutilisation, décisions
@@ -124,9 +146,13 @@ besoin concret les justifiera.
 doctrine de validation, le journal de décisions, le format de la matrice de réutilisation, un
 paquet Python sans code métier et un point d'entrée console provisoire.
 
+**31 octobre 2026 — socle d'ingénierie en place et vérifié.** L'environnement est verrouillé
+(`uv.lock` versionné), le paquet s'installe, se construit et s'importe, et le gate de qualité
+(synchronisation, tests, lint, format, construction) passe sur Python 3.12. Le workflow GitHub
+Actions qui rejoue ce gate est écrit, mais **n'a pas encore été exécuté**.
+
 En cours : consolidation de la matrice de réutilisation à partir des trois rapports
 d'archéologie, et choix du premier slice vertical.
 
-Non fait : génération de `uv.lock`, installation, exécution des tests, linting — impossible sur
-le poste de construction, qui n'avait ni `uv` ni dépendances. Aucune performance n'est
-démontrée.
+Non fait : aucun code métier, aucun connecteur, aucun modèle. **Aucune performance n'est
+démontrée.**
