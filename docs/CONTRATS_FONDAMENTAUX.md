@@ -185,7 +185,8 @@ inconclusif (`docs/ARCHITECTURE.md:87-90`).
 réécrit pas : une correction produit une **version nouvelle**, et l'ancienne reste consultable. Un produit
 inconclusif est un résultat valide, rapporté comme tel, avec sa cause
 (`docs/RESEARCH_AND_VALIDATION.md:130-135`). Un produit ne cite pas d'observation qui n'était pas admissible au
-moment où il a été établi.
+moment où il a été établi ; et son instant d'établissement ne précède ni la production du résultat qu'il
+publie, ni l'établissement de l'enregistrement qui le porte : **un produit ne précède pas ce qu'il publie**.
 
 **Il ne garantit pas** : que le produit soit vrai, ni qu'il reste vrai, ni qu'il soit réutilisable hors de son
 domaine de validité. Il n'est pas un registre et ne catalogue pas l'existant
@@ -480,8 +481,8 @@ test doit répondre par **oui** ou **non**. Aucun test n'est écrit ici.
 | **INV-26** | Re-parser le brut avec le même analyseur redonne la même observation. | Question : la re-parse produit-elle un résultat identique ? Attendu : oui. |
 | **INV-27** | Toute ligne dérivée porte un lignage minimal : source, clé, empreinte, instant de connaissance. | Question : les quatre éléments sont-ils présents et non vides sur chaque ligne dérivée ? Attendu : oui. |
 | **INV-28** | Le brut est la seule vérité ; le dérivé est reconstructible. | Question : la reconstruction depuis le brut redonne-t-elle le même résultat que le dérivé conservé ? Attendu : oui. |
-| **INV-29** | Une variable dérivée connaît toutes ses entrées, transitivement jusqu'aux bruts. | Question : l'ensemble des observations consommées est-il reconstructible depuis le produit ? Attendu : oui. |
-| **INV-30** | Un produit de connaissance ne cite aucune observation non admissible à son propre instant d'établissement. | Question : toutes les observations citées ont-elles `usable_at ≤` l'instant du produit ? Attendu : oui. |
+| **INV-29** | Une variable dérivée connaît toutes ses entrées, transitivement jusqu'aux bruts. Chaque entrée citée est l'**objet canonique** de l'enregistrement : un même identifiant ne peut pas désigner un autre contenu. | Question : l'ensemble des observations consommées est-il reconstructible depuis le produit ? Et chaque entrée citée est-elle bien l'objet que l'enregistrement porte ? Attendu : oui. |
+| **INV-30** | Un produit de connaissance ne cite aucune observation non admissible à son propre instant d'établissement. Cet instant ne précède ni la production du résultat publié, ni l'établissement de l'enregistrement qui le porte. | Question : toutes les observations citées ont-elles `usable_at ≤` l'instant du produit ? Et l'instant du produit est-il postérieur à ce qu'il publie ? Attendu : oui. |
 | **INV-31** | Un produit publié ne se réécrit pas. | Question : une correction crée-t-elle une version nouvelle, l'ancienne restant consultable ? Attendu : oui. |
 
 ### 4.5 Anti-fuite

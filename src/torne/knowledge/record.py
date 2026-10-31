@@ -455,20 +455,26 @@ def verify_lineage(record: ExecutionRecord, *, asof: datetime | None = None) -> 
        était admissible à l'instant d'établissement du produit : une
        publication inconnue la rend non admissible, et une observation
        postérieure au produit n'a pas pu l'alimenter (INV-30) ;
-    4. **Cohérence des révisions** — une révision pointe vers une observation
+    4. **Antériorité de la publication** — l'instant effectif de publication ne
+       précède ni la production du résultat publié, ni l'établissement de
+       l'enregistrement : un produit ne peut pas précéder ce qu'il publie ;
+    5. **Cohérence des révisions** — une révision pointe vers une observation
        présente dans le jeu cité et lui est postérieure ;
-    5. **Unicité des identifiants cités** ;
-    6. **Cohérence de la configuration d'exécution** — modèle, version,
+    6. **Unicité des identifiants cités** ;
+    7. **Cohérence de la configuration d'exécution** — modèle, version,
        paramètres et entrées correspondent à ce qui a été exécuté ;
-    7. **Cohérence de l'évaluation citée** — l'évaluation porte le même modèle
+    8. **Cohérence de l'évaluation citée** — l'évaluation porte le même modèle
        et la même version que l'enregistrement ;
-    8. **Existence des entrées citées par les grandeurs dérivées** — chaque
+    9. **Existence des entrées citées par les grandeurs dérivées** — chaque
        grandeur dérivée produite cite des observations et des grandeurs
        dérivées **présentes** dans l'enregistrement (INV-29) ;
-    9. **Fermeture transitive de la lignée** — l'ensemble des observations
+    10. **Identité des entrées citées** — l'entrée citée est l'objet
+       **canonique** de l'enregistrement : un même identifiant ne peut pas
+       désigner un autre contenu (INV-29) ;
+    11. **Fermeture transitive de la lignée** — l'ensemble des observations
        consommées transitivement par les grandeurs dérivées est reconstructible
        depuis l'enregistrement, jusqu'aux preuves brutes (INV-29) ;
-    10. **Temporalité du calcul** — une grandeur dérivée n'est pas calculée
+    12. **Temporalité du calcul** — une grandeur dérivée n'est pas calculée
        avant que ses entrées ne soient utilisables, et n'est pas calculée
        après l'instant du produit (INV-17, INV-30).
 
@@ -485,15 +491,17 @@ def verify_lineage(record: ExecutionRecord, *, asof: datetime | None = None) -> 
         "existence des preuves brutes citées (INV-25)",
         "existence des sources citées",
         "admissibilité des observations citées à l'instant du produit (INV-30)",
+        "antériorité de l'instant de publication (INV-30)",
         "cohérence des révisions (INV-13)",
         "unicité des identifiants cités",
         "cohérence de la configuration d'exécution",
         "cohérence de l'évaluation citée",
         "existence des entrées citées par les grandeurs dérivées (INV-29)",
+        "identité des entrées citées par les grandeurs dérivées (INV-29)",
         "fermeture transitive de la lignée des grandeurs dérivées (INV-29)",
         "temporalité du calcul des grandeurs dérivées (INV-17)",
     )
-    problems: list[str] = []
+    problems: list[str] = _problemes_anteriorite_publication(record, moment)
 
     ids_preuve = {preuve.evidence_id for preuve in record.evidence}
     ids_source = {source.source_id for source in record.sources}
@@ -575,6 +583,38 @@ def verify_lineage(record: ExecutionRecord, *, asof: datetime | None = None) -> 
     return LineageReport(ok=not problems, checks=checks, problems=tuple(problems))
 
 
+def _problemes_anteriorite_publication(record: ExecutionRecord, moment: datetime) -> list[str]:
+    """Antériorité de la publication : un produit ne précède pas ce qu'il publie.
+
+    L'instant effectif de publication ne peut être **ni antérieur à la
+    production du résultat publié**, **ni antérieur à l'établissement de
+    l'enregistrement** qui le porte.
+
+    Un produit daté avant le résultat qu'il contient n'est pas un produit
+    antédaté par inadvertance : c'est un produit faux. Il le serait d'autant
+    plus qu'il rendrait la lignée vérifiable — les contrôles d'admissibilité
+    seraient instruits à un instant où ce qui est publié n'existait pas encore.
+    """
+    problems: list[str] = []
+
+    production = record.result.produced_at
+    if moment < production:
+        problems.append(
+            f"le produit est établi au « {moment.isoformat()} », avant la production du "
+            f"résultat qu'il publie (« {production.isoformat()} ») : un produit ne "
+            "précède pas ce qu'il publie"
+        )
+
+    etablissement = to_utc(record.produced_at, name="produced_at")
+    if moment < etablissement:
+        problems.append(
+            f"le produit est établi au « {moment.isoformat()} », avant l'établissement de "
+            f"l'enregistrement qui le porte (« {etablissement.isoformat()} »)"
+        )
+
+    return problems
+
+
 def _problemes_admissibilite(observation: Observation, moment: datetime) -> list[str]:
     """Contrôle d'admissibilité d'une observation à un instant (INV-30)."""
     stamp = observation.temporal
@@ -625,37 +665,82 @@ def _problemes_unicite(record: ExecutionRecord) -> list[str]:
     return problems
 
 
+def _objet_canonique(
+    item: Observation | DerivedVariable,
+    par_observation: Mapping[str, Observation],
+    par_variable: Mapping[str, DerivedVariable],
+) -> Observation | DerivedVariable | None:
+    """L'objet canonique de l'enregistrement portant l'identifiant cité.
+
+    Une entrée citée est un **identifiant** ; c'est l'objet canonique de
+    l'enregistrement qui fait foi. Sans ce rapprochement, un même identifiant
+    pourrait désigner un autre contenu — une observation utilisable plus tôt,
+    par exemple — et les contrôles s'exerceraient sur le substitut et non sur
+    la vérité.
+
+    Renvoie `None` si l'identifiant cité n'existe pas dans l'enregistrement :
+    l'absence est alors signalée par l'appelant.
+    """
+    if isinstance(item, Observation):
+        return par_observation.get(item.observation_id)
+    return par_variable.get(item.variable_id)
+
+
+def _libelle_entree(item: Observation | DerivedVariable) -> str:
+    """Le nom d'une entrée citée, avec son genre grammatical."""
+    if isinstance(item, Observation):
+        return f"l'observation « {item.observation_id} »"
+    return f"la grandeur dérivée « {item.variable_id} »"
+
+
 def _problemes_grandeurs_derivees(record: ExecutionRecord, moment: datetime) -> list[str]:
     """Contrôles propres aux grandeurs dérivées produites par l'exécution.
 
-    Trois questions, toutes vérifiables :
+    Quatre questions, toutes vérifiables :
 
     1. **Existence des entrées citées** — une grandeur dérivée qui consomme
        une observation ou une autre grandeur dérivée absente de
        l'enregistrement a une lignée incomplète (INV-29) ;
-    2. **Fermeture transitive** — l'ensemble des observations consommées
+    2. **Identité des entrées citées** — l'entrée citée est l'objet
+       **canonique** de l'enregistrement : le même identifiant ne peut pas
+       désigner un autre contenu (INV-29) ;
+    3. **Fermeture transitive** — l'ensemble des observations consommées
        transitivement est reconstructible depuis l'enregistrement, jusqu'aux
        preuves brutes (INV-29) ;
-    3. **Temporalité du calcul** — le calcul n'est pas antérieur à
+    4. **Temporalité du calcul** — le calcul n'est pas antérieur à
        l'utilisabilité de ses entrées, ni postérieur à l'instant du produit
        (INV-17, INV-30).
+
+    Les contrôles temporels s'exercent sur les objets **canoniques** : la
+    substitutedité d'un objet ne peut pas rendre un calcul admissible avant
+    que sa véritable entrée ne soit utilisable.
     """
     problems: list[str] = []
-    ids_observation = {obs.observation_id for obs in record.input_observations}
-    ids_variable = {var.variable_id for var in record.derived_variables}
+    par_observation = {obs.observation_id: obs for obs in record.input_observations}
+    par_variable = {var.variable_id: var for var in record.derived_variables}
+    ids_observation = set(par_observation)
 
     for variable in record.derived_variables:
         for item in variable.inputs:
-            if isinstance(item, Observation):
-                if item.observation_id not in ids_observation:
+            canonique = _objet_canonique(item, par_observation, par_variable)
+            if canonique is None:
+                if isinstance(item, Observation):
                     problems.append(
                         f"grandeur dérivée « {variable.variable_id} » consomme l'observation "
                         f"« {item.observation_id} », absente des observations citées"
                     )
-            elif item.variable_id not in ids_variable:
+                else:
+                    problems.append(
+                        f"grandeur dérivée « {variable.variable_id} » consomme la grandeur dérivée "
+                        f"« {item.variable_id} », absente des grandeurs citées"
+                    )
+                continue
+            if item != canonique:
                 problems.append(
-                    f"grandeur dérivée « {variable.variable_id} » consomme la grandeur dérivée "
-                    f"« {item.variable_id} », absente des grandeurs citées"
+                    f"grandeur dérivée « {variable.variable_id} » consomme "
+                    f"{_libelle_entree(item)}, qui n'est pas "
+                    f"{_libelle_entree(canonique)} de l'enregistrement : un même "
+                    "identifiant ne peut pas désigner un autre contenu"
                 )
 
         for observation in variable.transitive_observations:
@@ -666,28 +751,32 @@ def _problemes_grandeurs_derivees(record: ExecutionRecord, moment: datetime) -> 
                 )
 
         for item in variable.inputs:
-            if isinstance(item, Observation):
-                usable = item.temporal.usable_at
-                if usable is not None and variable.computed_at < usable:
-                    problems.append(
-                        f"grandeur dérivée « {variable.variable_id} » est calculée le "
-                        f"« {variable.computed_at.isoformat()} », avant l'utilisabilité de "
-                        f"l'observation « {item.observation_id} » "
-                        f"(« {usable.isoformat()} »)"
-                    )
+            canonique = _objet_canonique(item, par_observation, par_variable)
+            if canonique is None:
+                continue
+            usable = canonique.temporal.usable_at
+            if usable is None:
+                continue
+            if variable.computed_at >= usable:
+                continue
+            if isinstance(canonique, Observation):
+                problems.append(
+                    f"grandeur dérivée « {variable.variable_id} » est calculée le "
+                    f"« {variable.computed_at.isoformat()} », avant l'utilisabilité de "
+                    f"l'observation « {canonique.observation_id} » "
+                    f"(« {usable.isoformat()} »)"
+                )
             else:
                 # L'entrée est une autre grandeur dérivée : ce qui compte est
                 # l'instant où elle **devient utilisable**, pas celui où elle a
                 # été calculée — une grandeur acquise plus tard n'a pas pu
                 # alimenter un calcul antérieur.
-                usable = item.temporal.usable_at
-                if usable is not None and variable.computed_at < usable:
-                    problems.append(
-                        f"grandeur dérivée « {variable.variable_id} » est calculée le "
-                        f"« {variable.computed_at.isoformat()} », avant l'utilisabilité de "
-                        f"la grandeur dérivée « {item.variable_id} » qu'elle consomme "
-                        f"(« {usable.isoformat()} »)"
-                    )
+                problems.append(
+                    f"grandeur dérivée « {variable.variable_id} » est calculée le "
+                    f"« {variable.computed_at.isoformat()} », avant l'utilisabilité de "
+                    f"la grandeur dérivée « {canonique.variable_id} » qu'elle consomme "
+                    f"(« {usable.isoformat()} »)"
+                )
 
         if variable.computed_at > moment:
             problems.append(

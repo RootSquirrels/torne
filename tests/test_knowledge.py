@@ -224,6 +224,7 @@ def _record(
     sources: tuple[Source, ...] | None = None,
     evaluation: dict[str, object] | None = None,
     variables: tuple[DerivedVariable, ...] = (),
+    produced_at: datetime | None = None,
 ):
     return build_record(
         _issue(),
@@ -234,6 +235,7 @@ def _record(
         evaluation=evaluation,
         inputs=ENTREES,
         derived_variables=variables,
+        produced_at=produced_at,
     )
 
 
@@ -883,3 +885,166 @@ def test_le_produit_refuse_une_incertitude_non_qualifiee():
             summary={},
             input_statuses={"obs-2026-10-01": QualityStatus.APPROVED},
         )
+
+
+# --------------------------------------------------------------------------
+# Fermeture de la lignée temporelle
+# --------------------------------------------------------------------------
+# Un produit ne précède pas ce qu'il publie, et une entrée citée est l'objet
+# canonique de l'enregistrement : un même identifiant ne peut pas désigner un
+# autre contenu.
+
+
+def test_une_publication_anterieure_a_la_production_du_resultat_est_refusee():
+    """Un produit ne peut pas précéder ce qu'il publie.
+
+    L'instant de publication demandé est postérieur à l'utilisabilité de
+    l'observation citée — la lignée est donc admissible à cet instant — mais
+    antérieur à la production du résultat publié. C'est un produit antidaté.
+    """
+    record = _record()
+
+    with pytest.raises(ValueError, match="ne précède pas ce qu'il publie"):
+        record.to_product(
+            product_id="produit-antidate",
+            version="1.0.0",
+            status=ProductStatus.USABLE,
+            domain_of_validity="stations du bassin moyen, campagne 2026",
+            uncertainty="incertitude de mesure déclarée par la source",
+            produced_at=_instant("2026-10-07T00:00:00+00:00"),
+        )
+
+
+def test_une_publication_anterieure_a_l_etablissement_de_l_enregistrement_est_refusee():
+    """Un produit ne peut pas précéder l'enregistrement qui le porte.
+
+    Ici l'instant de publication est postérieur à la production du résultat,
+    mais antérieur à l'établissement de l'enregistrement : le produit
+    serait daté d'avant l'acte qui l'établit.
+    """
+    record = _record(produced_at=_instant("2026-10-09T00:00:00+00:00"))
+
+    with pytest.raises(ValueError, match="avant l'établissement de l'enregistrement"):
+        record.to_product(
+            product_id="produit-antidate",
+            version="1.0.0",
+            status=ProductStatus.USABLE,
+            domain_of_validity="stations du bassin moyen, campagne 2026",
+            uncertainty="incertitude de mesure déclarée par la source",
+            produced_at=_instant("2026-10-08T00:00:00+00:00"),
+        )
+
+
+def test_une_observation_substituee_ne_peut_pas_rendre_un_calcul_admissible():
+    """Un même identifiant ne peut pas désigner un autre contenu.
+
+    L'enregistrement porte une observation utilisable à partir du 10 octobre.
+    La grandeur dérivée en cite une autre instance, de même identifiant,
+    utilisable depuis le 4 octobre, et est calculée le 9 octobre. Le contrôle
+    de temporalité s'exercerait alors sur le substitut, et laisserait passer
+    un calcul antérieur à l'utilisabilité de sa véritable entrée.
+    """
+    canonique = _observation(
+        observation_id="obs-1",
+        temporal=TemporalStamp(
+            valid_time=_instant(EXPRESSION),
+            known_at=_instant("2026-10-10T00:00:00+00:00"),
+            ingested_at=_instant("2026-10-10T00:00:00+00:00"),
+            publication=PublicationState.ESTABLISHED,
+        ),
+    )
+    substitut = replace(
+        canonique,
+        temporal=TemporalStamp(
+            valid_time=_instant(EXPRESSION),
+            known_at=_instant("2026-10-04T00:00:00+00:00"),
+            ingested_at=_instant("2026-10-04T00:00:00+00:00"),
+            publication=PublicationState.ESTABLISHED,
+        ),
+    )
+    variable = _variable(
+        variable_id="var-substituee",
+        computed_at=_instant("2026-10-09T00:00:00+00:00"),
+        inputs=(substitut,),
+    )
+    record = _record(
+        observations=(canonique,),
+        variables=(variable,),
+        produced_at=_instant("2026-10-12T00:00:00+00:00"),
+    )
+
+    with pytest.raises(ValueError, match="ne peut pas désigner un autre contenu"):
+        _produit(record)
+
+
+def test_le_controle_temporel_s_exerce_sur_l_entree_canonique():
+    """La temporalité se juge sur l'entrée canonique, pas sur l'entrée citée."""
+    canonique = _observation(
+        observation_id="obs-1",
+        temporal=TemporalStamp(
+            valid_time=_instant(EXPRESSION),
+            known_at=_instant("2026-10-10T00:00:00+00:00"),
+            ingested_at=_instant("2026-10-10T00:00:00+00:00"),
+            publication=PublicationState.ESTABLISHED,
+        ),
+    )
+    substitut = replace(
+        canonique,
+        temporal=TemporalStamp(
+            valid_time=_instant(EXPRESSION),
+            known_at=_instant("2026-10-04T00:00:00+00:00"),
+            ingested_at=_instant("2026-10-04T00:00:00+00:00"),
+            publication=PublicationState.ESTABLISHED,
+        ),
+    )
+    variable = _variable(
+        variable_id="var-substituee",
+        computed_at=_instant("2026-10-09T00:00:00+00:00"),
+        inputs=(substitut,),
+    )
+    record = _record(
+        observations=(canonique,),
+        variables=(variable,),
+        produced_at=_instant("2026-10-12T00:00:00+00:00"),
+    )
+
+    rapport = verify_lineage(record)
+
+    assert not rapport.ok
+    assert any(
+        "avant l'utilisabilité de l'observation « obs-1 »" in probleme
+        for probleme in rapport.problems
+    )
+
+
+def test_une_grandeur_derivee_substituee_ne_peut_pas_remplacer_sa_verite():
+    """La même règle pour les grandeurs dérivées citées en entrée.
+
+    La grandeur canonique est calculée le 10 octobre ; la grandeur qui la
+    consomme en cite une copie calculée le 4 octobre, et est calculée le
+    6 octobre. Le contrôle de temporalité, exercé sur la copie, laisserait
+    passer un calcul antérieur à l'utilisabilité de sa véritable entrée.
+    """
+    canonique = _variable(
+        variable_id="var-canonique",
+        computed_at=_instant("2026-10-10T00:00:00+00:00"),
+        ingested_at=_instant("2026-10-10T00:00:00+00:00"),
+    )
+    substitut = replace(
+        canonique,
+        computed_at=_instant("2026-10-04T00:00:00+00:00"),
+        ingested_at=_instant("2026-10-04T00:00:00+00:00"),
+    )
+    consommatrice = _variable(
+        variable_id="var-consommatrice",
+        computed_at=_instant("2026-10-06T00:00:00+00:00"),
+        ingested_at=_instant("2026-10-06T00:00:00+00:00"),
+        inputs=(substitut,),
+    )
+    record = _record(
+        variables=(canonique, consommatrice),
+        produced_at=_instant("2026-10-12T00:00:00+00:00"),
+    )
+
+    with pytest.raises(ValueError, match="ne peut pas désigner un autre contenu"):
+        _produit(record)

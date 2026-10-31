@@ -56,13 +56,14 @@ de lui.
 | Point d'entrée console qui énonce l'état du paquet | Reconstruction d'états sur données réelles, assimilation |
 | **Les cinq objets du contrat, exécutables** : source, preuve brute, observation, grandeur dérivée, produit de connaissance | Règles temporelles propres à chaque source |
 | **Oracles indépendants** : `statsmodels` (dépendance de développement) confronte le filtre d'état, la variance HAC et les écarts-types groupés | D'autres oracles : SciPy pour les distributions, une base de référence pour l'hydrologie |
-| 301 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
+| 306 tests, linting, formatage, test d'intégration bout en bout | Produits de connaissance sur sources qualifiées |
 | Environnement verrouillé (`uv.lock` versionné) et gate de qualité exécuté sur Python 3.12 | Exécution de la CI sur d'autres matrices (versions de Python, platforms) |
 | **Matrice de réutilisation consolidée** : trois audits d'archéologie, une décision par composant | Première application financière, edge démontré, capacité de déploiement |
 | **Proposition argumentée du premier vertical slice** (Mississippi) et ses conditions d'échec | — |
 | **Publication contrôlée** : la lignée est vérifiée au moment de la publication, pas seulement quand on le demande ; un enregistrement invalide ne peut pas produire de produit | — |
 | **Nature par sortie** : un produit publie une seule nature, et chaque sortie garde la sienne à travers la sérialisation | — |
 | **Absences respectées** : une absence reste une absence de la donnée à l'entrée jusqu'au rapport de métriques ; elle n'est jamais remplacée par un zéro | — |
+| **Lignée temporelle fermée** : un produit ne peut pas être daté avant ce qu'il publie, et une entrée citée est l'objet canonique de l'enregistrement — un même identifiant ne peut pas désigner un autre contenu | — |
 
 **Aucune performance n'est démontrée sur le monde réel.** Le dépôt contient désormais un modèle
 scientifique — un filtre de Kalman en espace d'état — dont **l'implémentation** est vérifiée :
@@ -106,7 +107,8 @@ Le gate tient en cinq commandes. Elles ont toutes été exécutées et ont toute
 31 octobre 2026 sur Python 3.12. Les sorties réelles du **socle initial** sont dans
 `docs/P0-RAPPORT.md` ; après la mission 001, le gate est rejoué à l'identique et passe de nouveau,
 avec 256 tests au lieu de 2 ; après la remédiation d'acceptation, il est rejoué encore, et passe
-avec **301 tests**.
+avec 301 tests ; après la fermeture de la lignée temporelle, il est rejoué une dernière fois, et
+passe avec **306 tests**.
 
 | Commande | Ce qu'elle garantit |
 |---|---|
@@ -202,6 +204,17 @@ nature de sortie non déclarée ; la méthode d'incertitude des métriques est c
 référence V2.0 autorise (variance HAC de Newey-West, taille effective) — et non un bootstrap que
 le message du précédent commit décrivait à tort ; une absence reste une absence jusqu'au rapport
 de métriques, sans jamais devenir un zéro.
+
+**31 octobre 2026 — fermeture de la lignée temporelle.** Deux failles d'intégrité subsistaient,
+au-delà des cinq défauts ci-dessus. Un produit pouvait être daté **avant** la production de ce
+qu'il publie — un produit antidaté, dont la lignée aurait été vérifiée à un instant où ce qu'il
+contient n'existait pas encore. Et une grandeur dérivée pouvait citer une **autre instance** de
+son entrée, de même identifiant mais de contenu différent : le contrôle de temporalité
+s'exerçait alors sur le substitut, et laissait passer un calcul antérieur à l'utilisabilité de sa
+véritable entrée. L'instant effectif de publication ne peut plus précéder ni la production du
+résultat publié ni l'établissement de l'enregistrement ; chaque entrée citée est rapprochée de
+son objet canonique dans l'enregistrement, et les contrôles temporels s'exercent sur cet objet.
+Cinq tests de non-régression : ils échouent sur le code d'avant, ils passent sur le nouveau.
 
 En cours : consolidation de la matrice de réutilisation à partir des trois rapports
 d'archéologie, et choix du premier slice vertical.
