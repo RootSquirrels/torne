@@ -569,10 +569,10 @@ d'implémentation.
 
 | Réf. | Invariant | Forme vérifiable |
 |---|---|---|
-| **INV-37** | **La présence de données brutes ne vaut pas conformité sémantique.** Un adaptateur vérifie, sur les lignes réellement reçues, que les identifiants demandés sont ceux qui reviennent ; il ne suppose pas que le fournisseur a obéi. | Question : une requête portant un identifiant inexistant revient-elle avec les lignes de cet identifiant ? Attendu : non, et le verdict est `non_conforme`. |
+| **INV-37** | **La présence de données brutes ne vaut pas conformité sémantique.** Un adaptateur confronte ce qu'il a reçu à ce qu'il a demandé : les identifiants demandés sont ceux qui reviennent, et il ne suppose pas que le fournisseur a obéi. **L'écho d'un filtre dans l'URL n'est pas une preuve de filtrage.** Un critère que la réponse ne permet pas de vérifier est consigné comme **non vérifiable**, jamais comme satisfait. | Question : une requête portant un identifiant inexistant revient-elle avec les lignes de cet identifiant ? Attendu : non, et le verdict est `non_conforme`. |
 | **INV-38** | **L'exhaustivité est qualifiée par source.** Une réponse HTTP réussie ne prouve pas que le fournisseur a rendu toutes les observations attendues. | Question : l'issue porte-t-elle une exhaustivité — `declared_exhausted`, `truncated` ou `undeclared` ? Attendu : oui, toujours. |
 | **INV-39** | **Une erreur d'adaptateur est un résultat, pas une exception.** Une réponse malformée produit une issue structurée (`failed` ou `partial`), jamais une exception qui sort de l'acquisition sans que rien ne soit consigné. | Question : une réponse malformée produit-elle une issue et une trace ? Attendu : oui, et l'issue est `failed` ou `partial`. |
-| **INV-40** | **La conformité est qualifiée, pas supposée.** Un verdict de conformité est `conforme`, `non_conforme` ou `non_applicable`, et il est établi par exécution. | Question : un verdict est-il produit sans avoir interrogé la source ? Attendu : non. |
+| **INV-40** | **La conformité est qualifiée, pas supposée.** Un verdict de conformité est `conforme`, `non_conforme` ou `non_applicable`, il est établi par exécution, et il porte un motif. Il ne parle que de la conformité : le statut d'acquisition, lui, ne parle que de l'acquisition, et la porte `exploitable` est la seule question à poser avant de construire des observations. | Question : un verdict est-il produit sans avoir interrogé la source ? Et une issue non conforme est-elle déclarée en échec d'acquisition ? Attendu : non, et non. |
 
 ### 4.9 Secrets et identifiants
 

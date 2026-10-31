@@ -52,9 +52,15 @@ dans les lignes réellement reçues** : il ne suppose pas que le fournisseur a o
 un verdict `non_conforme`, et l'acquisition est **bloquée**. La preuve brute, elle, est conservée — une réponse
 qui a répondu à côté est une preuve, et elle est d'autant plus utile qu'on sait qu'elle ne convient pas.
 
-**Limite à connaître.** Cette instance ne se comporte pas comme l'API publique documentée. Toute requête qui
+**Limite à connaître.** Cette instance ne se comporte pas comme l'API publique documentée : elle ne sait pas
+rendre les observations d'une station précise — **elle rend le référentiel, filtré ou non**. Toute requête qui
 suppose un filtrage par station sur ce point d'accès produit les données d'une autre station : la porte de
 conformité est ce qui empêche cette erreur de devenir une observation.
+
+**Conséquence pour la recherche.** Toute reconstruction d'un état hydrologique sur le Rhin devra emprunter une
+autre voie, ou passer par un **filtrage vérifié côté acquisition**. C'est un constat de **source**, pas une
+limite de l'architecture : le reste du socle tient, et le blocage observé est exactement celui qu'il devait
+produire.
 
 ### I.2 USGS NWIS — valeurs instantanées
 
@@ -100,7 +106,11 @@ conformité est ce qui empêche cette erreur de devenir une observation.
 
 ### I.4 Ce qui les sépare, et ce qui leur est commun
 
-**Ce qui les sépare** est ce qui les rend utiles ensemble :
+**Ce qui les sépare** est ce qui les rend utiles ensemble. Et l'une de ces différences est une
+**contre-valeur mesurée** : USGS `sites=` **applique** le filtre — un site inexistant rend zéro série — et
+Copernicus `$filter` **applique** aussi le filtre — un filtre non concordant rend zéro item. Le défaut de
+filtrage est donc **propre à `observations_tr`**, et c'est aussi une réponse à la question « quelles sources
+sont interrogeables par filtre ? » :
 
 | Source | Pagination | Filtres | Statut de qualité | Ce qui manque |
 |---|---|---|---|---|

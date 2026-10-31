@@ -147,8 +147,9 @@ Ces points ne sont pas tranchables aujourd'hui, et aucun n'est une négligence.
    non vérifiable : dans ce cas le verdict global reste `CONFORME`, et `NON_APPLICABLE` franchit la porte
    d'exploitabilité. La table de vérité retenue est : tous vérifiés et satisfaits → `CONFORME` ; au moins un vérifié
    et violé → `NON_CONFORME` ; aucun violé, mais au moins un critère demandé non vérifiable → **`INDETERMINATE`**, et
-   l'issue ne doit alors pas être exploitable. Ce cas n'est pas implémenté : il est fermé par la piste
-   d'acquisition, pas par la documentation.
+   l'issue ne doit alors pas être exploitable. `INDETERMINE` porte le même sens que l'axe d'applicabilité des
+   Knowledge Products (`INDETERMINATE`) : la même règle, au même mot, à deux étages. Ce cas n'est pas implémenté :
+   il est fermé par la piste d'acquisition, pas par la documentation.
 10. **Une source peut accepter un filtre et ne pas l'appliquer.** C'est le cas mesuré de Hub'EAU `observations_tr`
     sur l'instance observée : une station inexistante rend exactement la même population qu'une station réelle.
     Le constat et sa mesure sont dans `docs/SOURCES.md` §I.1. Ce n'est pas une limite d'architecture — USGS `sites=`

@@ -70,7 +70,12 @@ invariant vérifiable (`docs/CONTRATS_FONDAMENTAUX.md` §4.8 et §4.9) :
 
 - **La présence de données brutes ne vaut pas conformité sémantique.** Un adaptateur vérifie, sur les lignes
   réellement reçues, que les identifiants demandés sont ceux qui reviennent ; il ne suppose pas que le
-  fournisseur a obéi.
+  fournisseur a obéi. **L'écho d'un filtre dans l'URL n'est pas une preuve de filtrage** : un fournisseur
+  peut accepter le filtre, le renvoyer dans ses liens, et l'ignorer dans la population qu'il rend.
+- **Le prédicat est propre à la source ; le socle ne fait qu'orchestrer.** Le socle ne connaît ni les
+  identifiants de stations, ni les unités, ni les règles du domaine : il enregistre le verdict, il ne le
+  décide pas. Et les **prédicats de transférabilité** (`docs/RESEARCH_AND_VALIDATION.md` §12) ne sont pas
+  concernés ici : ils relèvent du contrat de validation des affirmations, pas de l'acquisition.
 - **L'exhaustivité est qualifiée par source.** Une réponse HTTP réussie ne prouve pas que le fournisseur a
   rendu toutes les observations attendues : soit la source le dit, soit elle ne le dit pas, et le parcours peut
   être tronqué par notre propre budget.
@@ -79,6 +84,14 @@ invariant vérifiable (`docs/CONTRATS_FONDAMENTAUX.md` §4.8 et §4.9) :
 - **Un secret ne circule que par référence.** Ce qui est consigné — journal, manifeste, empreinte — porte une
   référence d'identifiant, jamais la valeur ; et un identifiant ne franchit pas une redirection qui change de
   serveur, de port ou de schéma.
+
+**Deux axes, et une seule porte.** La conformité a son **propre** axe et son **propre** verdict ; le statut
+d'acquisition ne parle que de l'acquisition — la réponse est-elle arrivée, la page a-t-elle été conservée ?
+— et ne dit rien de la conformité de la réponse à la question posée. Une source qui renvoie les lignes
+d'une autre station **ne crée aucune observation** : la porte est `exploitable`, et c'est elle, et elle
+seule, qui décide de l'usage. Ce n'est pas un échec d'acquisition : la réponse est bien arrivée, bien
+conservée, bien empreintée — une réponse non conforme est une preuve, et elle est d'autant plus utile
+qu'on sait qu'elle ne convient pas. Un verdict sans motif n'est pas accepté.
 
 **Point d'attention :** les règles temporelles du protocole scellé de l'ancien projet électrique sont hors
 périmètre et ne sont pas reprises ici. TORNE a défini ses propres conventions temporelles, en s'appuyant sur la
