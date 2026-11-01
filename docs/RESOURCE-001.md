@@ -126,20 +126,30 @@ la sidérurgie et les terminaux à charbon. **[FAIT]** L'adresse du projet se li
 1. **Une API qui répond 200 en refusant.** AGSI+ répond `200` avec
    `{"error": "access denied", "message": "Invalid or missing API key"}`. Ce n'est pas un accès.
 2. **Une grande table servie par ArcGIS ne se lit pas comme une petite.** Sur
-   `Daily_Ports_Data` (1,85 M lignes), la requête `where=1=1` **encodée** (`1%3D1`) est refusée
-   (« Invalid query parameters ») alors que la même requête **non encodée** fonctionne, et
-   `returnCountOnly=true` renvoie `{"count":1852864}`. Une requête de lignes exige
-   `resultRecordCount` **et** un `orderByFields` explicite, faute de quoi elle expire.
-3. **Une URL de service ne se déduit pas du titre de l'item.** Les services PortWatch sont publiés
+   `Daily_Ports_Data` (1,85 M lignes), `returnCountOnly=true` renvoie `{"count":1852864}`, mais une
+   requête de lignes exige `resultRecordCount` **et** un `orderByFields` explicite, faute de quoi elle
+   expire ; et le service **refuse** `returnDistinctValues` (« Invalid query parameters »). La forme
+   qui fonctionne pour agréger est la **statistique groupée** (`outStatistics`).
+3. **Un espace non encodé casse l'URL avant la requête.** C'est le piège le plus coûteux de cette
+   mission, parce que l'erreur ressemble à un défaut de la source : `urllib` refuse une URL
+   contenant une espace brute (« URL can't contain control characters »), alors que la source est
+   parfaitement saine. `=` n'a pas besoin d'être encodé ; **l'espace, si**. Attention : une version
+   antérieure de ce dossier attribuait l'échec à l'encodage de `=` — **c'était faux**, et le
+   corriger a ouvert l'accès aux statistiques.
+4. **Une URL de service ne se déduit pas du titre de l'item.** Les services PortWatch sont publiés
    par l'équipe `IMF-portwatch_imf_dataviz` sous
    `services9.arcgis.com/weJ1QsnbMYJlCHdG/arcgis/rest/services/…` ; l'URL se lit dans le JSON de
-   l'item ArcGIS, pas dans son nom.
+   l'item ArcGIS, pas dans son nom. Et sur les **211 services** du dossier, **sept seulement** ont
+   des couches : `Daily_Ports_Data`, `Daily_Chokepoints_Data`, `PortWatch_ports_database`,
+   `PortWatch_chokepoints_database`, `portwatch_disruptions_database`, `PortWatch_boundaries` et
+   `PortWatch_ports`. Les autres — dont `Daily_Trade_Data_WLD` et `portsfacts` — sont des
+   **coquilles vides**.
 
 > **[NON VÉRIFIÉ]** l'**extraction d'une ligne réelle** de `Daily_Ports_Data` : le compte est établi,
 > mais la lecture de lignes sur un service de 1,85 M lignes n'a pas abouti dans cette session (le
 > paramétrage de *big data* n'a pas été stabilisé, et une tentative a expiré après 240 s).
-> **La marche à suivre** : `…/FeatureServer/0/query?where=1=1&outFields=…&resultRecordCount=5&orderByFields=date DESC&f=json`,
-> avec un délai de 300 s — et, en repli, le téléchargement CSV en masse de PortWatch.
+> **La marche à suivre** : la forme `outStatistics` (voir `experiments/resource_002_faisabilite_lng.py`),
+> qui agrège le service sans lire les lignes.
 
 ---
 
