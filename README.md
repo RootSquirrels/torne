@@ -116,10 +116,11 @@ built into the Python package and served by FastAPI:
 ```bash
 cd frontend
 npm install
+npx playwright install   # once: Chromium, Firefox and WebKit
 npm run dev       # Vite on :5173, proxying /api to FastAPI on :8765
 npm run build     # type-checks, lints and builds into src/torne/explorer/static/
 npm test          # the component and contract suite
-npm run test:e2e  # the browser journeys, against the application FastAPI serves
+npm run test:e2e  # the browser journeys, on three engines, against the application FastAPI serves
 ```
 
 The decisions are in `docs/ADR-EXPLORER-FOUNDATIONS-001.md`. The mission record — what was built, what was measured, and

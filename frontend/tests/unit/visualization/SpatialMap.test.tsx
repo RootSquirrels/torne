@@ -6,6 +6,7 @@
  * without a canvas.
  */
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { SpatialMap } from '@/components/visualization/SpatialMap';
@@ -65,20 +66,53 @@ describe('the spatial map', () => {
     expect(screen.getByRole('button', { name: 'Demo station Alpha' })).toBeVisible();
   });
 
-  it('reports the selection of an entity', () => {
-    const seen: (string | null)[] = [];
+  it('opens an entity from the list with a single activation', () => {
+    const opened: string[] = [];
 
     render(
       <SpatialMap
         scene={scene}
         title="Demo scene"
-        onSelect={(selection) => seen.push(selection?.id ?? null)}
+        onNavigate={(selection) => opened.push(selection.id)}
       />,
     );
 
     screen.getByRole('button', { name: 'Demo station Alpha' }).click();
 
-    expect(seen).toEqual(['alpha']);
+    expect(opened).toEqual(['alpha']);
+  });
+
+  it('opens an entity from the keyboard', async () => {
+    const user = userEvent.setup();
+    const opened: string[] = [];
+
+    render(
+      <SpatialMap
+        scene={scene}
+        title="Demo scene"
+        onNavigate={(selection) => opened.push(selection.id)}
+      />,
+    );
+
+    await user.tab();
+    // The list is the keyboard-reachable equivalent of the map: tabbing reaches
+    // it, and Enter opens an entity without a double click.
+    while (document.activeElement?.textContent !== 'Demo station Alpha') {
+      await user.tab();
+    }
+    await user.keyboard('{Enter}');
+
+    expect(opened).toEqual(['alpha']);
+  });
+
+  it('marks the entity being read', () => {
+    render(<SpatialMap scene={scene} title="Demo scene" selectedId="alpha" />);
+
+    expect(screen.getByRole('button', { name: 'Demo station Alpha' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('button', { name: 'Demo basin' })).not.toHaveAttribute('aria-current');
   });
 
   it('gives the map an accessible name', () => {

@@ -42,7 +42,8 @@ npm run test:e2e
    their props and know nothing about HTTP.
 2. **The API is versioned, typed and self-describing.** `/api/v1` is canonical and is the only
    prefix the OpenAPI document describes; `/api` still answers, marked `Deprecation: true` with a
-   `Link` header pointing at its successor. Every route declares the Pydantic model it serves, and
+   `Link` header pointing at its successor. Its removal has a published rule — one announced step,
+   never a side effect of another change. Every route declares the Pydantic model it serves, and
    every failure carries `detail` and a stable `error.code`.
 3. **The Explorer's meaning did not change.** The catalogue, the map, the missions, the assets,
    the sources, the models, the coverages and the results say the same things as before; the
@@ -225,7 +226,7 @@ The fallback is narrow on purpose:
 
 | Check | Result |
 |---|---|
-| `pytest` | **947 passed** (921 before the mission) |
+| `pytest` | **948 passed** (921 before the mission) |
 | `ruff check src/torne/explorer tests/` | All checks passed |
 | `ruff format --check src/torne/explorer tests/` | 58 files already formatted |
 
@@ -240,17 +241,18 @@ carry lint findings of their own. They are outside this mission's scope and were
 |---|---|
 | `tsc --noEmit` | exit 0 |
 | `eslint .` | 0 problems |
-| `vitest run` | 23 files, **112 tests passed** |
+| `vitest run` | 23 files, **114 tests passed** |
 | `vite build` | built in 520 ms, 682 modules |
-| `playwright test` | **7 journeys passed** |
+| `playwright test` | **27 tests passed** — 9 journeys on Chromium, Firefox and WebKit |
 
 The browser journeys run against the application FastAPI actually serves — the compiled frontend
 in the Python package, not a dev server — and they fail the run on any console error or any
-response of 400 or more.
+response of 400 or more. They run on the three engines a reader may use: a journey that only
+holds on one of them is a journey only half the readers can take.
 
-**The bundle.** The entry chunk is 18.0 kB gzipped; React is 98.1 kB, Leaflet 43.3 kB, and
+**The bundle.** The entry chunk is 17.9 kB gzipped; React is 98.1 kB, Leaflet 43.3 kB, and
 ECharts — which no page downloads until a chart is shown — is a lazy chunk of 209.4 kB. Each chart
-is a chunk of its own, between 1.9 and 2.7 kB gzipped. The whole application is 379.5 kB
+is a chunk of its own, between 1.9 and 2.7 kB gzipped. The whole application is 379.4 kB
 gzipped. `scripts/bundle-report.mjs` fails the build if the entry chunk passes 120 kB.
 
 **The frontiers.** Built at build time from `world-atlas` with a Douglas–Peucker simplification of
@@ -258,27 +260,58 @@ gzipped. `scripts/bundle-report.mjs` fails the build if the entry chunk passes 1
 
 ---
 
-## 6. What could not be verified
+## 6. Horizon 0 — the limits the mission closed
+
+The mission record listed four things it could not close. They are closed now.
+
+**The map opens an entity with one activation.** The entity list was the
+keyboard-reachable equivalent of the map, and it required a double click — a
+gesture no keyboard can make. The list now opens an entity on a single
+activation, and marks the entity being read with `aria-current`. The map keeps
+its two gestures: a click selects, a double click opens. The browser journeys
+now open a country from the map's entity list, and from the keyboard.
+
+**The journeys run on three engines.** Chromium, Firefox and WebKit, nine
+journeys each: 27 tests, all passing.
+
+**The two dead filters are gone.** The filter bar offered a *Period* and an
+*Uncertainty* dropdown, both disabled, both labelled "planned". The API carries
+no period and no uncertainty — there is no persisted knowledge record to filter
+on — and the overview already said so, in the reader's own words, under
+"Planned, not available", driven by the manifest rather than by a hardcoded
+label. A dropdown that cannot filter is a promise kept in the wrong place; it
+was removed, and its explanation stays where the reader meets it.
+
+**The deprecation of `/api` has a published rule.** The OpenAPI description now
+states the canonical prefix, the headers a consumer follows, and on what ground
+the legacy prefix goes away: one announced step, once the first application
+published outside this repository consumes `/api/v1`, never as a side effect of
+another change. A test refuses the application if the rule stops being
+published.
+
+---
+
+## 7. What could not be verified
 
 1. **The brief is truncated.** It ends mid-sentence at §13, "Préserver la compatibilité avec les
    routes `/api` actuelles pendant la transition, ou documenter précisément une migration si un
    maintien temporaire est techni…". Everything after §13 — and any third part — is unknown. The
    version choice was made on the part that survived.
-2. **The git binary is absent from this machine.** The work is in the working tree and is not
-   committed. The history is intact and readable; the commit has not been made.
-3. **Only Chromium was exercised.** The journeys run in one browser; no other engine was tested.
-4. **The deferred charts were not written.** Heatmaps, scalar-field maps, scatter plots,
+2. **The map does not show which entity is being read.** `selectedId` reaches the entity list,
+   which marks the current entity, but nothing in the drawing code reads it: the
+   `--map-marker-selected` token is computed and never used, and the map never outlines the
+   country being read. The status fill is what the choropleth encodes, so the marker must not
+   replace it — the outline is the place for it. This was found while closing the keyboard
+   affordance and is left as a decision rather than a silent change.
+3. **The deferred charts were not written.** Heatmaps, scalar-field maps, scatter plots,
    distributions, correlation matrices, network diagrams and calibration plots were studied and
    left alone, as §6.6 allows. A component is written when its contract and its use are clear.
-5. **The map's entity list opens an entity on a double click.** A keyboard reader cannot
-   double-click; the reading panel is the path that works without a mouse, and it is the path the
-   browser journeys test. The map's affordance deserves a single-click or an explicit control.
-6. **No application beyond the Explorer was built.** The foundations are exercised by the Explorer
+4. **No application beyond the Explorer was built.** The foundations are exercised by the Explorer
    itself, which is the honest test available before Water Intelligence exists.
 
 ---
 
-## 7. The products
+## 8. The products
 
 | Product | Where |
 |---|---|

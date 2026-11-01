@@ -161,7 +161,9 @@ None of these is an oversight; each is recorded so that it is not smoothed over.
   the natural occasion to define it.
 - **The API prefix is in transition.** `/api/v1` is canonical; `/api` still answers the same questions and marks
   its answers `Deprecation: true`, with a `Link` header naming the successor. The legacy prefix is kept until its
-  consumers have moved; removing it is a deliberate, announced step, not a side effect.
+  consumers have moved; removing it is a deliberate, announced step, not a side effect. The rule is published: the
+  legacy prefix goes in one announced step, once the first application published outside this repository consumes
+  `/api/v1`, and the rule is stated in the OpenAPI description.
 - **The front end ships as a build artefact.** `src/torne/explorer/static/` is produced by `npm run build` in
   `frontend/` and committed, so the Python wheel is self-contained. A change to the front end is only complete
   when the artefact has been rebuilt.

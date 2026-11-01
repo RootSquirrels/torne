@@ -71,6 +71,23 @@ def test_the_canonical_api_is_not_marked_as_deprecated(client):
     assert "Deprecation" not in response.headers
 
 
+def test_the_deprecation_rule_is_published(client):
+    """The removal of the legacy prefix is announced, not implied.
+
+    A deprecation without a published rule is a side effect waiting to happen:
+    the rule has to say what the legacy prefix is, how a consumer migrates,
+    and on what ground it goes away.
+    """
+    document = client.get("/api/v1/openapi.json").json()
+
+    description = document["info"]["description"]
+
+    assert "/api/v1" in description, "the canonical prefix must be named"
+    assert "Deprecation" in description, "the header a consumer follows must be named"
+    assert "one announced step" in description, "the removal must be a decided step"
+    assert "side effect" in description, "the removal must not be an accident"
+
+
 def test_the_openapi_document_describes_the_canonical_api_only(client):
     document = client.get("/api/v1/openapi.json").json()
 

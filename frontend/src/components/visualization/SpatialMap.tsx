@@ -17,6 +17,13 @@
  *
  * The map is not the only way to read it: the component also renders the
  * layers as a list, and every entity can be reached from there.
+ *
+ * **Two actions, two ways.** Clicking a shape *selects* it; opening it is a
+ * separate act. On the map, opening is a double click — a mouse gesture. In
+ * the entity list, which is the keyboard-reachable equivalent of the map,
+ * opening is a **single activation**: a double click cannot be performed from
+ * a keyboard, so a list whose only way to open an entity were a double click
+ * would be unreachable for the readers who use one.
  */
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -39,11 +46,16 @@ export interface SpatialMapProps {
   readonly title: string;
   readonly description?: string | null;
   readonly height?: number;
-  /** The entity currently selected, by its identifier. */
+  /** The entity being read, by its identifier. The entity list marks it. */
   readonly selectedId?: string | null;
   /** Called when an entity is selected, and with `null` when the selection is cleared. */
   readonly onSelect?: (selection: SpatialSelection | null) => void;
-  /** Called when the reader asks to open an entity. */
+  /**
+   * Called when the reader asks to open an entity.
+   *
+   * The entity list opens on a single activation; the map opens on a double
+   * click, because a shape is not focusable.
+   */
   readonly onNavigate?: (selection: SpatialSelection) => void;
   /** The extent to fit, as [[south, west], [north, east]]. */
   readonly bounds?: readonly (readonly [number, number])[];
@@ -399,15 +411,8 @@ export function SpatialMap({
                     <button
                       type="button"
                       className="torne-spatial__entity"
-                      aria-pressed={selectedId === entity.id}
-                      onClick={() =>
-                        onSelect?.(
-                          selectedId === entity.id
-                            ? null
-                            : { kind: entity.kind, id: entity.id },
-                        )
-                      }
-                      onDoubleClick={() => onNavigate?.({ kind: entity.kind, id: entity.id })}
+                      aria-current={selectedId === entity.id ? 'page' : undefined}
+                      onClick={() => onNavigate?.({ kind: entity.kind, id: entity.id })}
                     >
                       {entity.label}
                     </button>

@@ -149,7 +149,7 @@
   background: var(--surface-sunken);
 }
 
-.torne-spatial__entity[aria-pressed='true'] {
+.torne-spatial__entity[aria-current] {
   background: var(--accent-subtle);
   color: var(--accent-ink);
 }

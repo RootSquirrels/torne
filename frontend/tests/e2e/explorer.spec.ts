@@ -8,6 +8,10 @@ import { expect, test } from '@playwright/test';
  *
  * The journeys are the ones a reader takes: open the explorer, read a
  * country, read a mission, read an asset, and open the component workbench.
+ *
+ * They run on the three engines a reader may use — Chromium, Firefox and
+ * WebKit — because a journey that only holds on one of them is a journey that
+ * only half the readers can take.
  */
 
 test.beforeEach(({ page }) => {
@@ -68,6 +72,27 @@ test('the map lists the entities it draws', async ({ page }) => {
   const entities = page.getByRole('region', { name: 'Entities' });
   await expect(entities).toBeVisible();
   await expect(entities.getByRole('button').first()).toBeVisible();
+});
+
+test('a country opens from the map entity list with one activation', async ({ page }) => {
+  await page.goto('/');
+
+  const entities = page.getByRole('region', { name: 'Entities' });
+  await entities.getByRole('button', { name: 'France' }).click();
+
+  await expect(page.getByRole('heading', { name: 'France', level: 2 })).toBeVisible();
+});
+
+test('a country opens from the keyboard', async ({ page }) => {
+  await page.goto('/');
+
+  // The entity list is the keyboard-reachable equivalent of the map: opening an
+  // entity there must not require a double click, which no keyboard can make.
+  const france = page.getByRole('region', { name: 'Entities' }).getByRole('button', { name: 'France' });
+  await france.focus();
+  await page.keyboard.press('Enter');
+
+  await expect(page.getByRole('heading', { name: 'France', level: 2 })).toBeVisible();
 });
 
 test('a filter narrows the map and is shareable in the URL', async ({ page }) => {

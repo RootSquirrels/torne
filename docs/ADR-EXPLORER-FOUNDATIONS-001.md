@@ -76,6 +76,12 @@ migration is therefore something a consumer does, not something it suffers.
 
 *Why now.* Versioning after the consumers have multiplied means changing everyone's URL at once.
 
+**The removal of the legacy prefix has a published rule.** It goes away in one announced step,
+once the first application published outside this repository consumes `/api/v1`, and never as a
+side effect of another change. The rule is stated in the OpenAPI description — where a consumer
+reads it — and a test refuses the application if it stops being published: a deprecation without
+a published rule is a side effect waiting to happen.
+
 ### 6. Every response has a Pydantic model; every error has the same shape
 
 A route without a `response_model` leaves the OpenAPI document a guess, so a test refuses the
@@ -119,6 +125,7 @@ MapLibre, Cesium and any 3D globe stay out. The financial branch stays closed.
 ## Verification
 
 - `npx tsc --noEmit`, `npx eslint .`, `npx vitest run`, `npx playwright test` in `frontend/`.
+  The browser journeys run on Chromium, Firefox and WebKit.
 - `uv run pytest` in the repository root: the explorer suite, plus a suite that checks the
   versioned API, the error shape, the declared response models, and that no scientific module
   imports FastAPI.

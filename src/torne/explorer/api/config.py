@@ -33,7 +33,19 @@ class ExplorerSettings:
     """The prefix kept for compatibility during the transition to the canonical one."""
 
     title: str = "TORNE Explorer"
-    description: str = "Read-only view of what TORNE has really established."
+
+    description: str = (
+        "Read-only view of what TORNE has really established.\n\n"
+        "**The canonical prefix is `/api/v1`.** It is the only prefix this document describes.\n\n"
+        "**The legacy prefix `/api` still answers.** It answers the same questions as "
+        "`/api/v1`, marks every answer with `Deprecation: true`, and names its successor "
+        "in a `Link` header. A consumer that follows the header has migrated itself.\n\n"
+        "**The removal rule.** The legacy prefix will be removed in **one announced step**, "
+        "once the first application published outside this repository consumes `/api/v1`. "
+        "It is never removed as a side effect of another change: the step is announced in "
+        "this document and recorded in the commit that makes it. Until then, the legacy "
+        "prefix is a supported surface, and its answers carry the headers that say so."
+    )
 
     @property
     def serves_frontend(self) -> bool:

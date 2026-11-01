@@ -188,22 +188,14 @@ export function ExplorerRoute() {
             { value: 'raster_coverage', label: 'Raster coverages' },
           ]}
         />
-        <Select
-          label="Period"
-          value=""
-          onChange={() => undefined}
-          disabled
-          options={[{ value: '', label: 'planned' }]}
-          hint="Needs persisted knowledge records."
-        />
-        <Select
-          label="Uncertainty"
-          value=""
-          onChange={() => undefined}
-          disabled
-          options={[{ value: '', label: 'planned' }]}
-          hint="Needs persisted knowledge records."
-        />
+        {/*
+          There is no period filter and no uncertainty filter, and there will
+          not be one until a knowledge record exists to filter on: the API
+          carries no period and no uncertainty. The overview says so in the
+          reader's own words, under "Planned, not available", and the manifest
+          drives that list. A dropdown that cannot filter is a promise kept in
+          the wrong place.
+        */}
       </FilterBar>
 
       <div className="torne-explorer__body">
