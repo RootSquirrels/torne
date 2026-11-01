@@ -26,6 +26,15 @@ La plateforme refuse une cle absente ou invalide **avec le code 200** et un
 corps qui contient `error` et `message`. C'est la raison pour laquelle le
 critere de conformite regarde ces deux champs, et pas seulement le code
 retour : un `200` ne prouve rien ici.
+
+Le meme piege attend la requete par installation : ALSI exige le **couple**
+`country` + `company` + `facility`. Un `company` faux ne vide pas la reponse,
+il la **refuse** : le corps porte alors `error: invalid` et `message: invalid
+data`, toujours avec le code 200. Un filtre `facility` seul, ou un code EIC
+qui n'existe pas, retombe silencieusement sur l'agregat du pays — la reponse
+est alors celle du pays, pas celle du terminal, et rien ne le signale dans le
+corps. C'est pourquoi la confrontation des agregats est un **controle**
+obligatoire, et non une option.
 """
 
 from __future__ import annotations
@@ -74,6 +83,7 @@ class GieAdapter:
         fin: str,
         pays: str | None = None,
         installation: str | None = None,
+        company: str | None = None,
         type_: str | None = None,
         plateforme: str = "agsi",
         taille: int = TAILLE_MAX,
@@ -87,6 +97,7 @@ class GieAdapter:
         self.fin = fin.strip()
         self.pays = pays.strip().lower() if pays else None
         self.installation = installation.strip() if installation else None
+        self.company = company.strip() if company else None
         self.type_ = type_.strip() if type_ else None
         self.taille = taille
         self.credential_ref = credential_ref
@@ -105,6 +116,8 @@ class GieAdapter:
             params["country"] = self.pays
         if self.installation:
             params["facility"] = self.installation
+        if self.company:
+            params["company"] = self.company
         if self.type_:
             params["type"] = self.type_
         return params
@@ -130,12 +143,19 @@ class GieAdapter:
         return True
 
     def initial_request(self) -> AcquisitionRequest:
-        """La question : la premiere page de la fenetre demandee."""
+        """La question : la premiere page de la fenetre demandee.
+
+        La pagination des deux plateformes est **base 1** : la page 1 porte
+        les enregistrements les plus recents de la fenetre, et la page `n` les
+        plus anciens. La page 0 est un alias de la page 1, et une page
+        superieure a `last_page` est renvoyee a l'identique : demander la
+        page 0 ne perd rien, mais redemande la page 1.
+        """
         return AcquisitionRequest(
             source_id=self.source_id,
             url=self.base,
             method="GET",
-            params=self._params(0),
+            params=self._params(1),
             credential_ref=self.credential_ref,
             pagination=PaginationStrategy.OFFSET,
             max_pages=40,
@@ -151,7 +171,7 @@ class GieAdapter:
         charge = _charge(response.body)
         if charge is None:
             return None
-        page = int(request.params.get("page", "0") or 0)
+        page = int(request.params.get("page", "1") or 1)
         last = int(charge.get("last_page") or 0)
         if page >= last:
             return None
@@ -188,7 +208,9 @@ class GieAdapter:
         """Le corps est-il du JSON ?"""
         demande = "un corps JSON"
         if _charge(response.body) is None:
-            return CritereConformite(demande=demande, conforme=False, motif="corps illisible")
+            return CritereConformite(
+                demande=demande, verifie=True, recu="corps illisible", conforme=False
+            )
         return CritereConformite(demande=demande, verifie=True, recu="corps JSON", conforme=True)
 
     def _criterion_sans_refus(self, response: HttpResponse) -> CritereConformite:

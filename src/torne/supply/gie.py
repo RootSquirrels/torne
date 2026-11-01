@@ -89,11 +89,14 @@ def decoder_agsi(element: Mapping[str, object]) -> GasDay | None:
     )
 
 
-def decoder_alsi(element: Mapping[str, object]) -> GasDay | None:
+def decoder_alsi(element: Mapping[str, object], pays: str | None = None) -> GasDay | None:
     """Un enregistrement ALSI, traduit en etat de terminal LNG.
 
     Le **dechargement** n'est pas publie : l'entree reste inconnue, et
     l'equation du stock la derivera plus tard.
+
+    `pays` est passe par l'appelant : l'element ALSI porte le code EIC du
+    terminal, pas son pays.
     """
     jour = _jour(element.get("gasDayStart"))
     inventaire = element.get("inventory")
@@ -106,7 +109,7 @@ def decoder_alsi(element: Mapping[str, object]) -> GasDay | None:
         return None
     return GasDay(
         installation=str(element.get("code") or ""),
-        pays=str(element.get("country") or element.get("code") or "")[:2],
+        pays=pays or str(element.get("country") or "")[:2],
         couche=TERMINAL_LNG,
         jour_gaz=jour,
         date_publication=_publication(element),
@@ -117,6 +120,9 @@ def decoder_alsi(element: Mapping[str, object]) -> GasDay | None:
         rempli=None,
         autonomie_publiee=None,
         precision=0.1,
+        nom=str(element.get("name") or ""),
+        latitude=_nombre(element.get("latitude")),
+        longitude=_nombre(element.get("longitude")),
     )
 
 

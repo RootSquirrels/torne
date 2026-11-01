@@ -97,6 +97,12 @@ class GasDay:
     """L'autonomie equivalente **publiee** par la source (jours)."""
     precision: float = 0.01
     """La precision annoncee par la source, en unites absolues."""
+    nom: str = ""
+    """Le nom de l'installation, tel que la source le publie."""
+    latitude: float | None = None
+    longitude: float | None = None
+    """La position de l'installation, en degres -- elle permet la
+    concentration geographique et le scenario de perte."""
 
     @property
     def taux_remplissage(self) -> float:

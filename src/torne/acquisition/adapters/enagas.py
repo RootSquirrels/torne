@@ -140,20 +140,20 @@ class EnagasDailyAdapter:
         charge = _charge(response.body)
         if charge is None:
             return verdict_from_criteria(
-                [
-                    CritereConformite(
+                {
+                    "corps": CritereConformite(
                         demande="un corps JSON",
-                        conforme=False,
-                        motif="corps illisible ou erreur de la source",
+                        verifie=False,
+                        recu="corps illisible ou erreur de la source",
                     )
-                ]
+                }
             )
         return verdict_from_criteria(
-            [
-                self._criterion_json(charge),
-                self._criterion_publication(charge),
-                self._criterion_grandeurs(charge),
-            ]
+            {
+                "rapport": self._criterion_json(charge),
+                "publication": self._criterion_publication(charge),
+                "grandeurs": self._criterion_grandeurs(charge),
+            }
         )
 
     # -- les criteres ---------------------------------------------------
@@ -161,17 +161,35 @@ class EnagasDailyAdapter:
         """Le corps est-il bien le rapport attendu ?"""
         demande = "un rapport JSON du suivi quotidien"
         if "gasSystemPPDDataReportPojo" not in charge:
-            return CritereConformite(demande=demande, conforme=False, motif="rapport absent")
-        return CritereConformite(demande=demande, conforme=True)
+            return CritereConformite(
+                demande=demande,
+                verifie=True,
+                recu="rapport absent",
+                conforme=False,
+            )
+        return CritereConformite(
+            demande=demande,
+            verifie=True,
+            recu="rapport JSON du suivi quotidien",
+            conforme=True,
+        )
 
     def _criterion_publication(self, charge: dict) -> CritereConformite:
         """Le rapport porte-t-il son instant de publication ?"""
         demande = "l'instant de publication (lastDate)"
         if not charge.get("lastDate"):
             return CritereConformite(
-                demande=demande, conforme=False, motif="instant de publication absent"
+                demande=demande,
+                verifie=False,
+                recu="instant de publication absent",
+                conforme=None,
             )
-        return CritereConformite(demande=demande, conforme=True)
+        return CritereConformite(
+            demande=demande,
+            verifie=True,
+            recu=str(charge.get("lastDate")),
+            conforme=True,
+        )
 
     def _criterion_grandeurs(self, charge: dict) -> CritereConformite:
         """Les grandeurs attendues sont-elles presentes ?"""
@@ -180,9 +198,17 @@ class EnagasDailyAdapter:
         absentes = [nom for nom in GRANDEURS_ATTENDUES if nom not in rapport]
         if absentes:
             return CritereConformite(
-                demande=demande, conforme=False, motif=f"absentes : {', '.join(absentes)}"
+                demande=demande,
+                verifie=True,
+                recu=f"absentes : {', '.join(absentes)}",
+                conforme=False,
             )
-        return CritereConformite(demande=demande, conforme=True)
+        return CritereConformite(
+            demande=demande,
+            verifie=True,
+            recu="toutes les grandeurs attendues",
+            conforme=True,
+        )
 
 
 def _charge(corps: bytes) -> dict | None:
