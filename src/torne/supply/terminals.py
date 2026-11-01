@@ -127,6 +127,14 @@ def marge_installation(
 
     Une installation qui ne sort rien donne une couverture nulle : la question
     n'a pas de reponse, et non pas une reponse infinie.
+
+    Ce que la couverture mesure, et ce qu'elle borne : la **reserve** est la
+    part du stock au-dessus du minimum technique, et elle se consomme au
+    rythme observe. Si le flux publie n'est que le flux **reseau**, la
+    couverture est une **BORNE SUPERIEURE** de la couverture reelle : un
+    terminal qui expédie aussi sur camion et sur navire se vide plus vite que
+    le flux publie ne le dit. Le controle de confrontation a mesure l'ampleur
+    de l'effet sur les terminaux espagnols.
     """
     marges: list[float] = []
     for index in range(len(suite)):
@@ -159,17 +167,43 @@ def degradation_installation(suite: Sequence[GasDay], fenetre: int = FENETRE_JOU
 
 
 def dechargement_derive(suite: Sequence[GasDay]) -> list[float | None]:
-    """Le dechargement des cargaisons, **derive** de l'equation du stock.
+    """L'entree dans le systeme de cuves, **derivee** de l'equation du stock.
 
         entree(j) = stock(j) - stock(j-1) + sortie(j)
 
-    Le premier jour n'a pas de jour precedent : il n'a donc pas de dechargement
-    derive, et ne vaut pas zero.
+    Le premier jour n'a pas de jour precedent : il n'a donc pas d'entree
+    derivee, et ne vaut pas zero.
 
-    La grandeur est une **reconstruction**, pas une observation : elle herite
-    du bruit de la source, et elle suppose que le stock publie est bien le
-    stock de fin de journee de gaz. Elle est donc notee comme derivee, et
-    elle ne remplace jamais l'entree publiee quand la source en donne une.
+    Ce que la grandeur est exactement
+    -------------------------------
+
+    Ce n'est **pas** le flux d'importation de cargaisons. La vraie balance
+    des cuves est :
+
+        entree_reelle = stock(j) - stock(j-1) + regasification + citernes + navires
+
+    et la formule ci-dessus n'en retient que le premier terme de la sortie,
+    celui que la source publie. La valeur derivee est donc :
+
+        entree_reelle - (citernes + navires)
+
+    Deux consequences, mesurees :
+
+    - c'est une **borne inferieure** de l'entree dans les cuves. La
+      plateforme ne publie aucun champ pour les sorties par camion et par
+      navire : sur les sept terminaux espagnols confrontes a l'exploitant,
+      l'ecart atteint **-26 %** pour un terminal qui charge des navires ;
+    - l'entree reelle n'est pas seulement made of cargaisons : le reseau
+      de l'exploitant peut alimenter les cuves d'un terminal par
+      gazoduc. Le rapport de l'exploitant le montre sur El Musel, dont les
+      cuves recoivent du gaz d'autres installations, sans aucun
+      dechargement de barge publie.
+
+    Ce que la grandeur vaut donc : une mesure **relative** de l'activite
+    d'un systeme de cuves — quel terminal se remplit, a quel rythme — et
+    non un flux d'importation absolu. C'est une **reconstruction**, pas
+    une observation : elle est notee comme derivee, et elle ne remplace
+    jamais l'entree publiee quand la source en donne une.
     """
     resultat: list[float | None] = []
     for index in range(len(suite)):

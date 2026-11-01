@@ -498,7 +498,11 @@ def _main(argv: list[str]) -> int:
                     "sortie_gwh_j": round(jour.sortie, 3),
                     "marge_jours": round(marges[index], 3),
                     "tension": int(marges[index] < SEUIL_TENSION_JOURS),
-                    "dechargement_derive_gwh": (
+                    # L'entree derivee dans les cuves : cargaisons ET
+                    # transferts par gazoduc, moins les sorties par camion et
+                    # par navire que la plateforme ne publie pas. Ce n'est
+                    # donc pas un flux d'importation : c'est une entree nette.
+                    "entree_derivee_gwh": (
                         round(dechargements[index], 3) if dechargements[index] is not None else ""
                     ),
                     "latitude": jour.latitude if jour.latitude is not None else "",
@@ -667,7 +671,11 @@ def _main(argv: list[str]) -> int:
                 "stock_t": etat.stock_final_t,
                 "regas_gwh": etat.regas_gwh,
                 "citernes_gwh": etat.sorties_citernes_gwh,
+                "reexport_gwh": etat.reexport_m3 / lecture.facteur_m3_par_gwh,
                 "remplissage": etat.remplissage,
+                # Le dechargement publie par l'exploitant, converti avec le
+                # facteur mesure par le produit espagnol.
+                "decharge_gwh": etat.entrees_m3 / lecture.facteur_m3_par_gwh,
             }
 
     # L'alignement des jours de gaz est mesure : on essaie les decalages.
@@ -753,7 +761,11 @@ def _main(argv: list[str]) -> int:
                 (
                     terminal_enagas,
                     float(element["sendOut"]),
-                    reference_enagas["regas_gwh"] + reference_enagas["citernes_gwh"],
+                    # Le flux Reseau de la plateforme se compare a la
+                    # regazification de l'exploitant, et a rien d'autre : les
+                    # citernes et les navires sortent aussi des cuves, mais
+                    # la plateforme ne publie aucun champ pour eux.
+                    reference_enagas["regas_gwh"],
                 )
             )
         if controles:
@@ -765,7 +777,7 @@ def _main(argv: list[str]) -> int:
             ecarts_flux = [abs(a - b) / b for _, a, b in flux if b]
             if ecarts_flux:
                 print(
-                    f"   controle des debits  : ecart relatif median "
+                    f"   controle des flux RESEAU : ecart relatif median "
                     f"{sorted(ecarts_flux)[len(ecarts_flux) // 2] * 100:.2f} % sur {len(ecarts_flux)} paires"
                 )
 
@@ -784,6 +796,91 @@ def _main(argv: list[str]) -> int:
                     }
                 )
         print(f"   la confrontation detaillee -> {chemin_confrontation}")
+
+        # -- le controle de PERIMETRE : ce que la plateforme compte -------
+        # Le flux reseau de la plateforme et la regazification publiee par
+        # l'exploitant se comparent sur le MOIS : le cumul neutralise le
+        # decalage eventuel d'un jour et donne un signal fort.
+        # Ce que l'exploitant publie en plus -- le chargement sur citernes
+        # et le LNG charge sur navire -- sort aussi des cuves, mais la
+        # plateforme ne publie aucun champ pour cela.
+        perimetre: list[dict[str, object]] = []
+        for terminal_enagas, code in CORRESPONDANCE_ENAGAS.items():
+            # Le cumul se fait sur le MOIS de confrontation, pas sur la
+            # fenetre entiere : les deux series doivent porter la meme
+            # periode pour que la comparaison ait un sens.
+            serie = sorted(
+                (
+                    (jour, element)
+                    for (c, jour), element in bruts.items()
+                    if c == code and debut_mois <= jour <= fin_mois
+                ),
+                key=lambda paire: paire[0],
+            )
+            if len(serie) < 2:
+                continue
+            envois = sum(float(element["sendOut"]) for _, element in serie)
+            stocks = [float(element["inventory"]["gwh"]) for _, element in serie]
+            if not any(k[0] == terminal_enagas for k in enagas):
+                continue
+            regas = sum(v["regas_gwh"] for k, v in enagas.items() if k[0] == terminal_enagas)
+            citernes = sum(v["citernes_gwh"] for k, v in enagas.items() if k[0] == terminal_enagas)
+            navires = sum(v["reexport_gwh"] for k, v in enagas.items() if k[0] == terminal_enagas)
+            decharge = sum(v["decharge_gwh"] for k, v in enagas.items() if k[0] == terminal_enagas)
+            derive = stocks[-1] - stocks[0] + envois
+            perimetre.append(
+                {
+                    "terminal_enagas": terminal_enagas,
+                    "terminal_eic": code,
+                    "sendout_alsi_gwh": round(envois, 3),
+                    "regas_exploitant_gwh": round(regas, 3),
+                    "ecart_reseau_pct": round((envois - regas) / regas * 100, 3) if regas else 0.0,
+                    "citernes_gwh": round(citernes, 3),
+                    "navires_gwh": round(navires, 3),
+                    "decharge_publiee_gwh": round(decharge, 3),
+                    "decharge_derivee_gwh": round(derive, 3),
+                    "ecart_decharge_pct": (
+                        round((derive - decharge) / decharge * 100, 3) if decharge else 0.0
+                    ),
+                    "sorties_non_publiees_gwh": round(citernes + navires, 3),
+                }
+            )
+        if perimetre:
+            print()
+            print("   le controle de PERIMETRE (cumul du mois) :")
+            print(
+                f"      {'terminal':<12}{'sendOut ALSI':>13}{'regas':>10}{'ecart':>9}"
+                f"{'citernes':>10}{'navires':>9}{'entree publiee':>17}"
+                f"{'entree derivee':>17}{'ecart':>9}"
+            )
+            for ligne in perimetre:
+                print(
+                    f"      {ligne['terminal_enagas']!s:<12}"
+                    f"{float(ligne['sendout_alsi_gwh']):>13,.0f}"
+                    f"{float(ligne['regas_exploitant_gwh']):>10,.0f}"
+                    f"{float(ligne['ecart_reseau_pct']):>8.2f} %"
+                    f"{float(ligne['citernes_gwh']):>10,.0f}"
+                    f"{float(ligne['navires_gwh']):>9,.0f}"
+                    f"{float(ligne['decharge_publiee_gwh']):>17,.0f}"
+                    f"{float(ligne['decharge_derivee_gwh']):>17,.0f}"
+                    f"{float(ligne['ecart_decharge_pct']):>8.2f} %"
+                )
+            ecarts_reseau = [float(ligne["ecart_reseau_pct"]) for ligne in perimetre]
+            ecarts_decharge = [float(ligne["ecart_decharge_pct"]) for ligne in perimetre]
+            print(
+                f"      le flux RESEAU concorde a {max(abs(v) for v in ecarts_reseau):.2f} % "
+                f"au maximum ; l'ecart de dechargement atteint {min(ecarts_decharge):+.2f} %"
+            )
+            print(
+                "      => la plateforme ne publie QUE l'injection reseau : l'entree derivee "
+                "est une BORNE INFERIEURE"
+            )
+            chemin_perimetre = sortie / "confrontation_perimetre_alsi_enagas.csv"
+            with chemin_perimetre.open("w", encoding="utf-8", newline="") as fichier:
+                redacteur = csv.DictWriter(fichier, fieldnames=list(perimetre[0].keys()))
+                redacteur.writeheader()
+                redacteur.writerows(perimetre)
+            print(f"      le controle de perimetre -> {chemin_perimetre}")
 
     # -- les sorties -------------------------------------------------------
     chemin_serie = sortie / "europe_lng_terminals.csv"
