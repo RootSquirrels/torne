@@ -1,6 +1,45 @@
 {
   "components": {
     "schemas": {
+      "AggregateSumControl": {
+        "description": "The control of a country's terminals against the aggregate it publishes.",
+        "properties": {
+          "country": {
+            "description": "The country.",
+            "title": "Country",
+            "type": "string"
+          },
+          "published_aggregate_gwh": {
+            "description": "The aggregate the platform publishes, in GWh.",
+            "title": "Published Aggregate Gwh",
+            "type": "number"
+          },
+          "relative_difference": {
+            "description": "The difference between the two, as a fraction.",
+            "title": "Relative Difference",
+            "type": "number"
+          },
+          "terminals_counted": {
+            "description": "How many terminals were counted.",
+            "title": "Terminals Counted",
+            "type": "integer"
+          },
+          "terminals_sum_gwh": {
+            "description": "The sum of the terminals' reserves, in GWh.",
+            "title": "Terminals Sum Gwh",
+            "type": "number"
+          }
+        },
+        "required": [
+          "country",
+          "terminals_counted",
+          "terminals_sum_gwh",
+          "published_aggregate_gwh",
+          "relative_difference"
+        ],
+        "title": "AggregateSumControl",
+        "type": "object"
+      },
       "Asset": {
         "description": "A physical object, where it is, and what was measured there.",
         "properties": {
@@ -128,6 +167,225 @@
           "mission_ids"
         ],
         "title": "Asset",
+        "type": "object"
+      },
+      "Branch": {
+        "description": "One branch of the platform, and whether it is open.\n\nA branch is an application of what the repository has established. It is\nopen when the products it consumes are themselves validated, and closed\notherwise — and a closed branch says why, in words a reader can check.",
+        "properties": {
+          "branch_id": {
+            "description": "The branch's identifier.",
+            "title": "Branch Id",
+            "type": "string"
+          },
+          "domain_ids": {
+            "description": "The observation modalities it reads.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "mission_ids": {
+            "description": "The missions behind it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Mission Ids",
+            "type": "array"
+          },
+          "open": {
+            "description": "Whether the branch is open.",
+            "title": "Open",
+            "type": "boolean"
+          },
+          "product_ids": {
+            "description": "The published products it serves.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Product Ids",
+            "type": "array"
+          },
+          "reason": {
+            "description": "Why it is closed, or why it is open.",
+            "title": "Reason",
+            "type": "string"
+          },
+          "title": {
+            "description": "What the branch is called.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "branch_id",
+          "title",
+          "open",
+          "reason"
+        ],
+        "title": "Branch",
+        "type": "object"
+      },
+      "ConfrontationRow": {
+        "description": "One day of one terminal, seen by two independent sources.",
+        "properties": {
+          "absolute_difference_gwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The difference between the two, in GWh.",
+            "title": "Absolute Difference Gwh"
+          },
+          "alsi_day": {
+            "description": "The day the platform describes.",
+            "title": "Alsi Day",
+            "type": "string"
+          },
+          "alsi_stock_gwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The stock the platform publishes, in GWh.",
+            "title": "Alsi Stock Gwh"
+          },
+          "operator_day": {
+            "description": "The day the operator describes.",
+            "title": "Operator Day",
+            "type": "string"
+          },
+          "operator_stock_gwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The stock the operator publishes, in GWh.",
+            "title": "Operator Stock Gwh"
+          },
+          "operator_terminal": {
+            "description": "The terminal, in the operator's words.",
+            "title": "Operator Terminal",
+            "type": "string"
+          },
+          "relative_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The difference between the two, as a fraction.",
+            "title": "Relative Difference"
+          },
+          "terminal_eic": {
+            "description": "Its identifier.",
+            "title": "Terminal Eic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "operator_terminal",
+          "terminal_eic",
+          "alsi_day",
+          "operator_day"
+        ],
+        "title": "ConfrontationRow",
+        "type": "object"
+      },
+      "ConfrontationRows": {
+        "description": "The confrontation, in full.",
+        "properties": {
+          "comparisons": {
+            "description": "How many comparisons it holds.",
+            "title": "Comparisons",
+            "type": "integer"
+          },
+          "product_id": {
+            "description": "The product the confrontation validates.",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "rows": {
+            "description": "The comparisons themselves.",
+            "items": {
+              "$ref": "#/components/schemas/ConfrontationRow"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product_id",
+          "comparisons",
+          "rows"
+        ],
+        "title": "ConfrontationRows",
+        "type": "object"
+      },
+      "CountryDependency": {
+        "description": "What one country holds, and what it lets out.",
+        "properties": {
+          "capacity_gwh": {
+            "description": "Its capacity, in GWh.",
+            "title": "Capacity Gwh",
+            "type": "number"
+          },
+          "capacity_share": {
+            "description": "Its share of the European capacity.",
+            "title": "Capacity Share",
+            "type": "number"
+          },
+          "send_out_gwh_per_day": {
+            "description": "Its send-out, in GWh per day.",
+            "title": "Send Out Gwh Per Day",
+            "type": "number"
+          },
+          "send_out_share": {
+            "description": "Its share of the European send-out.",
+            "title": "Send Out Share",
+            "type": "number"
+          },
+          "stock_gwh": {
+            "description": "Its reserve, in GWh.",
+            "title": "Stock Gwh",
+            "type": "number"
+          },
+          "stock_share": {
+            "description": "Its share of the European reserve.",
+            "title": "Stock Share",
+            "type": "number"
+          },
+          "terminals": {
+            "description": "How many terminals it holds.",
+            "title": "Terminals",
+            "type": "number"
+          }
+        },
+        "required": [
+          "stock_gwh",
+          "capacity_gwh",
+          "send_out_gwh_per_day",
+          "terminals",
+          "stock_share",
+          "capacity_share",
+          "send_out_share"
+        ],
+        "title": "CountryDependency",
         "type": "object"
       },
       "CountryDetail": {
@@ -474,6 +732,57 @@
         "title": "Health",
         "type": "object"
       },
+      "LossScenario": {
+        "description": "What the loss of one installation costs the system.",
+        "properties": {
+          "coverage_after_days": {
+            "description": "The coverage after, in days.",
+            "title": "Coverage After Days",
+            "type": "number"
+          },
+          "coverage_before_days": {
+            "description": "The coverage before, in days.",
+            "title": "Coverage Before Days",
+            "type": "number"
+          },
+          "days_lost": {
+            "description": "The days of coverage it costs.",
+            "title": "Days Lost",
+            "type": "number"
+          },
+          "flow_lost_gwh_per_day": {
+            "description": "The send-out it carries, in GWh per day.",
+            "title": "Flow Lost Gwh Per Day",
+            "type": "number"
+          },
+          "installation": {
+            "description": "The installation that is lost.",
+            "title": "Installation",
+            "type": "string"
+          },
+          "reserve_lost_gwh": {
+            "description": "The reserve it carries, in GWh.",
+            "title": "Reserve Lost Gwh",
+            "type": "number"
+          },
+          "reserve_share_lost": {
+            "description": "Its share of the European reserve.",
+            "title": "Reserve Share Lost",
+            "type": "number"
+          }
+        },
+        "required": [
+          "installation",
+          "coverage_before_days",
+          "coverage_after_days",
+          "days_lost",
+          "reserve_lost_gwh",
+          "flow_lost_gwh_per_day",
+          "reserve_share_lost"
+        ],
+        "title": "LossScenario",
+        "type": "object"
+      },
       "Manifest": {
         "description": "The whole manifest: one JSON projection of what TORNE can show.\n\nIt is derived from the catalogue, from the surface-product registry and\nfrom the code itself. Building it computes nothing scientific and calls no\nprovider.",
         "properties": {
@@ -483,6 +792,14 @@
               "$ref": "#/components/schemas/Asset"
             },
             "title": "Assets",
+            "type": "array"
+          },
+          "branches": {
+            "description": "The branches of the platform, and whether they are open.",
+            "items": {
+              "$ref": "#/components/schemas/Branch"
+            },
+            "title": "Branches",
             "type": "array"
           },
           "countries": {
@@ -513,10 +830,6 @@
             "description": "The version of the manifest's shape.",
             "title": "Manifest Version",
             "type": "string"
-          },
-          "market_intelligence": {
-            "$ref": "#/components/schemas/MarketIntelligence",
-            "description": "The state of the market branch."
           },
           "missions": {
             "description": "The missions and what they established.",
@@ -605,30 +918,9 @@
           "surface_products",
           "results",
           "planned",
-          "market_intelligence"
+          "branches"
         ],
         "title": "Manifest",
-        "type": "object"
-      },
-      "MarketIntelligence": {
-        "description": "The state of the market branch of the platform.",
-        "properties": {
-          "open": {
-            "description": "Whether the market branch is open. It is not, today.",
-            "title": "Open",
-            "type": "boolean"
-          },
-          "reason": {
-            "description": "Why it is closed, or why it is open.",
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "open",
-          "reason"
-        ],
-        "title": "MarketIntelligence",
         "type": "object"
       },
       "Mission": {
@@ -902,6 +1194,780 @@
         "title": "PlannedFeature",
         "type": "object"
       },
+      "ProductBound": {
+        "description": "A quantity that is a bound, and not a measurement.",
+        "properties": {
+          "direction": {
+            "description": "`lower` or `upper`: which way the true value lies.",
+            "title": "Direction",
+            "type": "string"
+          },
+          "quantity": {
+            "description": "What the bound concerns.",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "statement": {
+            "description": "Why the quantity is a bound, in clear language.",
+            "title": "Statement",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quantity",
+          "direction",
+          "statement"
+        ],
+        "title": "ProductBound",
+        "type": "object"
+      },
+      "ProductDetail": {
+        "description": "A published product, in full.",
+        "properties": {
+          "bounds": {
+            "description": "The quantities that are bounds, not measurements.",
+            "items": {
+              "$ref": "#/components/schemas/ProductBound"
+            },
+            "title": "Bounds",
+            "type": "array"
+          },
+          "domain_of_validity": {
+            "description": "Where the product holds, and where it does not.",
+            "title": "Domain Of Validity",
+            "type": "string"
+          },
+          "generated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the published payload was generated.",
+            "title": "Generated At"
+          },
+          "indicators": {
+            "$ref": "#/components/schemas/ProductIndicators",
+            "description": "The indicators of each layer, typed by the layer they belong to."
+          },
+          "input_statuses": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The quality status of each entry it consumed.",
+            "title": "Input Statuses",
+            "type": "object"
+          },
+          "layers": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ProductLayer"
+            },
+            "description": "The layers it publishes, and the columns they carry.",
+            "title": "Layers",
+            "type": "object"
+          },
+          "lineage": {
+            "description": "Its lineage, from the sources to the evaluation.",
+            "items": {
+              "$ref": "#/components/schemas/ProductRef"
+            },
+            "title": "Lineage",
+            "type": "array"
+          },
+          "nature": {
+            "description": "The nature of the result it publishes.",
+            "title": "Nature",
+            "type": "string"
+          },
+          "payload_digest": {
+            "description": "The digest of the payload it publishes.",
+            "title": "Payload Digest",
+            "type": "string"
+          },
+          "payload_files": {
+            "description": "The files the payload is made of.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Payload Files",
+            "type": "array"
+          },
+          "produced_at": {
+            "description": "When the product was established.",
+            "title": "Produced At",
+            "type": "string"
+          },
+          "product_id": {
+            "description": "The stable identifier of the product.",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/ProductProvenance",
+            "description": "Where its numbers come from."
+          },
+          "provisional_inputs": {
+            "description": "The entries it consumed whose status is provisional.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Provisional Inputs",
+            "type": "array"
+          },
+          "reference_date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the published states are the state of.",
+            "title": "Reference Date"
+          },
+          "status": {
+            "description": "Its status: usable, degraded, withdrawn or inconclusive.",
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "description": "What the product is.",
+            "title": "Title",
+            "type": "string"
+          },
+          "uncertainty": {
+            "description": "Its uncertainty, qualified in clear language.",
+            "title": "Uncertainty",
+            "type": "string"
+          },
+          "units": {
+            "$ref": "#/components/schemas/ProductUnits",
+            "description": "The units its quantities are expressed in."
+          },
+          "validation": {
+            "$ref": "#/components/schemas/ProductValidation",
+            "description": "The confrontation that validated it."
+          },
+          "version": {
+            "description": "The version of the product.",
+            "title": "Version",
+            "type": "string"
+          },
+          "windows": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ProductWindow"
+            },
+            "description": "The period each layer covers.",
+            "title": "Windows",
+            "type": "object"
+          }
+        },
+        "required": [
+          "product_id",
+          "version",
+          "title",
+          "nature",
+          "produced_at",
+          "status",
+          "domain_of_validity",
+          "uncertainty",
+          "lineage",
+          "input_statuses",
+          "payload_digest",
+          "payload_files",
+          "windows",
+          "layers",
+          "bounds",
+          "units",
+          "validation",
+          "provenance",
+          "indicators"
+        ],
+        "title": "ProductDetail",
+        "type": "object"
+      },
+      "ProductIndicators": {
+        "description": "The indicators of each layer of the product.\n\nThey are typed, layer by layer, because a reader must be able to trust\nwhat a number means without reading the production code that produced it.",
+        "properties": {
+          "storage": {
+            "$ref": "#/components/schemas/StorageIndicators",
+            "description": "What the underground storage layer publishes."
+          },
+          "terminals": {
+            "$ref": "#/components/schemas/TerminalIndicators",
+            "description": "What the LNG terminal layer publishes."
+          }
+        },
+        "required": [
+          "terminals",
+          "storage"
+        ],
+        "title": "ProductIndicators",
+        "type": "object"
+      },
+      "ProductLayer": {
+        "description": "One physical layer of a product, and the columns it publishes.",
+        "properties": {
+          "country_column": {
+            "description": "The column that carries its country.",
+            "title": "Country Column",
+            "type": "string"
+          },
+          "day_column": {
+            "description": "The column that carries the gas day.",
+            "title": "Day Column",
+            "type": "string"
+          },
+          "entity_column": {
+            "description": "The column that names the entity the state belongs to.",
+            "title": "Entity Column",
+            "type": "string"
+          },
+          "file": {
+            "description": "The published file that carries it.",
+            "title": "File",
+            "type": "string"
+          },
+          "flags": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ProductQuantity"
+            },
+            "description": "The flags it publishes, by column.",
+            "title": "Flags",
+            "type": "object"
+          },
+          "id": {
+            "description": "The layer's identifier.",
+            "title": "Id",
+            "type": "string"
+          },
+          "label_column": {
+            "description": "The column that names it for a reader.",
+            "title": "Label Column",
+            "type": "string"
+          },
+          "measures": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ProductQuantity"
+            },
+            "description": "The quantities it publishes, by column.",
+            "title": "Measures",
+            "type": "object"
+          },
+          "position_columns": {
+            "description": "The columns that place it.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Position Columns",
+            "type": "array"
+          },
+          "published_column": {
+            "description": "The column that carries the publication instant.",
+            "title": "Published Column",
+            "type": "string"
+          },
+          "title": {
+            "description": "What the layer is.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "file",
+          "entity_column",
+          "label_column",
+          "country_column",
+          "day_column",
+          "published_column"
+        ],
+        "title": "ProductLayer",
+        "type": "object"
+      },
+      "ProductList": {
+        "description": "The products the repository has published.",
+        "properties": {
+          "products": {
+            "description": "The published products.",
+            "items": {
+              "$ref": "#/components/schemas/ProductSummary"
+            },
+            "title": "Products",
+            "type": "array"
+          }
+        },
+        "required": [
+          "products"
+        ],
+        "title": "ProductList",
+        "type": "object"
+      },
+      "ProductProvenance": {
+        "description": "Where the product's numbers come from.",
+        "properties": {
+          "identifier_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the identifiers of the entities come from.",
+            "title": "Identifier Reference"
+          },
+          "production_digests": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "The digest of each production file the product was built from.",
+            "title": "Production Digests",
+            "type": "object"
+          },
+          "sources": {
+            "description": "The sources it consumed.",
+            "items": {
+              "$ref": "#/components/schemas/SourceDescription"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "title": "ProductProvenance",
+        "type": "object"
+      },
+      "ProductQuantity": {
+        "description": "A quantity the product publishes, with what it means and in what unit.",
+        "properties": {
+          "label": {
+            "description": "What the quantity is.",
+            "title": "Label",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The unit it is expressed in.",
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "title": "ProductQuantity",
+        "type": "object"
+      },
+      "ProductRef": {
+        "description": "One link of a product's lineage.",
+        "properties": {
+          "identifier": {
+            "description": "The stable identifier of the object cited.",
+            "title": "Identifier",
+            "type": "string"
+          },
+          "kind": {
+            "description": "What the reference points at: a source, an observation, an evaluation.",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A human-readable name for it.",
+            "title": "Label"
+          },
+          "revision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its version, when it has one.",
+            "title": "Revision"
+          }
+        },
+        "required": [
+          "kind",
+          "identifier"
+        ],
+        "title": "ProductRef",
+        "type": "object"
+      },
+      "ProductState": {
+        "description": "One state of one entity.",
+        "properties": {
+          "country": {
+            "description": "Its country.",
+            "title": "Country",
+            "type": "string"
+          },
+          "entity": {
+            "description": "The entity the state belongs to.",
+            "title": "Entity",
+            "type": "string"
+          },
+          "flags": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "The flags of the state.",
+            "title": "Flags",
+            "type": "object"
+          },
+          "gas_day": {
+            "description": "The day the state describes.",
+            "title": "Gas Day",
+            "type": "string"
+          },
+          "label": {
+            "description": "Its name for a reader.",
+            "title": "Label",
+            "type": "string"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its latitude, when it is placed.",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Its longitude, when it is placed.",
+            "title": "Longitude"
+          },
+          "published_at": {
+            "description": "When the state was published.",
+            "title": "Published At",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "description": "The quantities of the state. A quantity that is not known is null.",
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "entity",
+          "label",
+          "country",
+          "gas_day",
+          "published_at",
+          "values",
+          "flags"
+        ],
+        "title": "ProductState",
+        "type": "object"
+      },
+      "ProductStates": {
+        "description": "The states of one layer.",
+        "properties": {
+          "layer": {
+            "description": "The layer they belong to.",
+            "title": "Layer",
+            "type": "string"
+          },
+          "product_id": {
+            "description": "The product the states belong to.",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "states": {
+            "description": "The states themselves.",
+            "items": {
+              "$ref": "#/components/schemas/ProductState"
+            },
+            "title": "States",
+            "type": "array"
+          }
+        },
+        "required": [
+          "product_id",
+          "layer",
+          "states"
+        ],
+        "title": "ProductStates",
+        "type": "object"
+      },
+      "ProductSummary": {
+        "description": "A published product, as the list shows it.",
+        "properties": {
+          "domain_of_validity": {
+            "description": "Where the product holds, and where it does not.",
+            "title": "Domain Of Validity",
+            "type": "string"
+          },
+          "nature": {
+            "description": "The nature of the result it publishes.",
+            "title": "Nature",
+            "type": "string"
+          },
+          "payload_digest": {
+            "description": "The digest of the payload it publishes.",
+            "title": "Payload Digest",
+            "type": "string"
+          },
+          "produced_at": {
+            "description": "When the product was established.",
+            "title": "Produced At",
+            "type": "string"
+          },
+          "product_id": {
+            "description": "The stable identifier of the product.",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "status": {
+            "description": "Its status: usable, degraded, withdrawn or inconclusive.",
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "description": "What the product is.",
+            "title": "Title",
+            "type": "string"
+          },
+          "uncertainty": {
+            "description": "Its uncertainty, qualified in clear language.",
+            "title": "Uncertainty",
+            "type": "string"
+          },
+          "version": {
+            "description": "The version of the product. A correction is a new version.",
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "product_id",
+          "version",
+          "title",
+          "status",
+          "nature",
+          "produced_at",
+          "domain_of_validity",
+          "uncertainty",
+          "payload_digest"
+        ],
+        "title": "ProductSummary",
+        "type": "object"
+      },
+      "ProductUnits": {
+        "description": "The units the product's quantities are expressed in.\n\nThe measures are the units of the columns of the payload; the published\nones are the units each source states for itself.",
+        "properties": {
+          "measures": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "description": "The unit of each measure, by layer and by column.",
+            "title": "Measures",
+            "type": "object"
+          },
+          "published": {
+            "additionalProperties": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "description": "The units each source publishes for itself, by layer.",
+            "title": "Published",
+            "type": "object"
+          }
+        },
+        "title": "ProductUnits",
+        "type": "object"
+      },
+      "ProductValidation": {
+        "description": "The confrontation that validated the product, and what it found.",
+        "properties": {
+          "aligned_days": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How the two sources' days were aligned.",
+            "title": "Aligned Days"
+          },
+          "comparisons": {
+            "description": "How many comparisons were made.",
+            "title": "Comparisons",
+            "type": "integer"
+          },
+          "max_relative_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The largest relative difference, as a fraction.",
+            "title": "Max Relative Difference"
+          },
+          "median_relative_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The median relative difference, as a fraction.",
+            "title": "Median Relative Difference"
+          },
+          "median_relative_difference_network_flow": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The median relative difference on the network flow.",
+            "title": "Median Relative Difference Network Flow"
+          },
+          "median_relative_difference_volume": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The median relative difference on the volumes.",
+            "title": "Median Relative Difference Volume"
+          },
+          "method": {
+            "description": "How the product was confronted with an independent source.",
+            "title": "Method",
+            "type": "string"
+          },
+          "residual": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the residual difference turned out to be.",
+            "title": "Residual"
+          }
+        },
+        "required": [
+          "method",
+          "comparisons"
+        ],
+        "title": "ProductValidation",
+        "type": "object"
+      },
+      "ProductWindow": {
+        "description": "The period a layer covers.\n\nThe counts are optional: a layer that publishes its own window may count\nits states and entities, and a window that only bounds the period says\nso. A count that is not published stays null.",
+        "properties": {
+          "end": {
+            "description": "The last day of the period.",
+            "title": "End",
+            "type": "string"
+          },
+          "entities": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many entities the period covers.",
+            "title": "Entities"
+          },
+          "start": {
+            "description": "The first day of the period.",
+            "title": "Start",
+            "type": "string"
+          },
+          "states": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "How many states the period holds.",
+            "title": "States"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "ProductWindow",
+        "type": "object"
+      },
       "Ref": {
         "description": "A reference to the evidence behind a fact.\n\nEvery fact, status and coverage period carries references. A reference\nthat resolves to a repository file carries its URL; one that resolves to\nan importable name does not.",
         "properties": {
@@ -1123,6 +2189,57 @@
         "title": "Source",
         "type": "object"
       },
+      "SourceDescription": {
+        "description": "One source the product consumed.",
+        "properties": {
+          "access": {
+            "description": "How it is reached.",
+            "title": "Access",
+            "type": "string"
+          },
+          "dataset": {
+            "description": "Which dataset of theirs it is.",
+            "title": "Dataset",
+            "type": "string"
+          },
+          "identifier_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the identifiers of the entities come from, when it is not this source.",
+            "title": "Identifier Reference"
+          },
+          "publisher": {
+            "description": "Who publishes it.",
+            "title": "Publisher",
+            "type": "string"
+          },
+          "source_id": {
+            "description": "The source's identifier.",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "units": {
+            "description": "The units it publishes.",
+            "title": "Units",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "publisher",
+          "dataset",
+          "units",
+          "access"
+        ],
+        "title": "SourceDescription",
+        "type": "object"
+      },
       "StatusEntry": {
         "description": "One step of the closed, ordered vocabulary of what a mission produced.",
         "properties": {
@@ -1142,6 +2259,235 @@
           "rank"
         ],
         "title": "StatusEntry",
+        "type": "object"
+      },
+      "StorageConcentration": {
+        "description": "How the reserve is concentrated among the countries.",
+        "properties": {
+          "herfindahl": {
+            "description": "The Herfindahl index of the national reserves.",
+            "title": "Herfindahl",
+            "type": "number"
+          },
+          "top_country_share": {
+            "description": "The share the first country carries.",
+            "title": "Top Country Share",
+            "type": "number"
+          },
+          "top_three_countries_share": {
+            "description": "The share the three first carry.",
+            "title": "Top Three Countries Share",
+            "type": "number"
+          }
+        },
+        "required": [
+          "herfindahl",
+          "top_country_share",
+          "top_three_countries_share"
+        ],
+        "title": "StorageConcentration",
+        "type": "object"
+      },
+      "StorageCountryIndicator": {
+        "description": "What one country's underground storage holds.",
+        "properties": {
+          "capacity_gwh": {
+            "description": "Its capacity, in GWh.",
+            "title": "Capacity Gwh",
+            "type": "number"
+          },
+          "computed_coverage_days": {
+            "description": "The computed coverage, in days. It is an upper bound.",
+            "title": "Computed Coverage Days",
+            "type": "number"
+          },
+          "country": {
+            "description": "The country.",
+            "title": "Country",
+            "type": "string"
+          },
+          "days": {
+            "description": "How many days of the period it covers.",
+            "title": "Days",
+            "type": "integer"
+          },
+          "degradation_days_per_day": {
+            "description": "How fast it draws down, in days of coverage per day.",
+            "title": "Degradation Days Per Day",
+            "type": "number"
+          },
+          "difference_with_published_days": {
+            "description": "The difference between the computed coverage and the published autonomy, in days.",
+            "title": "Difference With Published Days",
+            "type": "number"
+          },
+          "published_at": {
+            "description": "When the state was published.",
+            "title": "Published At",
+            "type": "string"
+          },
+          "published_autonomy_days": {
+            "description": "The autonomy the platform publishes, in days.",
+            "title": "Published Autonomy Days",
+            "type": "number"
+          },
+          "published_autonomy_on_consumption_days": {
+            "description": "The published autonomy divided by the published consumption, in days.",
+            "title": "Published Autonomy On Consumption Days",
+            "type": "number"
+          },
+          "published_autonomy_over_consumption_ratio": {
+            "description": "The ratio of the published autonomy to the published consumption.",
+            "title": "Published Autonomy Over Consumption Ratio",
+            "type": "number"
+          },
+          "published_fill_pct": {
+            "description": "The published fill, in per cent.",
+            "title": "Published Fill Pct",
+            "type": "number"
+          },
+          "reconstitution_rate_per_day": {
+            "description": "How fast it refills, per day.",
+            "title": "Reconstitution Rate Per Day",
+            "type": "number"
+          },
+          "stock_gwh": {
+            "description": "Its reserve, in GWh.",
+            "title": "Stock Gwh",
+            "type": "number"
+          }
+        },
+        "required": [
+          "country",
+          "days",
+          "stock_gwh",
+          "capacity_gwh",
+          "published_fill_pct",
+          "computed_coverage_days",
+          "published_autonomy_days",
+          "published_autonomy_on_consumption_days",
+          "published_autonomy_over_consumption_ratio",
+          "difference_with_published_days",
+          "reconstitution_rate_per_day",
+          "degradation_days_per_day",
+          "published_at"
+        ],
+        "title": "StorageCountryIndicator",
+        "type": "object"
+      },
+      "StorageIndicators": {
+        "description": "What the storage layer publishes.",
+        "properties": {
+          "concentration": {
+            "$ref": "#/components/schemas/StorageConcentration",
+            "description": "How the reserve is concentrated."
+          },
+          "countries_without_published_state": {
+            "description": "The countries it answered for that published no usable state. They are not missing data: they are declared absences.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Countries Without Published State",
+            "type": "array"
+          },
+          "coverage": {
+            "description": "The countries the platform answered for.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Coverage",
+            "type": "array"
+          },
+          "indicators": {
+            "description": "What each country holds.",
+            "items": {
+              "$ref": "#/components/schemas/StorageCountryIndicator"
+            },
+            "title": "Indicators",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/ProductWindow",
+            "description": "The period it covers."
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/StorageProvenance",
+            "description": "Where its numbers come from."
+          },
+          "refusals": {
+            "description": "The refusals it recorded.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Refusals",
+            "type": "array"
+          },
+          "units": {
+            "$ref": "#/components/schemas/StorageUnits",
+            "description": "The units it publishes."
+          }
+        },
+        "required": [
+          "period",
+          "concentration",
+          "units",
+          "provenance"
+        ],
+        "title": "StorageIndicators",
+        "type": "object"
+      },
+      "StorageProvenance": {
+        "description": "Where the storage layer's numbers come from.",
+        "properties": {
+          "api": {
+            "description": "How it is reached.",
+            "title": "Api",
+            "type": "string"
+          },
+          "attribution": {
+            "description": "The attribution it requires.",
+            "title": "Attribution",
+            "type": "string"
+          },
+          "credential": {
+            "description": "How the key is carried.",
+            "title": "Credential",
+            "type": "string"
+          },
+          "source": {
+            "description": "The platform that publishes them.",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source",
+          "attribution",
+          "api",
+          "credential"
+        ],
+        "title": "StorageProvenance",
+        "type": "object"
+      },
+      "StorageUnits": {
+        "description": "The units the storage layer publishes.",
+        "properties": {
+          "flow": {
+            "description": "The unit of the flows.",
+            "title": "Flow",
+            "type": "string"
+          },
+          "stock": {
+            "description": "The unit of the reserves.",
+            "title": "Stock",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stock",
+          "flow"
+        ],
+        "title": "StorageUnits",
         "type": "object"
       },
       "SurfaceProduct": {
@@ -1271,6 +2617,152 @@
           "refs"
         ],
         "title": "SurfaceProduct",
+        "type": "object"
+      },
+      "TerminalConcentration": {
+        "description": "How the reserve is concentrated among the installations.",
+        "properties": {
+          "herfindahl": {
+            "description": "The Herfindahl index of the reserve among the installations.",
+            "title": "Herfindahl",
+            "type": "number"
+          },
+          "top_share": {
+            "description": "The share of the reserve the first installation carries.",
+            "title": "Top Share",
+            "type": "number"
+          },
+          "top_three_share": {
+            "description": "The share the three first carry.",
+            "title": "Top Three Share",
+            "type": "number"
+          },
+          "total_gwh": {
+            "description": "The European reserve, in GWh.",
+            "title": "Total Gwh",
+            "type": "number"
+          }
+        },
+        "required": [
+          "herfindahl",
+          "top_share",
+          "top_three_share",
+          "total_gwh"
+        ],
+        "title": "TerminalConcentration",
+        "type": "object"
+      },
+      "TerminalIndicators": {
+        "description": "What the terminal layer publishes.",
+        "properties": {
+          "aggregate_sum_control": {
+            "description": "The control of each country's terminals against its aggregate.",
+            "items": {
+              "$ref": "#/components/schemas/AggregateSumControl"
+            },
+            "title": "Aggregate Sum Control",
+            "type": "array"
+          },
+          "concentration": {
+            "$ref": "#/components/schemas/TerminalConcentration",
+            "description": "How the reserve is concentrated."
+          },
+          "concentration_by_country": {
+            "description": "The Herfindahl index of the reserve among the countries.",
+            "title": "Concentration By Country",
+            "type": "number"
+          },
+          "dependency_by_country": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CountryDependency"
+            },
+            "description": "What each country holds and lets out.",
+            "title": "Dependency By Country",
+            "type": "object"
+          },
+          "generated_at": {
+            "description": "When the indicators were computed.",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "installations": {
+            "description": "How many installations the layer carries.",
+            "title": "Installations",
+            "type": "integer"
+          },
+          "installations_without_data": {
+            "description": "The installations the platform lists but publishes nothing for.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Installations Without Data",
+            "type": "array"
+          },
+          "loss_scenarios": {
+            "description": "What the loss of each installation costs.",
+            "items": {
+              "$ref": "#/components/schemas/LossScenario"
+            },
+            "title": "Loss Scenarios",
+            "type": "array"
+          },
+          "product": {
+            "description": "The product, in the words of the mission that produced it.",
+            "title": "Product",
+            "type": "string"
+          },
+          "reference_date": {
+            "description": "The day they are the state of.",
+            "title": "Reference Date",
+            "type": "string"
+          },
+          "sources": {
+            "description": "The sources they come from.",
+            "items": {
+              "$ref": "#/components/schemas/SourceDescription"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "states": {
+            "description": "How many states the layer holds.",
+            "title": "States",
+            "type": "integer"
+          },
+          "system_coverage_days": {
+            "description": "The coverage of the system, in days. It is an upper bound.",
+            "title": "System Coverage Days",
+            "type": "number"
+          },
+          "system_flow_gwh_per_day": {
+            "description": "The send-out of the system, in GWh per day.",
+            "title": "System Flow Gwh Per Day",
+            "type": "number"
+          },
+          "system_reserve_gwh": {
+            "description": "The exploitable reserve of the system, in GWh.",
+            "title": "System Reserve Gwh",
+            "type": "number"
+          },
+          "window": {
+            "$ref": "#/components/schemas/ProductWindow",
+            "description": "The period they cover."
+          }
+        },
+        "required": [
+          "product",
+          "generated_at",
+          "window",
+          "reference_date",
+          "concentration",
+          "concentration_by_country",
+          "system_coverage_days",
+          "system_reserve_gwh",
+          "system_flow_gwh_per_day",
+          "installations",
+          "states"
+        ],
+        "title": "TerminalIndicators",
         "type": "object"
       },
       "ValidationError": {
@@ -1954,6 +3446,182 @@
         "summary": "One model or method.",
         "tags": [
           "models"
+        ]
+      }
+    },
+    "/api/v1/products": {
+      "get": {
+        "description": "The published products, with what each one is and where it holds.",
+        "operationId": "products_api_v1_products_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The knowledge products the repository has published.",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}": {
+      "get": {
+        "description": "One published product: its identity, its lineage, its bounds, its indicators.",
+        "operationId": "product_api_v1_products__product_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One published product, in full.",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}/confrontation": {
+      "get": {
+        "description": "The day-by-day confrontation of the product with an independent source.",
+        "operationId": "confrontation_api_v1_products__product_id__confrontation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "title": "Product Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfrontationRows"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The confrontation that validated a published product.",
+        "tags": [
+          "products"
+        ]
+      }
+    },
+    "/api/v1/products/{product_id}/states": {
+      "get": {
+        "description": "The states of a layer.\n\nWithout an entity, the last published state of every entity of the layer\nis served — what a map draws. With one, the whole series of that entity\nis served — what a chart draws.",
+        "operationId": "states_api_v1_products__product_id__states_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "layer",
+            "required": true,
+            "schema": {
+              "title": "Layer",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductStates"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The states of one layer of a published product.",
+        "tags": [
+          "products"
         ]
       }
     },

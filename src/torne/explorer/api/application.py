@@ -17,7 +17,7 @@ from fastapi import FastAPI
 from ..services import catalogue_service as service
 from .config import DEFAULT_SETTINGS, ExplorerSettings
 from .errors import install_error_handlers
-from .routers import assets, catalogue, health, missions, models, results, sources
+from .routers import assets, catalogue, health, missions, models, products, results, sources
 from .static import mount_frontend
 
 __all__ = ["app", "create_app", "main"]
@@ -30,6 +30,7 @@ _ROUTERS = (
     sources.router,
     models.router,
     results.router,
+    products.router,
 )
 
 
