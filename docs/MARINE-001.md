@@ -371,6 +371,14 @@ turbidité est une `EarthObservation`.
 
 ## 9. La suite proposée
 
+> **Mise à jour du 1ᵉʳ novembre 2026 — cette suite est suspendue.** Le pivot de TORNE vers la
+> *Physical Supply Intelligence* (voir `docs/RESOURCE-001.md` et `docs/FILTRE-MISSION.md`) déplace
+> l'océan du statut de **finalité** à celui de **moyen** : les données océaniques 3D sont conservées
+> comme capacité complémentaire, lorsqu'elles permettent d'estimer des **contraintes de navigation**
+> ou des **disponibilités de ressources**. En particulier, **MARINE-003 sur le panache de la Gironde
+> n'est pas lancé**. Ce qui suit est conservé comme **traces de raisonnement** — les quatre points
+> ci-dessous restent techniquement vrais, mais aucun n'est prioritaire.
+
 1. **Arbitrer l'accès Copernicus Marine** (compte) — c'est la source qui porte le plateau
    Nord-Est Atlantique. Le motif est établi deux fois (Météo-France, CMEMS) : le chemin
    institutionnel européen passe par un compte, et c'est un fait d'architecture à assumer, pas un

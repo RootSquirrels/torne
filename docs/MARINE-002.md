@@ -567,6 +567,14 @@ dépôt l'importe réellement »*.
 
 ## 8. La suite proposée
 
+> **Mise à jour du 1ᵉʳ novembre 2026.** Le pivot de TORNE vers la *Physical Supply Intelligence*
+> (voir `docs/RESOURCE-001.md`) déplace l'océan du statut de finalité à celui de **moyen** : les
+> réanalyses 3D et les profils Argo restent acquis et utiles — pour estimer des **contraintes de
+> navigation** et des **délais de transport** — mais l'**objectif** n'est plus l'océan. Aucun
+> **MARINE-003** n'est lancé. Les arbitrages M2, M4 et M5 restent **ouverts** et **signalés** : ces
+> besoins deviennent ceux d'une **donnée d'entrée** de la reconstruction de l'offre, pas ceux d'une
+> mission en soi.
+
 1. **Décider M2 et M4** — la forme exacte du besoin est §4 et §5 ; l'arbitrage est au propriétaire de
    l'intégration, pas à cette mission.
 2. **Décider M5** — installer `h5py` en extra optionnel, ou adopter la règle « le CSV d'abord ».
