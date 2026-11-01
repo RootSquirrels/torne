@@ -52,6 +52,7 @@ from __future__ import annotations
 import collections
 import datetime as dt
 import json
+import os
 import pathlib
 import statistics
 import sys
@@ -65,8 +66,13 @@ from power_001_golfech import EDF, EDF_HISTORY, cached
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / "src"))
 from torne.acquisition.credentials import lire_fichier_env
 
-START = dt.datetime(2025, 11, 1, tzinfo=dt.UTC)
-END = dt.datetime(2026, 11, 1, tzinfo=dt.UTC)
+# The period can be moved with TORNE_A73_START / TORNE_A73_END (ISO dates, UTC); POWER-003 uses it to compute calendar 2025.
+START = dt.datetime.fromisoformat(os.environ.get("TORNE_A73_START", "2025-11-01")).replace(
+    tzinfo=dt.UTC
+)
+END = dt.datetime.fromisoformat(os.environ.get("TORNE_A73_END", "2026-11-01")).replace(
+    tzinfo=dt.UTC
+)
 STEP = dt.timedelta(minutes=15)
 N_SLOTS = int((END - START) / STEP)
 ENTSOE = "https://web-api.tp.entsoe.eu/api"
