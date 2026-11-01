@@ -17,6 +17,8 @@ Each adapter verifies the response it receives against what it asked
   catalogue and the STAC surface-observation catalogue;
 - `enagas`: the Enagas daily system report (Spain) — one gas day per request,
   the state of the seven LNG import terminals;
+- `gie`: the GIE transparency platforms — AGSI+ (underground storage) and
+  ALSI (LNG terminals), one gas day per request, behind a personal key;
 - `ghcnd`: NOAA GHCN-Daily station records;
 - `meteofrance`: Météo-France observation API and daily climatological API
   (DPClim), behind an API key held by reference (`torne.acquisition.credentials`).
@@ -28,6 +30,7 @@ from .copernicus import CopernicusProductsAdapter
 from .copernicus_stac import CopernicusStacAdapter
 from .enagas import EnagasDailyAdapter
 from .ghcnd import GhcndDailyAdapter
+from .gie import GieAdapter
 from .hubeau import HubeauObservationsAdapter
 from .hubeau_feed import HubeauFeedAdapter
 from .meteofrance import DailyClimatologyAdapter, MeteoFranceAdapter
@@ -40,6 +43,7 @@ __all__ = [
     "DailyClimatologyAdapter",
     "EnagasDailyAdapter",
     "GhcndDailyAdapter",
+    "GieAdapter",
     "HubeauFeedAdapter",
     "HubeauObservationsAdapter",
     "MeteoFranceAdapter",

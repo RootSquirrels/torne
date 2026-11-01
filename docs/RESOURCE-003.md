@@ -7,6 +7,11 @@
 >
 > Ce n'est pas un dossier comparant des capteurs. C'est l'objet, son schéma, ses contrôles, son
 > premier résultat, et la seule question qui reste ouverte.
+>
+> **Suite.** Ce produit a été étendu à l'échelle européenne par la mission
+> **LNG-002 — European Gas Supply Intelligence** (`docs/LNG-002.md`), qui ajoute la couche du
+> stockage souterrain européen (GIE AGSI+) et établit — par le calcul — qu'au niveau pays la
+> grandeur reconstruite était **déjà publiée**, et où se trouve donc le terrain restant.
 
 ---
 
