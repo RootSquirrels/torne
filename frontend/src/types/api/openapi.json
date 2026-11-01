@@ -1,0 +1,2162 @@
+{
+  "components": {
+    "schemas": {
+      "Asset": {
+        "description": "A physical object, where it is, and what was measured there.",
+        "properties": {
+          "asset_id": {
+            "description": "The asset's identifier, as the source names it.",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "bbox": {
+            "anyOf": [
+              {
+                "maxItems": 4,
+                "minItems": 4,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The extent of the asset, as (west, south, east, north) in the source's own reference frame.",
+            "title": "Bbox"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "ISO 3166-1 alpha-2 code of the country the asset is in.",
+            "title": "Country"
+          },
+          "domain_id": {
+            "description": "The observation modality the asset belongs to.",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "facts": {
+            "description": "What was measured at the asset.",
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "kind": {
+            "description": "The kind of physical asset.",
+            "enum": [
+              "station",
+              "catchment",
+              "raster_coverage"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "location_ref": {
+            "$ref": "#/components/schemas/Ref",
+            "description": "The evidence for where the asset is."
+          },
+          "mission_ids": {
+            "description": "The missions that touched the asset.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Mission Ids",
+            "type": "array"
+          },
+          "name": {
+            "description": "The name of the asset.",
+            "title": "Name",
+            "type": "string"
+          },
+          "point": {
+            "anyOf": [
+              {
+                "maxItems": 2,
+                "minItems": 2,
+                "prefixItems": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "number"
+                  }
+                ],
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The position of the asset, as (longitude, latitude) in the source's own reference frame.",
+            "title": "Point"
+          },
+          "source_id": {
+            "description": "The source the asset was read from.",
+            "title": "Source Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "asset_id",
+          "kind",
+          "name",
+          "domain_id",
+          "source_id",
+          "location_ref",
+          "facts",
+          "mission_ids"
+        ],
+        "title": "Asset",
+        "type": "object"
+      },
+      "CountryDetail": {
+        "description": "A country, with the region-wide coverage that surrounds it.",
+        "properties": {
+          "asset_ids": {
+            "description": "The physical assets of the country.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Asset Ids",
+            "type": "array"
+          },
+          "country": {
+            "description": "ISO 3166-1 alpha-2 code of the country.",
+            "title": "Country",
+            "type": "string"
+          },
+          "covered": {
+            "description": "Whether any mission of this country reached a status. False for a country no mission touched.",
+            "title": "Covered",
+            "type": "boolean"
+          },
+          "domains": {
+            "description": "Each domain's status in the country.",
+            "items": {
+              "$ref": "#/components/schemas/CountryDomain"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "regions": {
+            "description": "The region-wide scopes, which are not national statuses.",
+            "items": {
+              "$ref": "#/components/schemas/Region"
+            },
+            "title": "Regions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "country",
+          "domains",
+          "asset_ids",
+          "covered",
+          "regions"
+        ],
+        "title": "CountryDetail",
+        "type": "object"
+      },
+      "CountryDomain": {
+        "description": "One domain's status in one country, earned by that country's missions.",
+        "properties": {
+          "asset_ids": {
+            "description": "The physical assets of this country in the domain.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Asset Ids",
+            "type": "array"
+          },
+          "domain_id": {
+            "description": "The domain's identifier.",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "mission_ids": {
+            "description": "Every mission of this country in the domain.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Mission Ids",
+            "type": "array"
+          },
+          "model_keys": {
+            "description": "The models and methods those missions ran.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Model Keys",
+            "type": "array"
+          },
+          "source_ids": {
+            "description": "The sources those missions read.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The highest status this country's missions reached in the domain. Null when no mission of this country touched it. Region-wide coverage never colours a country.",
+            "title": "Status"
+          },
+          "status_from": {
+            "description": "The missions that earned the status.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Status From",
+            "type": "array"
+          },
+          "status_rank": {
+            "description": "The rank of that status, from 1 upwards. Zero when there is none.",
+            "title": "Status Rank",
+            "type": "integer"
+          },
+          "title": {
+            "description": "The domain's name.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain_id",
+          "title",
+          "status_rank",
+          "status_from",
+          "mission_ids",
+          "source_ids",
+          "model_keys",
+          "asset_ids"
+        ],
+        "title": "CountryDomain",
+        "type": "object"
+      },
+      "CountrySummary": {
+        "description": "What one country holds, domain by domain.",
+        "properties": {
+          "asset_ids": {
+            "description": "The physical assets of the country.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Asset Ids",
+            "type": "array"
+          },
+          "country": {
+            "description": "ISO 3166-1 alpha-2 code of the country.",
+            "title": "Country",
+            "type": "string"
+          },
+          "domains": {
+            "description": "Each domain's status in the country.",
+            "items": {
+              "$ref": "#/components/schemas/CountryDomain"
+            },
+            "title": "Domains",
+            "type": "array"
+          }
+        },
+        "required": [
+          "country",
+          "domains",
+          "asset_ids"
+        ],
+        "title": "CountrySummary",
+        "type": "object"
+      },
+      "CoverageEntry": {
+        "description": "A period that observations or a product cover.",
+        "properties": {
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The country, for an asset. Null for a region-wide product.",
+            "title": "Country"
+          },
+          "domain_id": {
+            "description": "The observation modality the subject belongs to.",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day of the period. Null when the end is not established.",
+            "title": "End"
+          },
+          "open": {
+            "description": "Whether the period is still open, that is, not finished.",
+            "title": "Open",
+            "type": "boolean"
+          },
+          "refs": {
+            "description": "The evidence for the period.",
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day of the period, as an ISO date, a year, or an ISO instant. Null when the start is not established.",
+            "title": "Start"
+          },
+          "subject_id": {
+            "description": "The asset or product collection the period belongs to.",
+            "title": "Subject Id",
+            "type": "string"
+          },
+          "subject_kind": {
+            "description": "Whether the period belongs to a physical asset or to a surface product.",
+            "enum": [
+              "asset",
+              "surface_product"
+            ],
+            "title": "Subject Kind",
+            "type": "string"
+          },
+          "title": {
+            "description": "The name of the subject.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "subject_kind",
+          "subject_id",
+          "title",
+          "domain_id",
+          "open",
+          "refs"
+        ],
+        "title": "CoverageEntry",
+        "type": "object"
+      },
+      "Domain": {
+        "description": "A modality of observation of the physical world.",
+        "properties": {
+          "domain_id": {
+            "description": "The domain's identifier.",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "semantic_layer": {
+            "description": "The package that reads this modality into observations.",
+            "title": "Semantic Layer",
+            "type": "string"
+          },
+          "title": {
+            "description": "The domain's name.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "domain_id",
+          "title",
+          "semantic_layer"
+        ],
+        "title": "Domain",
+        "type": "object"
+      },
+      "Fact": {
+        "description": "A statement and the evidence it rests on.",
+        "properties": {
+          "refs": {
+            "description": "The evidence. Never empty: a fact without a reference cannot be built.",
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "text": {
+            "description": "The statement, as the repository records it.",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "refs"
+        ],
+        "title": "Fact",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "Health": {
+        "description": "Whether the application is up, and which version it serves.",
+        "properties": {
+          "manifest_version": {
+            "description": "The version of the manifest's shape.",
+            "title": "Manifest Version",
+            "type": "string"
+          },
+          "status": {
+            "description": "`ok` when the application can answer.",
+            "title": "Status",
+            "type": "string"
+          },
+          "torne_version": {
+            "description": "The version of the TORNE package.",
+            "title": "Torne Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "torne_version",
+          "manifest_version"
+        ],
+        "title": "Health",
+        "type": "object"
+      },
+      "Manifest": {
+        "description": "The whole manifest: one JSON projection of what TORNE can show.\n\nIt is derived from the catalogue, from the surface-product registry and\nfrom the code itself. Building it computes nothing scientific and calls no\nprovider.",
+        "properties": {
+          "assets": {
+            "description": "The physical assets the missions touched.",
+            "items": {
+              "$ref": "#/components/schemas/Asset"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "countries": {
+            "description": "What each country holds.",
+            "items": {
+              "$ref": "#/components/schemas/CountrySummary"
+            },
+            "title": "Countries",
+            "type": "array"
+          },
+          "coverage": {
+            "description": "The periods observations and products cover.",
+            "items": {
+              "$ref": "#/components/schemas/CoverageEntry"
+            },
+            "title": "Coverage",
+            "type": "array"
+          },
+          "domains": {
+            "description": "The observation modalities.",
+            "items": {
+              "$ref": "#/components/schemas/Domain"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "manifest_version": {
+            "description": "The version of the manifest's shape.",
+            "title": "Manifest Version",
+            "type": "string"
+          },
+          "market_intelligence": {
+            "$ref": "#/components/schemas/MarketIntelligence",
+            "description": "The state of the market branch."
+          },
+          "missions": {
+            "description": "The missions and what they established.",
+            "items": {
+              "$ref": "#/components/schemas/Mission"
+            },
+            "title": "Missions",
+            "type": "array"
+          },
+          "models": {
+            "description": "The models and methods, and where they ran.",
+            "items": {
+              "$ref": "#/components/schemas/Model"
+            },
+            "title": "Models",
+            "type": "array"
+          },
+          "planned": {
+            "description": "What is planned and not available.",
+            "items": {
+              "$ref": "#/components/schemas/PlannedFeature"
+            },
+            "title": "Planned",
+            "type": "array"
+          },
+          "regions": {
+            "description": "The region-wide scopes.",
+            "items": {
+              "$ref": "#/components/schemas/Region"
+            },
+            "title": "Regions",
+            "type": "array"
+          },
+          "repository_url": {
+            "description": "The repository the references link to.",
+            "title": "Repository Url",
+            "type": "string"
+          },
+          "results": {
+            "$ref": "#/components/schemas/Results",
+            "description": "What is published, and what was only run."
+          },
+          "sources": {
+            "description": "The sources, and their established behaviour.",
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "statuses": {
+            "description": "The closed vocabulary of what a mission produced.",
+            "items": {
+              "$ref": "#/components/schemas/StatusEntry"
+            },
+            "title": "Statuses",
+            "type": "array"
+          },
+          "surface_products": {
+            "description": "The surface observation products.",
+            "items": {
+              "$ref": "#/components/schemas/SurfaceProduct"
+            },
+            "title": "Surface Products",
+            "type": "array"
+          },
+          "torne_version": {
+            "description": "The version of the TORNE package.",
+            "title": "Torne Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "manifest_version",
+          "torne_version",
+          "repository_url",
+          "statuses",
+          "domains",
+          "countries",
+          "regions",
+          "missions",
+          "assets",
+          "coverage",
+          "sources",
+          "models",
+          "surface_products",
+          "results",
+          "planned",
+          "market_intelligence"
+        ],
+        "title": "Manifest",
+        "type": "object"
+      },
+      "MarketIntelligence": {
+        "description": "The state of the market branch of the platform.",
+        "properties": {
+          "open": {
+            "description": "Whether the market branch is open. It is not, today.",
+            "title": "Open",
+            "type": "boolean"
+          },
+          "reason": {
+            "description": "Why it is closed, or why it is open.",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "open",
+          "reason"
+        ],
+        "title": "MarketIntelligence",
+        "type": "object"
+      },
+      "Mission": {
+        "description": "A mission, the status it reached, and what supports that status.",
+        "properties": {
+          "asset_ids": {
+            "description": "The physical assets the mission touched.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Asset Ids",
+            "type": "array"
+          },
+          "countries": {
+            "description": "ISO 3166-1 alpha-2 codes of the countries the mission concerned. Empty for a region-wide mission.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Countries",
+            "type": "array"
+          },
+          "domain_ids": {
+            "description": "The observation modalities the mission touched.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "knowledge_records": {
+            "description": "The persisted knowledge records. Empty today: no record format exists on disk yet.",
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "title": "Knowledge Records",
+            "type": "array"
+          },
+          "mission_id": {
+            "description": "The mission's identifier, stable across versions.",
+            "title": "Mission Id",
+            "type": "string"
+          },
+          "model_keys": {
+            "description": "The models and methods the mission ran.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Model Keys",
+            "type": "array"
+          },
+          "not_established": {
+            "description": "What the mission explicitly did not establish.",
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "title": "Not Established",
+            "type": "array"
+          },
+          "produced": {
+            "description": "What the mission established.",
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "title": "Produced",
+            "type": "array"
+          },
+          "question": {
+            "description": "The scientific question the mission addressed.",
+            "title": "Question",
+            "type": "string"
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The region-wide scope, when the mission was not national.",
+            "title": "Region"
+          },
+          "source_ids": {
+            "description": "The sources the mission read.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "status": {
+            "description": "What the mission produced: qualification, exploration, demonstration or knowledge. A knowledge status requires a persisted record.",
+            "title": "Status",
+            "type": "string"
+          },
+          "status_basis": {
+            "description": "The evidence supporting the status. Never empty: a status without evidence cannot be built.",
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "title": "Status Basis",
+            "type": "array"
+          },
+          "status_rank": {
+            "description": "The rank of the status in the closed vocabulary, from 1 upwards. Ordered, comparable.",
+            "title": "Status Rank",
+            "type": "integer"
+          },
+          "title": {
+            "description": "A one-line statement of what the mission did.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mission_id",
+          "title",
+          "status",
+          "status_rank",
+          "status_basis",
+          "domain_ids",
+          "countries",
+          "question",
+          "produced",
+          "not_established",
+          "asset_ids",
+          "source_ids",
+          "model_keys",
+          "knowledge_records"
+        ],
+        "title": "Mission",
+        "type": "object"
+      },
+      "Model": {
+        "description": "A model or method implemented in the repository, and where it ran.",
+        "properties": {
+          "domain_ids": {
+            "description": "The observation modalities the model applies to.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "executed_on_real_data": {
+            "description": "Whether the model was executed on real data, as recorded by evidence.",
+            "title": "Executed On Real Data",
+            "type": "boolean"
+          },
+          "identity": {
+            "description": "The identity of the implementation, read from the code.",
+            "title": "Identity",
+            "type": "string"
+          },
+          "identity_ref": {
+            "$ref": "#/components/schemas/Ref",
+            "description": "The importable name of the implementation."
+          },
+          "key": {
+            "description": "The model's stable key.",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "description": "Whether the model produces a result (model) or tests a series (diagnostic).",
+            "title": "Kind",
+            "type": "string"
+          },
+          "mission_ids": {
+            "description": "The missions that ran the model.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Mission Ids",
+            "type": "array"
+          },
+          "runs": {
+            "description": "The recorded runs, with their evidence.",
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "title": "Runs",
+            "type": "array"
+          },
+          "title": {
+            "description": "What the model does.",
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The version of the implementation, when the module exposes one.",
+            "title": "Version"
+          },
+          "version_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Ref"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The importable name holding the version, when there is one."
+          }
+        },
+        "required": [
+          "key",
+          "title",
+          "kind",
+          "domain_ids",
+          "identity",
+          "identity_ref",
+          "executed_on_real_data",
+          "runs",
+          "mission_ids"
+        ],
+        "title": "Model",
+        "type": "object"
+      },
+      "PersistedResult": {
+        "description": "A knowledge product backed by a persisted record.",
+        "properties": {
+          "mission_id": {
+            "description": "The mission that produced the product.",
+            "title": "Mission Id",
+            "type": "string"
+          },
+          "records": {
+            "description": "The persisted records themselves.",
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "title": "Records",
+            "type": "array"
+          }
+        },
+        "required": [
+          "mission_id",
+          "records"
+        ],
+        "title": "PersistedResult",
+        "type": "object"
+      },
+      "PlannedFeature": {
+        "description": "A feature that is planned, and what it would need.",
+        "properties": {
+          "feature": {
+            "description": "The planned feature.",
+            "title": "Feature",
+            "type": "string"
+          },
+          "needs": {
+            "description": "What the feature would need before it could exist.",
+            "title": "Needs",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feature",
+          "needs"
+        ],
+        "title": "PlannedFeature",
+        "type": "object"
+      },
+      "Ref": {
+        "description": "A reference to the evidence behind a fact.\n\nEvery fact, status and coverage period carries references. A reference\nthat resolves to a repository file carries its URL; one that resolves to\nan importable name does not.",
+        "properties": {
+          "kind": {
+            "description": "What the reference points at.",
+            "enum": [
+              "mission",
+              "document",
+              "script",
+              "implementation",
+              "record"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "target": {
+            "description": "The reference itself: a mission identifier, a repository path optionally followed by ' §section', or a 'module:attribute' name.",
+            "title": "Target",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Link to the referenced repository file, when the reference points at one.",
+            "title": "Url"
+          }
+        },
+        "required": [
+          "kind",
+          "target"
+        ],
+        "title": "Ref",
+        "type": "object"
+      },
+      "Region": {
+        "description": "A region-wide scope, and the missions that covered it.",
+        "properties": {
+          "domain_ids": {
+            "description": "The domains the region-wide missions touched.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Domain Ids",
+            "type": "array"
+          },
+          "mission_ids": {
+            "description": "The region's missions.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Mission Ids",
+            "type": "array"
+          },
+          "region": {
+            "description": "The region's name.",
+            "title": "Region",
+            "type": "string"
+          },
+          "status": {
+            "description": "The highest status the region's missions reached.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "region",
+          "domain_ids",
+          "status",
+          "mission_ids"
+        ],
+        "title": "Region",
+        "type": "object"
+      },
+      "Results": {
+        "description": "What the repository has published, and what it has only run.",
+        "properties": {
+          "gap": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Why the published list is empty, when it is. Null once a record is persisted.",
+            "title": "Gap"
+          },
+          "persisted": {
+            "description": "The published knowledge products. Empty today: no record is persisted.",
+            "items": {
+              "$ref": "#/components/schemas/PersistedResult"
+            },
+            "title": "Persisted",
+            "type": "array"
+          },
+          "runs_not_persisted": {
+            "description": "The runs that produced a product in memory, and were never persisted.",
+            "items": {
+              "$ref": "#/components/schemas/RunNotPersisted"
+            },
+            "title": "Runs Not Persisted",
+            "type": "array"
+          }
+        },
+        "required": [
+          "persisted",
+          "runs_not_persisted"
+        ],
+        "title": "Results",
+        "type": "object"
+      },
+      "RunNotPersisted": {
+        "description": "A run that produced a product in memory only.",
+        "properties": {
+          "mission_id": {
+            "description": "The mission that ran.",
+            "title": "Mission Id",
+            "type": "string"
+          },
+          "produced": {
+            "description": "What the run produced.",
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "title": "Produced",
+            "type": "array"
+          },
+          "status": {
+            "description": "The status the mission reached.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mission_id",
+          "status",
+          "produced"
+        ],
+        "title": "RunNotPersisted",
+        "type": "object"
+      },
+      "Source": {
+        "description": "A source, the adapter that reads it, and its established behaviour.",
+        "properties": {
+          "adapter": {
+            "description": "The adapter class that reads the source.",
+            "title": "Adapter",
+            "type": "string"
+          },
+          "adapter_ref": {
+            "$ref": "#/components/schemas/Ref",
+            "description": "The importable name of the adapter."
+          },
+          "domain_id": {
+            "description": "The observation modality the source feeds.",
+            "title": "Domain Id",
+            "type": "string"
+          },
+          "facts": {
+            "description": "The behaviour of the source, as established.",
+            "items": {
+              "$ref": "#/components/schemas/Fact"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "mission_ids": {
+            "description": "The missions that read the source.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Mission Ids",
+            "type": "array"
+          },
+          "publication_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The publication class of the source: p, b, c or n. Null when it is not established.",
+            "title": "Publication Class"
+          },
+          "qualified_in": {
+            "$ref": "#/components/schemas/Ref",
+            "description": "Where the source is qualified."
+          },
+          "source_id": {
+            "description": "The source's identifier, as the adapter declares it.",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "title": {
+            "description": "The name of the source.",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_id",
+          "title",
+          "adapter",
+          "adapter_ref",
+          "domain_id",
+          "qualified_in",
+          "facts",
+          "mission_ids"
+        ],
+        "title": "Source",
+        "type": "object"
+      },
+      "StatusEntry": {
+        "description": "One step of the closed, ordered vocabulary of what a mission produced.",
+        "properties": {
+          "rank": {
+            "description": "The rank of the status in the vocabulary, from 1 upwards.",
+            "title": "Rank",
+            "type": "integer"
+          },
+          "status": {
+            "description": "The status name, lower case.",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "rank"
+        ],
+        "title": "StatusEntry",
+        "type": "object"
+      },
+      "SurfaceProduct": {
+        "description": "A surface observation product, as the registry declares it.",
+        "properties": {
+          "collection": {
+            "description": "The collection identifier.",
+            "title": "Collection",
+            "type": "string"
+          },
+          "coverage_end": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day covered, as an ISO instant.",
+            "title": "Coverage End"
+          },
+          "coverage_start": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day covered, as an ISO instant.",
+            "title": "Coverage Start"
+          },
+          "dependence": {
+            "description": "The declared meteorological dependence of the product.",
+            "title": "Dependence",
+            "type": "string"
+          },
+          "instruments": {
+            "description": "The instruments the product is built on.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Instruments",
+            "type": "array"
+          },
+          "nature": {
+            "description": "The nature of the observation.",
+            "title": "Nature",
+            "type": "string"
+          },
+          "open_coverage": {
+            "description": "Whether the coverage is still open.",
+            "title": "Open Coverage",
+            "type": "boolean"
+          },
+          "publication_delay": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The declared publication delay. Null when it is not established.",
+            "title": "Publication Delay"
+          },
+          "quantity": {
+            "description": "The quantity the product carries.",
+            "title": "Quantity",
+            "type": "string"
+          },
+          "refs": {
+            "description": "The evidence for the registry entry.",
+            "items": {
+              "$ref": "#/components/schemas/Ref"
+            },
+            "title": "Refs",
+            "type": "array"
+          },
+          "resolution_m": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The spatial resolution in metres. Null when it is not established.",
+            "title": "Resolution M"
+          },
+          "title": {
+            "description": "The product's name.",
+            "title": "Title",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The unit of the quantity. Null when it is not established.",
+            "title": "Unit"
+          },
+          "unit_established": {
+            "description": "Whether the unit is established, as opposed to declared by the producer only.",
+            "title": "Unit Established",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "collection",
+          "title",
+          "quantity",
+          "nature",
+          "open_coverage",
+          "dependence",
+          "unit_established",
+          "instruments",
+          "refs"
+        ],
+        "title": "SurfaceProduct",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Read-only view of what TORNE has really established.\n\n**The canonical prefix is `/api/v1`.** It is the only prefix this document describes.\n\n**The legacy prefix `/api` still answers.** It answers the same questions as `/api/v1`, marks every answer with `Deprecation: true`, and names its successor in a `Link` header. A consumer that follows the header has migrated itself.\n\n**The removal rule.** The legacy prefix will be removed in **one announced step**, once the first application published outside this repository consumes `/api/v1`. It is never removed as a side effect of another change: the step is announced in this document and recorded in the commit that makes it. Until then, the legacy prefix is a supported surface, and its answers carry the headers that say so.",
+    "title": "TORNE Explorer",
+    "version": "2"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/assets": {
+      "get": {
+        "description": "The assets, filtered by country, domain and kind.",
+        "operationId": "assets_api_v1_assets_get",
+        "parameters": [
+          {
+            "description": "ISO 3166-1 alpha-2 code.",
+            "in": "query",
+            "name": "country",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO 3166-1 alpha-2 code.",
+              "title": "Country"
+            }
+          },
+          {
+            "description": "The observation modality.",
+            "in": "query",
+            "name": "domain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The observation modality.",
+              "title": "Domain"
+            }
+          },
+          {
+            "description": "The kind of physical asset.",
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "station",
+                    "catchment",
+                    "raster_coverage"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The kind of physical asset.",
+              "title": "Kind"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Asset"
+                  },
+                  "title": "Response Assets Api V1 Assets Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The physical assets the missions touched.",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/v1/assets/{asset_id}": {
+      "get": {
+        "description": "One asset: where it is, and what was measured there.",
+        "operationId": "asset_api_v1_assets__asset_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "asset_id",
+            "required": true,
+            "schema": {
+              "title": "Asset Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Asset"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One physical asset.",
+        "tags": [
+          "assets"
+        ]
+      }
+    },
+    "/api/v1/countries": {
+      "get": {
+        "description": "The countries that hold a mission.",
+        "operationId": "countries_api_v1_countries_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CountrySummary"
+                  },
+                  "title": "Response Countries Api V1 Countries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "What each country holds, domain by domain.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/countries/{code}": {
+      "get": {
+        "description": "One country.\n\nA country no mission touched is not an error: it is a country with no\nstatus, and the API says so.",
+        "operationId": "country_api_v1_countries__code__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One country, with the region-wide coverage that surrounds it.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/countries/{code}/domains/{domain_id}": {
+      "get": {
+        "description": "The status one domain reached in one country.",
+        "operationId": "country_domain_api_v1_countries__code__domains__domain_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CountryDomain"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One domain's status in one country.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/coverage": {
+      "get": {
+        "description": "The observation coverage: what period each asset or product covers.",
+        "operationId": "coverage_api_v1_coverage_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "domain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain"
+            }
+          },
+          {
+            "in": "query",
+            "name": "country",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Country"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CoverageEntry"
+                  },
+                  "title": "Response Coverage Api V1 Coverage Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The periods observations and products cover.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/domains": {
+      "get": {
+        "description": "The domains: hydrology, atmosphere, earth observation.",
+        "operationId": "domains_api_v1_domains_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Domain"
+                  },
+                  "title": "Response Domains Api V1 Domains Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The observation modalities of the physical world.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "The health of the application and the version it serves.\n\nThe answer is never cached: it says whether the application is up right\nnow, and a cached answer would say it was up when it was cached.",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Is the explorer up, and which version is it serving?",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/v1/manifest": {
+      "get": {
+        "description": "The manifest, derived from the catalogue and from the code itself.",
+        "operationId": "manifest_api_v1_manifest_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Manifest"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The whole manifest — one JSON projection of what TORNE can show.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/missions": {
+      "get": {
+        "description": "The missions, filtered by country, domain and minimum status.\n\nThe status vocabulary is closed: a name outside it is a 422, not an\nempty result.",
+        "operationId": "missions_api_v1_missions_get",
+        "parameters": [
+          {
+            "description": "ISO 3166-1 alpha-2 code.",
+            "in": "query",
+            "name": "country",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO 3166-1 alpha-2 code.",
+              "title": "Country"
+            }
+          },
+          {
+            "description": "The observation modality.",
+            "in": "query",
+            "name": "domain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The observation modality.",
+              "title": "Domain"
+            }
+          },
+          {
+            "description": "The lowest status to include. One of qualification, exploration, demonstration, knowledge.",
+            "in": "query",
+            "name": "min_status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The lowest status to include. One of qualification, exploration, demonstration, knowledge.",
+              "title": "Min Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Mission"
+                  },
+                  "title": "Response Missions Api V1 Missions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The missions, and what each established.",
+        "tags": [
+          "missions"
+        ]
+      }
+    },
+    "/api/v1/missions/{mission_id}": {
+      "get": {
+        "description": "One mission, with the evidence behind its status.",
+        "operationId": "mission_api_v1_missions__mission_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mission_id",
+            "required": true,
+            "schema": {
+              "title": "Mission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mission"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One mission.",
+        "tags": [
+          "missions"
+        ]
+      }
+    },
+    "/api/v1/models": {
+      "get": {
+        "description": "The models, optionally filtered by whether they ran on real data.",
+        "operationId": "models_api_v1_models_get",
+        "parameters": [
+          {
+            "description": "Whether the model was executed on real data, as recorded by evidence.",
+            "in": "query",
+            "name": "executed",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Whether the model was executed on real data, as recorded by evidence.",
+              "title": "Executed"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Model"
+                  },
+                  "title": "Response Models Api V1 Models Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The models and methods, and where they ran.",
+        "tags": [
+          "models"
+        ]
+      }
+    },
+    "/api/v1/models/{key}": {
+      "get": {
+        "description": "One model: its identity, read from the code, and its recorded runs.",
+        "operationId": "model_api_v1_models__key__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key",
+            "required": true,
+            "schema": {
+              "title": "Key",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Model"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One model or method.",
+        "tags": [
+          "models"
+        ]
+      }
+    },
+    "/api/v1/regions": {
+      "get": {
+        "description": "The regions covered by region-wide missions.",
+        "operationId": "regions_api_v1_regions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Region"
+                  },
+                  "title": "Response Regions Api V1 Regions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "The region-wide scopes, which are not national statuses.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/api/v1/results": {
+      "get": {
+        "description": "The published knowledge products, and the runs that were never persisted.",
+        "operationId": "results_api_v1_results_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Results"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "What is published, and what was only run.",
+        "tags": [
+          "results"
+        ]
+      }
+    },
+    "/api/v1/sources": {
+      "get": {
+        "description": "The sources, optionally filtered by domain.",
+        "operationId": "sources_api_v1_sources_get",
+        "parameters": [
+          {
+            "description": "The observation modality.",
+            "in": "query",
+            "name": "domain",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The observation modality.",
+              "title": "Domain"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Source"
+                  },
+                  "title": "Response Sources Api V1 Sources Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The sources, and their established behaviour.",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/api/v1/sources/{source_id}": {
+      "get": {
+        "description": "One source: how it behaves, and where it is qualified.",
+        "operationId": "source_api_v1_sources__source_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "title": "Source Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Source"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "One source.",
+        "tags": [
+          "sources"
+        ]
+      }
+    },
+    "/api/v1/surface-products": {
+      "get": {
+        "description": "The surface products, optionally filtered by their declared dependence.",
+        "operationId": "surface_products_api_v1_surface_products_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dependence",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dependence"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SurfaceProduct"
+                  },
+                  "title": "Response Surface Products Api V1 Surface Products Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "The surface observation products, as the registry declares them.",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    }
+  }
+}

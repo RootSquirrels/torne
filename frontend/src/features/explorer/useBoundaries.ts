@@ -2,62 +2,32 @@
  * The country boundaries.
  *
  * They are served from the application's own origin: the explorer fetches no
- * third-party resource at runtime.
+ * third-party resource at runtime. They are read once for the whole
+ * application, like every other resource.
  */
-import { useEffect, useState } from 'react';
+import { BOUNDARIES } from '@/services/api/registry';
+import type { GeoJsonCollection, GeoJsonFeature } from '@/services/api/registry';
+import { useResource } from '@/services/api/useResource';
 
-export interface GeoJsonFeature {
-  readonly id?: string | number;
-  readonly properties?: { readonly name?: string };
-  readonly geometry:
-    | { readonly type: 'Polygon'; readonly coordinates: number[][][] }
-    | { readonly type: 'MultiPolygon'; readonly coordinates: number[][][][] };
-}
+export type { GeoJsonFeature } from '@/services/api/registry';
 
 export interface BoundariesState {
   readonly features: readonly GeoJsonFeature[];
   readonly loading: boolean;
+  /** Set when the boundaries could not be read and none are on screen. */
   readonly failure: string | null;
+  /** Set when the boundaries could not be re-read but some are on screen. */
+  readonly stale: string | null;
 }
 
 export function useBoundaries(): BoundariesState {
-  const [state, setState] = useState<BoundariesState>({
-    features: [],
-    loading: true,
-    failure: null,
-  });
+  const { data, error, loading } = useResource<GeoJsonCollection>(BOUNDARIES);
+  const features = data?.features ?? [];
 
-  useEffect(() => {
-    let active = true;
-
-    fetch('/data/countries-50m.geo.json')
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        return response.json() as Promise<{
-          readonly features: readonly GeoJsonFeature[];
-        }>;
-      })
-      .then((collection) => {
-        if (active) {
-          setState({ features: collection.features, loading: false, failure: null });
-        }
-      })
-      .catch((error: unknown) => {
-        if (active) {
-          setState({
-            features: [],
-            loading: false,
-            failure: error instanceof Error ? error.message : 'the boundaries could not be loaded',
-          });
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  return state;
+  return {
+    features,
+    loading,
+    failure: features.length === 0 ? error : null,
+    stale: features.length > 0 ? error : null,
+  };
 }

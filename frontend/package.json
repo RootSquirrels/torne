@@ -14,6 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "bundle:report": "node scripts/bundle-report.mjs",
+    "generate:types": "node scripts/generate-types.mjs",
+    "check:types": "node scripts/generate-types.mjs --check",
     "build:boundaries": "node scripts/build-boundaries.mjs",
     "prebuild": "npm run build:boundaries",
     "predev": "npm run build:boundaries"

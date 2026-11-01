@@ -97,6 +97,8 @@ select = ["E4", "E7", "E9", "F", "I", "UP", "B", "SIM", "RUF", "C4", "PIE", "PT"
 [tool.ruff.lint.per-file-ignores]
 # Les scripts d'execution demonstrate : ils doivent pouvoir ecrire a l'ecran.
 "experiments/**/*.py" = ["T201"]
+# Les scripts d'outils ecrivent sur la sortie standard : c'est leur mode d'expression.
+"scripts/**/*.py" = ["T201"]
 # Les tests utilisent des assertions : c'est leur mode d'expression normal.
 "tests/**/*.py" = ["T201"]
 # Le point d'entree console doit, par nature, ecrire sur la sortie standard.

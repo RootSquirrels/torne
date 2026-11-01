@@ -214,6 +214,18 @@ export function ExplorerRoute() {
               Country boundaries could not be loaded: {boundaries.failure}
             </p>
           ) : null}
+          {boundaries.stale !== null ? (
+            <p className="torne-explorer__gap" role="status">
+              The country boundaries could not be refreshed — the ones on screen are the last that
+              were read.
+            </p>
+          ) : null}
+          {state.stale !== null ? (
+            <p className="torne-explorer__gap" role="status">
+              The catalogue could not be refreshed — the version on screen is the last one that
+              was read.
+            </p>
+          ) : null}
         </div>
 
         <aside className="torne-explorer__panel" aria-label="Reading panel">

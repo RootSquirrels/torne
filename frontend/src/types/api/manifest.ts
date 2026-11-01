@@ -1,20 +1,56 @@
 /**
  * The API contract.
  *
- * These types mirror the Pydantic schemas the explorer serves, field for
- * field, and they keep the API's own `snake_case` names. There is deliberately
- * **one** definition: a camelCase mirror would be a second contract, free to
+ * These types are **derived** from the OpenAPI document the application
+ * serves. The document is committed at `./openapi.json` and is written by the
+ * application itself (`scripts/dump_openapi.py`); the TypeScript is generated
+ * from it into `./generated.ts`. Nothing here is a copy of a schema: a type
+ * here is a *name* for a schema there.
+ *
+ * That is the whole point. A hand-written mirror drifts — the first time a
+ * field changed, the two would disagree and nothing would say so. Now a field
+ * that changes in the API changes here too, and the drift is a failing gate
+ * rather than a silent disagreement.
+ *
+ * The names keep the API's own `snake_case` words. There is deliberately
+ * **one** contract: a camelCase mirror would be a second contract, free to
  * drift from the first, and a mapper is exactly the place where a `null` — an
  * unknown, which the API takes care to preserve — could quietly become a
  * zero.
  *
  * A field that is not known is `null`. It is never `0`, never `''`.
  */
+import type { components } from '@/types/api/generated';
+
+/**
+ * A type that cannot be changed, and that is always there.
+ *
+ * The API's data is read, never written: the reader may not alter what the
+ * repository says. The generated types are mutable, so they are frozen here.
+ *
+ * The `-?` is not a detail. A Pydantic field declared `Optional[str] = None`
+ * is *not required* in the OpenAPI document — it has a default — yet the
+ * response always carries it, with the value `null` when it is unknown. The
+ * document is imprecise there; the responses are not. The type therefore says
+ * what the API actually sends: the field is there, and it may be null.
+ */
+type Frozen<T> = T extends readonly (infer U)[]
+  ? number extends T['length']
+    ? readonly Frozen<U>[]
+    : { readonly [K in keyof T]: Frozen<T[K]> }
+  : T extends object
+    ? { -readonly [K in keyof T]-?: Frozen<T[K]> }
+    : T;
+
+/** A schema of the OpenAPI document, frozen. */
+type Schema<Name extends keyof components['schemas']> = Frozen<
+  components['schemas'][Name]
+>;
 
 // ------------------------------------------------------------------- common
 
 /** What a reference points at. */
-export type RefKind = 'mission' | 'document' | 'script' | 'implementation' | 'record';
+export type RefKind = Schema<'Ref'>['kind'];
 
 /**
  * A reference to the evidence behind a fact.
@@ -22,221 +58,84 @@ export type RefKind = 'mission' | 'document' | 'script' | 'implementation' | 're
  * A reference that resolves to a repository file carries its URL; one that
  * resolves to an importable name does not.
  */
-export interface ApiRef {
-  readonly kind: RefKind;
-  readonly target: string;
-  readonly url: string | null;
-}
+export type ApiRef = Schema<'Ref'>;
 
 /** A statement and the evidence it rests on. Never empty. */
-export interface ApiFact {
-  readonly text: string;
-  readonly refs: readonly ApiRef[];
-}
+export type ApiFact = Schema<'Fact'>;
 
 /** One step of the closed vocabulary of what a mission produced. */
-export interface ApiStatusEntry {
-  readonly status: string;
-  readonly rank: number;
-}
+export type ApiStatusEntry = Schema<'StatusEntry'>;
 
 // ---------------------------------------------------------------- catalogue
 
-export interface ApiDomain {
-  readonly domain_id: string;
-  readonly title: string;
-  readonly semantic_layer: string;
-}
+export type ApiDomain = Schema<'Domain'>;
 
-export interface ApiCountryDomain {
-  readonly domain_id: string;
-  readonly title: string;
-  readonly status: string | null;
-  readonly status_rank: number;
-  readonly status_from: readonly string[];
-  readonly mission_ids: readonly string[];
-  readonly source_ids: readonly string[];
-  readonly model_keys: readonly string[];
-  readonly asset_ids: readonly string[];
-}
+export type ApiCountryDomain = Schema<'CountryDomain'>;
 
-export interface ApiCountrySummary {
-  readonly country: string;
-  readonly domains: readonly ApiCountryDomain[];
-  readonly asset_ids: readonly string[];
-}
+export type ApiCountrySummary = Schema<'CountrySummary'>;
 
-export interface ApiRegion {
-  readonly region: string;
-  readonly domain_ids: readonly string[];
-  readonly status: string;
-  readonly mission_ids: readonly string[];
-}
+export type ApiRegion = Schema<'Region'>;
 
 /** A country, with the region-wide coverage that surrounds it. */
-export interface ApiCountryDetail extends ApiCountrySummary {
-  readonly covered: boolean;
-  readonly regions: readonly ApiRegion[];
-}
+export type ApiCountryDetail = Schema<'CountryDetail'>;
 
-export type ApiCoverageSubjectKind = 'asset' | 'surface_product';
+export type ApiCoverageSubjectKind = Schema<'CoverageEntry'>['subject_kind'];
 
-export interface ApiCoverageEntry {
-  readonly subject_kind: ApiCoverageSubjectKind;
-  readonly subject_id: string;
-  readonly title: string;
-  readonly domain_id: string;
-  readonly country: string | null;
-  readonly start: string | null;
-  readonly end: string | null;
-  readonly open: boolean;
-  readonly refs: readonly ApiRef[];
-}
+export type ApiCoverageEntry = Schema<'CoverageEntry'>;
 
-export interface ApiSurfaceProduct {
-  readonly collection: string;
-  readonly title: string;
-  readonly quantity: string;
-  readonly nature: string;
-  readonly resolution_m: number | null;
-  readonly coverage_start: string | null;
-  readonly coverage_end: string | null;
-  readonly open_coverage: boolean;
-  readonly dependence: string;
-  readonly unit: string | null;
-  readonly unit_established: boolean;
-  readonly publication_delay: string | null;
-  readonly instruments: readonly string[];
-  readonly refs: readonly ApiRef[];
-}
+export type ApiSurfaceProduct = Schema<'SurfaceProduct'>;
 
-export interface ApiPlannedFeature {
-  readonly feature: string;
-  readonly needs: string;
-}
+export type ApiPlannedFeature = Schema<'PlannedFeature'>;
 
-export interface ApiMarketIntelligence {
-  readonly open: boolean;
-  readonly reason: string;
-}
+export type ApiMarketIntelligence = Schema<'MarketIntelligence'>;
 
 // ------------------------------------------------------------------ mission
 
-export interface ApiMission {
-  readonly mission_id: string;
-  readonly title: string;
-  readonly status: string;
-  readonly status_rank: number;
-  readonly status_basis: readonly ApiRef[];
-  readonly domain_ids: readonly string[];
-  readonly countries: readonly string[];
-  readonly region: string | null;
-  readonly question: string;
-  readonly produced: readonly ApiFact[];
-  readonly not_established: readonly ApiFact[];
-  readonly asset_ids: readonly string[];
-  readonly source_ids: readonly string[];
-  readonly model_keys: readonly string[];
-  readonly knowledge_records: readonly ApiRef[];
-}
+export type ApiMission = Schema<'Mission'>;
 
 // -------------------------------------------------------------------- asset
 
-export type ApiAssetKind = 'station' | 'catchment' | 'raster_coverage';
+export type ApiAssetKind = Schema<'Asset'>['kind'];
 
-export interface ApiAsset {
-  readonly asset_id: string;
-  readonly kind: ApiAssetKind;
-  readonly name: string;
-  readonly country: string | null;
-  readonly domain_id: string;
-  readonly source_id: string;
-  /** (longitude, latitude) in the source's own reference frame. */
-  readonly point: readonly [number, number] | null;
-  /** (west, south, east, north) in the source's own reference frame. */
-  readonly bbox: readonly [number, number, number, number] | null;
-  readonly location_ref: ApiRef;
-  readonly facts: readonly ApiFact[];
-  readonly mission_ids: readonly string[];
-}
+/**
+ * An asset.
+ *
+ * The two geometry fields are pairs and quadruples: the document declares
+ * them with `prefixItems` and a fixed length, and the generator keeps that
+ * length, so a reader never has to check it.
+ */
+export type ApiAsset = Schema<'Asset'>;
 
 // ------------------------------------------------------------------- source
 
-export interface ApiSource {
-  readonly source_id: string;
-  readonly title: string;
-  readonly adapter: string;
-  readonly adapter_ref: ApiRef;
-  readonly domain_id: string;
-  readonly publication_class: string | null;
-  readonly qualified_in: ApiRef;
-  readonly facts: readonly ApiFact[];
-  readonly mission_ids: readonly string[];
-}
+export type ApiSource = Schema<'Source'>;
 
 // -------------------------------------------------------------------- model
 
-export interface ApiModel {
-  readonly key: string;
-  readonly title: string;
-  readonly kind: string;
-  readonly domain_ids: readonly string[];
-  readonly identity: string;
-  readonly identity_ref: ApiRef;
-  readonly version: string | null;
-  readonly version_ref: ApiRef | null;
-  readonly executed_on_real_data: boolean;
-  readonly runs: readonly ApiFact[];
-  readonly mission_ids: readonly string[];
-}
+export type ApiModel = Schema<'Model'>;
 
 // ------------------------------------------------------------------- result
 
-export interface ApiPersistedResult {
-  readonly mission_id: string;
-  readonly records: readonly ApiRef[];
-}
+export type ApiPersistedResult = Schema<'PersistedResult'>;
 
-export interface ApiRunNotPersisted {
-  readonly mission_id: string;
-  readonly status: string;
-  readonly produced: readonly ApiFact[];
-}
+export type ApiRunNotPersisted = Schema<'RunNotPersisted'>;
 
-export interface ApiResults {
-  readonly persisted: readonly ApiPersistedResult[];
-  readonly runs_not_persisted: readonly ApiRunNotPersisted[];
-  readonly gap: string | null;
-}
+export type ApiResults = Schema<'Results'>;
 
 // ----------------------------------------------------------------- manifest
 
-export interface ApiManifest {
-  readonly manifest_version: string;
-  readonly torne_version: string;
-  readonly repository_url: string;
-  readonly statuses: readonly ApiStatusEntry[];
-  readonly domains: readonly ApiDomain[];
-  readonly countries: readonly ApiCountrySummary[];
-  readonly regions: readonly ApiRegion[];
-  readonly missions: readonly ApiMission[];
-  readonly assets: readonly ApiAsset[];
-  readonly coverage: readonly ApiCoverageEntry[];
-  readonly sources: readonly ApiSource[];
-  readonly models: readonly ApiModel[];
-  readonly surface_products: readonly ApiSurfaceProduct[];
-  readonly results: ApiResults;
-  readonly planned: readonly ApiPlannedFeature[];
-  readonly market_intelligence: ApiMarketIntelligence;
-}
+export type ApiManifest = Schema<'Manifest'>;
 
-export interface ApiHealth {
-  readonly status: string;
-  readonly torne_version: string;
-  readonly manifest_version: string;
-}
+export type ApiHealth = Schema<'Health'>;
 
-/** The structured part of an error response. */
+/**
+ * The structured part of an error response.
+ *
+ * These two are written by hand, and this is why: the error envelope is
+ * produced by the application's exception handlers, not by a declared
+ * response model, so it is not a schema of the OpenAPI document. It is the
+ * one part of the contract that the document does not carry.
+ */
 export interface ApiErrorBody {
   readonly code: string;
   readonly message: string;

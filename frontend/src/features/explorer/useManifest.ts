@@ -5,45 +5,38 @@
  * catalogue, the coverage, the models and the results. The application calls
  * the API and nothing else — it never contacts a data provider, and it never
  * computes a scientific quantity.
+ *
+ * The reading itself is shared: the manifest is fetched once for the whole
+ * application, however many components ask for it. This module gives that
+ * shared value the shape the explorer expects.
  */
-import { useEffect, useState } from 'react';
-
-import { api } from '@/services/api/client';
+import { MANIFEST } from '@/services/api/registry';
+import { useResource } from '@/services/api/useResource';
 import type { ApiManifest } from '@/types/api/manifest';
 
 export type ManifestState =
   | { readonly status: 'loading' }
-  | { readonly status: 'ready'; readonly manifest: ApiManifest }
+  | {
+      readonly status: 'ready';
+      readonly manifest: ApiManifest;
+      /**
+       * Set when the catalogue could not be re-read but a previous reading is
+       * on screen. A catalogue that cannot be refreshed is still a catalogue
+       * that was read: the reader keeps the last known state and is told why
+       * it is not fresher.
+       */
+      readonly stale: string | null;
+    }
   | { readonly status: 'failed'; readonly message: string };
 
 export function useManifest(): ManifestState {
-  const [state, setState] = useState<ManifestState>({ status: 'loading' });
+  const { data, error } = useResource<ApiManifest>(MANIFEST);
 
-  useEffect(() => {
-    const controller = new AbortController();
-    let active = true;
-
-    api
-      .manifest(controller.signal)
-      .then((manifest) => {
-        if (active) {
-          setState({ status: 'ready', manifest });
-        }
-      })
-      .catch((error: unknown) => {
-        if (!active) {
-          return;
-        }
-        const message =
-          error instanceof Error ? error.message : 'the explorer API did not answer';
-        setState({ status: 'failed', message });
-      });
-
-    return () => {
-      active = false;
-      controller.abort();
-    };
-  }, []);
-
-  return state;
+  if (data !== null) {
+    return { status: 'ready', manifest: data, stale: error };
+  }
+  if (error !== null) {
+    return { status: 'failed', message: error };
+  }
+  return { status: 'loading' };
 }
