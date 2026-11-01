@@ -1,3 +1,11 @@
+/**
+ * The dropdown.
+ *
+ * A field like any other: the label is an eyebrow, the control is a well cut
+ * into the surface, and the focused well carries the rule that says the
+ * instrument has been engaged.
+ */
+
 .torne-select {
   display: flex;
   flex-direction: column;
@@ -6,20 +14,24 @@
 }
 
 .torne-select__label {
-  color: var(--content-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
   line-height: var(--line-height-snug);
+  text-transform: uppercase;
 }
 
 .torne-select__control {
   width: 100%;
   height: var(--control-height-md);
-  padding-inline: var(--control-padding-inline-md);
-  background: var(--surface-raised);
+  padding-inline: var(--control-padding-inline-md) calc(var(--control-padding-inline-md) + var(--space-4));
+  background: var(--surface-inset);
   border: var(--control-border-width) solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--content-primary);
+  font-family: var(--font-sans);
   font-size: var(--font-size-md);
   line-height: var(--line-height-normal);
   cursor: pointer;
@@ -32,6 +44,11 @@
   border-color: var(--border-strong);
 }
 
+.torne-select__control:focus {
+  border-color: var(--border-focus);
+  box-shadow: inset var(--control-border-width) 0 0 0 var(--accent);
+}
+
 .torne-select__control:disabled {
   background: var(--surface-sunken);
   border-color: var(--border-subtle);
@@ -39,7 +56,9 @@
   cursor: not-allowed;
 }
 
+/* ---------------------------------------------------------------- invalid */
 .torne-select[data-state='error'] .torne-select__control {
+  background: var(--semantic-danger-subtle);
   border-color: var(--semantic-danger);
 }
 
@@ -47,6 +66,12 @@
   border-color: var(--semantic-danger);
 }
 
+.torne-select[data-state='error'] .torne-select__control:focus {
+  border-color: var(--semantic-danger);
+  box-shadow: inset var(--control-border-width) 0 0 0 var(--semantic-danger);
+}
+
+/* --------------------------------------------------------------- messages */
 .torne-select__hint {
   color: var(--content-tertiary);
   font-size: var(--font-size-xs);

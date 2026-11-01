@@ -1,30 +1,49 @@
+/**
+ * The component workbench.
+ *
+ * The bench where the components are laid out and looked at. It follows the
+ * same language as the application — flat surfaces, hairlines, an eyebrow for
+ * every section — so that what is seen here is what ships.
+ */
+
 .torne-workbench {
   max-width: var(--container-wide);
   margin: 0 auto;
-  padding: var(--space-6) var(--space-4) var(--space-16);
+  padding: var(--space-8) var(--space-5) var(--space-16);
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-8);
 }
 
+/**
+ * The notice that says the data is synthetic.
+ *
+ * It is a warning, not an alarm: a left rule and a tinted ground, the way
+ * every other "this is not a result" statement is written in the system.
+ */
 .torne-workbench__notice {
   background: var(--semantic-warning-subtle);
   color: var(--semantic-warning-ink);
   border: var(--control-border-width) solid var(--semantic-warning-subtle);
-  border-radius: var(--radius-lg);
+  border-left: 2px solid var(--semantic-warning);
+  border-radius: var(--radius-md);
   padding: var(--space-4);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-relaxed);
 }
 
 .torne-workbench__title {
+  font-family: var(--font-display);
   font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--content-primary);
 }
 
 .torne-workbench__section {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-5);
 }
 
 .torne-workbench__row {
@@ -37,6 +56,6 @@
 
 .torne-workbench__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
   gap: var(--space-4);
 }

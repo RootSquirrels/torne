@@ -13,13 +13,24 @@ const THEMES: ReadonlyArray<{ value: ThemePreference; label: string }> = [
   { value: 'dark', label: 'Dark' },
 ];
 
+/**
+ * The mark of the Explorer: a reticle.
+ *
+ * It is the instrument the whole application is a reading of — a sight
+ * centred on a place — and it is drawn in CSS so that it costs nothing and
+ * stays sharp at any size.
+ */
 export function TopBar() {
   const { preference, setPreference } = useTheme();
 
   return (
     <header className="torne-topbar">
       <div className="torne-topbar__brand">
-        <span className="torne-topbar__name">TORNE Explorer</span>
+        <span className="torne-topbar__mark" aria-hidden="true" />
+        <span className="torne-topbar__names">
+          <span className="torne-topbar__name">TORNE</span>
+          <span className="torne-topbar__product">Explorer</span>
+        </span>
         <span className="torne-topbar__subtitle">what the system has really established</span>
       </div>
 

@@ -66,7 +66,6 @@ the chart does not draw is a legend that lies, and a kind carried by its colour 
 carried at all. The two are therefore one value: a kind names a mark, the mark names a swatch,
 and the chart draws the mark. A period that does not exist is drawn as an empty outline, because
 an absence is not a pale period.
-
 ### 4. Leaflet is kept, and the map draws no tiles
 
 The map shows TORNE's own layers on a plain background. An external tile service would make the
@@ -105,6 +104,51 @@ mirror would be a second contract, free to drift from the first, and a mapper is
 `PointValidity`, `MissingReason`, `QualityStatus` and `PublicationState` carry the engine's own
 words. The frontend defines the contract of **representation** of what the API exposes; it does
 not define physics, and it depends on no Python class.
+
+### 9. One system, two skins
+
+The Explorer is read in two conditions: at a console, where the reader is looking at an instrument,
+and at a desk, where the reader is looking at a report. Rather than choose, the system carries
+both: a dark **cockpit** skin and a light **journal** skin, over one grammar of components.
+
+A skin is a set of values, never a fork of the code. Every colour token holds both values through
+`light-dark()`, and a component reads the token; it never chooses. A stylesheet that names a
+colour has left the system, and that is the rule a reviewer can check.
+
+The two skins are not one derivation of the other. The cockpit separates with hairlines and
+lightness, the journal with hairlines and soft elevation; the cockpit's accent is a luminous
+ember, the journal's a deep one. What they *share* is the semantics: the categorical register
+keeps the same eight Okabe–Ito hues in both, the dark skin lifting their lightness rather than
+re-choosing them, so a chart means the same thing whichever skin the reader is in.
+
+*Why not one skin.* A single skin forces a compromise — a light skin that is too dark to read a
+figure on a bright room, or a dark skin that is too dark to read in a lit room — and the reader
+pays for the compromise.
+
+*Why not two systems.* Two systems is twice the work and two chances to drift apart, and the
+second skin would arrive with the wrong semantics baked in.
+
+### 10. The canvas is part of the system
+
+A canvas has no stylesheets: the grid, the axes, the ticks, the tooltip and the zoom track are
+options in concrete values, for every chart. Left to itself each chart describes its own
+furniture, and four charts end up looking like four applications.
+
+`src/components/visualization/chartCraft.ts` is that furniture, built from the chart tokens — one
+grid, one time axis, one value axis, one category axis, one tooltip, one legend, one zoom. The
+charts read the same tokens the DOM reads, and **the figures are set in the mono face**, because
+an instant, a measurement and an identifier are read in columns.
+
+**The unit is written once, on a label plate.** The plate sits beside the title of the figure, in
+the place where the reader looks for it. When the series disagree on their unit, the plate says
+*unit not established* and the axis says nothing — an axis labelled "unit not established" states
+nothing a reader can use, and it collides with the legend that explains the axis.
+
+**The selection on a map is an outline, never a change of fill.** The fill of a country is what
+the choropleth encodes — the highest status its own missions earned — and that does not change
+because the reader is looking at it. A station carries no status, so a station takes the fill.
+This is the same rule the rest of the system obeys, applied to the drawing code rather than
+described in a document.
 
 ## Consequences
 

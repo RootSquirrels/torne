@@ -1,3 +1,16 @@
+/**
+ * The explorer: a map on the left, a reading panel on the right.
+ *
+ * The two columns are not two widgets side by side — one is an instrument, the
+ * other is a document. The map is fixed and the panel scrolls on its own, so
+ * the reader never loses the picture while reading. They are separated by a
+ * hairline rather than by an empty gap, because the panel is the continuation
+ * of the map's story, not a neighbour of it.
+ *
+ * Every rule here is scoped to the explorer's own classes: the components the
+ * reading panel uses are owned elsewhere, and their own styles must survive.
+ */
+
 .torne-explorer {
   display: flex;
   flex-direction: column;
@@ -12,11 +25,17 @@
   padding: var(--space-16) var(--space-4);
 }
 
+/**
+ * The body is two columns: the map, and the reading panel.
+ *
+ * The gutter is the space around the pair, not a space between them: the
+ * separator between the columns is a hairline that belongs to the panel.
+ */
 .torne-explorer__body {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
-  gap: var(--space-4);
-  padding: var(--space-4);
+  grid-template-columns: minmax(0, 1.2fr) minmax(22rem, 0.8fr);
+  gap: var(--space-0);
+  padding: var(--space-5);
   min-height: 0;
   flex: 1 1 auto;
 }
@@ -24,31 +43,502 @@
 @media (max-width: 64rem) {
   .torne-explorer__body {
     grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .torne-explorer__panel {
+    border-left: 0;
+    padding-left: 0;
   }
 }
 
 .torne-explorer__map {
   min-width: 0;
+  padding-right: var(--space-5);
 }
 
+/**
+ * The reading column: a document that scrolls.
+ *
+ * It keeps a reading measure even on a wide screen — the line length is a
+ * property of the text, not of the window — and the hairline that separates
+ * it from the map stays put while the document moves under it.
+ */
 .torne-explorer__panel {
   min-width: 0;
+  min-height: 0;
   overflow-y: auto;
-  padding-right: var(--space-2);
+  border-left: var(--control-border-width) solid var(--hairline);
+  padding-left: var(--space-5);
+}
+
+.torne-explorer__panel > * {
+  max-width: 50rem;
+}
+
+/**
+ * The breadcrumb trail is quiet: it says where the reader is, and it must not
+ * compete with the page it sits above.
+ *
+ * The trail is laid out here rather than inherited, because the breadcrumb
+ * component carries no stylesheet of its own — the reading column is the
+ * only place it is shown, so it is the only place that has to make it read.
+ */
+.torne-explorer__panel .torne-breadcrumbs {
+  margin-bottom: var(--space-3);
+}
+
+.torne-explorer__panel .torne-breadcrumbs__list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.torne-explorer__panel .torne-breadcrumbs__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+}
+
+.torne-explorer__panel .torne-breadcrumbs__link,
+.torne-explorer__panel .torne-breadcrumbs__button,
+.torne-explorer__panel .torne-breadcrumbs__text,
+.torne-explorer__panel .torne-breadcrumbs__current {
+  color: var(--content-tertiary);
+}
+
+/* ------------------------------------------------------------- the document */
+
+/**
+ * The page header.
+ *
+ * It is the one block that lifts off the page: it carries the shadow, and it
+ * is closed off from the body below it by a rule, so the reader sees where
+ * the document starts.
+ */
+.torne-explorer__page-header {
+  background: var(--surface-raised);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-bottom: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+/**
+ * The eyebrow: the small uppercase label that names a part of the page.
+ *
+ * It is the signature of the system, and it is used for two things only — the
+ * kind of page being read, and the heading of a section.
+ */
+.torne-explorer__eyebrow {
+  margin: 0;
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
 }
 
 .torne-explorer__title {
-  font-size: var(--font-size-2xl);
-  margin-bottom: var(--space-2);
+  margin: var(--space-2) 0 0;
+  color: var(--content-primary);
+  font-family: var(--font-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-tight);
 }
 
-.torne-explorer__heading {
-  font-size: var(--font-size-sm);
-  text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wide);
+.torne-explorer__lede {
+  margin: var(--space-3) 0 0;
+  max-width: 44rem;
   color: var(--content-secondary);
-  margin-top: var(--space-6);
-  margin-bottom: var(--space-2);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-relaxed);
+}
+
+.torne-explorer__meta {
+  margin: var(--space-2) 0 0;
+  color: var(--content-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/**
+ * The status strip.
+ *
+ * The status is a labelled row, not a floating badge: it sits directly under
+ * the header, and the references that support it are part of the same row.
+ * A status is never read on its own.
+ */
+.torne-explorer__status {
+  display: grid;
+  grid-template-columns: minmax(4rem, max-content) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.torne-explorer__status-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
+
+.torne-explorer__status-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/**
+ * A section.
+ *
+ * The heading is an eyebrow because the reader navigates by it, not by its
+ * size; the hairline under it closes the heading off from the content.
+ */
+.torne-explorer__section {
+  margin-bottom: var(--space-6);
+}
+
+.torne-explorer__section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-bottom: var(--control-border-width) solid var(--hairline);
+}
+
+.torne-explorer__section-title {
+  margin: 0;
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
+}
+
+.torne-explorer__section-note {
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: var(--font-numeric);
+}
+
+.torne-explorer__section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------- the entities */
+
+/**
+ * A list of entities.
+ *
+ * The rows are separated by a gap, not by borders between them: the border
+ * belongs to the row, and a row is a card in its own right.
+ */
+.torne-explorer__entity-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.torne-explorer__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--surface-raised);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.torne-explorer__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.torne-explorer__row-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/**
+ * The name of an entity is the title of its row, not a link inside a
+ * sentence: it is set in the body type, and it takes the accent only on
+ * hover, so a list of names never reads as a wall of links.
+ */
+.torne-explorer__entity,
+.torne-explorer__row-name {
+  color: var(--content-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+}
+
+.torne-explorer__entity {
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  text-decoration-color: transparent;
+  transition:
+    color var(--duration-fast) var(--easing-standard),
+    text-decoration-color var(--duration-fast) var(--easing-standard);
+}
+
+.torne-explorer__entity:hover {
+  color: var(--accent);
+  text-decoration-color: var(--accent);
+}
+
+/**
+ * An identifier: a mission id, an asset id, a coordinate.
+ *
+ * It is a code and not a word, so it is set in the mono face, and figures are
+ * tabular so that columns of numbers line up.
+ */
+.torne-explorer__code,
+.torne-explorer__row-id,
+.torne-explorer__entity--code {
+  font-family: var(--font-mono);
+  font-variant-numeric: var(--font-numeric);
+  font-feature-settings: var(--font-numeric);
+}
+
+.torne-explorer__entity--code {
+  font-size: var(--font-size-sm);
+}
+
+.torne-explorer__row-id {
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.torne-explorer__row-meta {
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.torne-explorer__row-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+.torne-explorer__row-status {
+  flex: 0 0 auto;
+}
+
+/* -------------------------------------------------------------- the evidence */
+
+/**
+ * A fact is an evidence block: it is set in a well, and the rule on its left
+ * says "this rests on something" — the references that follow it.
+ */
+.torne-explorer__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.torne-explorer__fact {
+  padding: var(--space-3);
+  background: var(--surface-inset);
+  border-left: calc(var(--control-border-width) * 2) solid var(--semantic-info);
+  border-radius: var(--radius-md);
+  color: var(--content-primary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.torne-explorer__fact p {
+  margin: 0;
+}
+
+/**
+ * The references.
+ *
+ * They are chips: quiet enough not to compete with the claim, visible enough
+ * that the reader knows the evidence is there.
+ */
+.torne-explorer__refs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-left: var(--space-2);
+}
+
+.torne-explorer__refs .torne-provenance-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-2);
+  background: var(--surface-raised);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  color: var(--content-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  line-height: var(--line-height-relaxed);
+  text-decoration: none;
+}
+
+.torne-explorer__refs a.torne-provenance-link:hover,
+.torne-explorer__refs button.torne-provenance-link:hover {
+  color: var(--accent-hover);
+  border-color: var(--accent);
+}
+
+/**
+ * The definition list: a well of labelled values.
+ *
+ * The label is an eyebrow — it names the field, it does not state it — and
+ * the value carries the reading.
+ */
+.torne-explorer__card {
+  padding: var(--space-4);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.torne-explorer__card dl {
+  display: grid;
+  grid-template-columns: minmax(6rem, max-content) minmax(0, 1fr);
+  gap: var(--space-3) var(--space-4);
+  margin: 0;
+}
+
+.torne-explorer__card dt {
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
+}
+
+.torne-explorer__card dd {
+  margin: 0;
+  color: var(--content-primary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+/**
+ * A run that produced a product without persisting it: the row that says so,
+ * and the facts the run produced.
+ */
+.torne-explorer__run {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/**
+ * The gap.
+ *
+ * An absence the reader must know about: a warning that warns, without
+ * shouting over the content it belongs to.
+ */
+.torne-explorer__gap {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--semantic-warning-subtle);
+  color: var(--semantic-warning-ink);
+  border-left: calc(var(--control-border-width) * 2) solid var(--semantic-warning);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+/**
+ * The planned features.
+ *
+ * A planned feature is a sentence about what is missing, not a control: it is
+ * written as one, with the "needs" that keeps it a plan.
+ */
+.torne-explorer__planned {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.torne-explorer__planned-item {
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-normal);
+}
+
+.torne-explorer__planned-feature {
+  color: var(--content-primary);
+}
+
+.torne-explorer__planned-needs {
+  color: var(--content-tertiary);
+}
+
+/* ---------------------------------------------------------------- the links */
+
+/**
+ * A link inside the text.
+ *
+ * It is an accent affordance with a visible underline, so it is never
+ * mistaken for the words around it — but it is never the only way to reach
+ * something either.
+ */
+.torne-explorer__link {
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.torne-explorer__link:hover {
+  color: var(--accent-hover);
+  text-decoration-thickness: 2px;
 }
 
 .torne-explorer__muted {
@@ -57,81 +547,4 @@
 
 .torne-explorer__small {
   font-size: var(--font-size-xs);
-}
-
-.torne-explorer__gap {
-  color: var(--semantic-warning-ink);
-  background: var(--semantic-warning-subtle);
-  border: var(--control-border-width) solid var(--semantic-warning-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  font-size: var(--font-size-sm);
-}
-
-.torne-explorer__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-1) 0;
-  flex-wrap: wrap;
-}
-
-.torne-explorer__link {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--accent);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.torne-explorer__link:hover {
-  color: var(--accent-hover);
-}
-
-.torne-explorer__refs {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-left: var(--space-2);
-}
-
-.torne-explorer__facts {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
-
-.torne-explorer__fact {
-  border-left: var(--control-border-width) solid var(--border-default);
-  padding-left: var(--space-3);
-}
-
-.torne-explorer__card {
-  background: var(--surface-raised);
-  border: var(--control-border-width) solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3);
-  margin-top: var(--space-3);
-}
-
-.torne-explorer__card dl {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-2) var(--space-4);
-  margin: 0;
-}
-
-.torne-explorer__card dt {
-  color: var(--content-secondary);
-  font-size: var(--font-size-sm);
-}
-
-.torne-explorer__card dd {
-  margin: 0;
-  font-size: var(--font-size-sm);
 }

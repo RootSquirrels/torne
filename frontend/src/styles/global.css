@@ -2,7 +2,9 @@
  * Global styles: the reset, the base typography and the accessibility
  * primitives every component relies on.
  *
- * Components carry their own styles; nothing here styles a component.
+ * Components carry their own styles; nothing here styles a component — except
+ * the three utilities at the end, which are shared vocabulary rather than
+ * decoration.
  */
 
 *,
@@ -28,7 +30,9 @@ body {
   font-family: var(--font-sans);
   font-size: var(--font-size-md);
   line-height: var(--line-height-normal);
+  font-synthesis-weight: none;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizelegibility;
 }
 
@@ -39,13 +43,16 @@ h4,
 h5,
 h6 {
   margin: 0;
+  font-family: var(--font-display);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-tight);
   letter-spacing: var(--letter-spacing-tight);
+  text-wrap: balance;
 }
 
 p {
   margin: 0;
+  text-wrap: pretty;
 }
 
 ul,
@@ -73,6 +80,10 @@ textarea {
   color: inherit;
 }
 
+button {
+  letter-spacing: inherit;
+}
+
 /**
  * The focus ring is drawn once, for every focusable element, and is never
  * removed. `:focus-visible` keeps it off mouse clicks while guaranteeing it
@@ -86,6 +97,38 @@ textarea {
 
 ::selection {
   background: var(--accent-ring);
+  color: var(--content-primary);
+}
+
+/**
+ * The scrollbars are part of the instrument: thin, quiet, and the same
+ * colour as the surface they sit on. The webkit rules are the ones browsers
+ * actually honour; the `scrollbar-width` pair is the standard fallback.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-default);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--radius-full);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+  background-clip: content-box;
 }
 
 /**
@@ -102,6 +145,30 @@ textarea {
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+/**
+ * The eyebrow: the small uppercase label that names a section of an
+ * instrument. It is shared vocabulary, so it is defined once here.
+ */
+.torne-eyebrow {
+  margin: 0;
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
+}
+
+/**
+ * A figure the reader may compare: an instant, a count, a measurement.
+ * Tabular figures make columns line up.
+ */
+.torne-numeric {
+  font-variant-numeric: var(--font-numeric);
+  font-feature-settings: var(--font-numeric);
 }
 
 /**

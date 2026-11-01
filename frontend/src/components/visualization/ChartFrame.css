@@ -1,3 +1,12 @@
+/**
+ * The bezel of a chart.
+ *
+ * The frame is what makes a canvas read as an instrument: a caption above it,
+ * a well it sits in, a disclosure of the values below it. Everything here is
+ * flat — the separation is drawn with hairlines, not with shadows, because a
+ * shadow says "this floats above the page" and a chart does not float.
+ */
+
 .torne-chart-frame {
   margin: 0;
   display: flex;
@@ -21,13 +30,51 @@
   min-width: 0;
 }
 
+.torne-chart-frame__head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .torne-chart-frame__title {
+  font-family: var(--font-display);
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-snug);
+  letter-spacing: var(--letter-spacing-tight);
+  color: var(--content-primary);
+}
+
+/**
+ * The label plate: the unit, stated once, where the reader reads the figure.
+ *
+ * It is set in the figures face, because a unit is a symbol rather than a
+ * word, and it is boxed like the plate it is.
+ */
+.torne-chart-frame__plate {
+  padding: 1px var(--space-2);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--content-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  font-variant-numeric: var(--font-numeric);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--line-height-snug);
+  white-space: nowrap;
+}
+
+.torne-chart-frame__plate[data-tone='warning'] {
+  background: var(--semantic-warning-subtle);
+  border-color: var(--semantic-warning);
+  color: var(--semantic-warning-ink);
 }
 
 .torne-chart-frame__description {
+  max-width: 62ch;
   color: var(--content-secondary);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
@@ -36,19 +83,28 @@
 .torne-chart-frame__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex-shrink: 0;
 }
 
+/**
+ * The well the plot sits in.
+ *
+ * The ground is the chart's own ground — the token the canvas is painted
+ * with — so the canvas and the frame around it are one surface and not two.
+ */
 .torne-chart-frame__plot {
   position: relative;
   width: 100%;
   min-width: 0;
-  background: var(--surface-raised);
-  border: var(--control-border-width) solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3);
+  background: var(--chart-well);
+  border: var(--control-border-width) solid var(--hairline);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  overflow: hidden;
 }
+
+/* ------------------------------------------------------------------ values */
 
 .torne-chart-frame__table {
   font-size: var(--font-size-sm);
@@ -58,38 +114,76 @@
 .torne-chart-frame__table summary {
   cursor: pointer;
   padding: var(--space-1) 0;
+  color: var(--content-tertiary);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+  list-style-position: outside;
 }
 
 .torne-chart-frame__table summary:hover {
   color: var(--content-primary);
 }
 
+.torne-chart-frame__table summary::marker {
+  color: var(--content-disabled);
+  font-size: 0.9em;
+}
+
 .torne-chart-frame__table-body {
   overflow-x: auto;
   margin-top: var(--space-2);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--hairline);
+  border-radius: var(--radius-md);
 }
 
 .torne-chart-frame__table-body table {
   border-collapse: collapse;
   width: 100%;
-  font-variant-numeric: tabular-nums;
+  font-variant-numeric: var(--font-numeric);
 }
 
 .torne-chart-frame__table-body th,
 .torne-chart-frame__table-body td {
-  border-bottom: var(--control-border-width) solid var(--border-subtle);
-  padding: var(--space-1) var(--space-2);
+  border-bottom: var(--control-border-width) solid var(--hairline);
+  padding: var(--space-2) var(--space-3);
   text-align: left;
   white-space: nowrap;
 }
 
 .torne-chart-frame__table-body th {
-  color: var(--content-secondary);
-  font-weight: var(--font-weight-medium);
+  position: sticky;
+  top: 0;
+  background: var(--surface-sunken);
+  color: var(--content-tertiary);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
 }
 
+.torne-chart-frame__table-body td {
+  color: var(--content-primary);
+  font-size: var(--font-size-xs);
+}
+
+.torne-chart-frame__table-body td:nth-child(n + 3) {
+  font-family: var(--font-mono);
+}
+
+.torne-chart-frame__table-body tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ----------------------------------------------------------------- footnote */
+
 .torne-chart-frame__footnote {
+  max-width: 78ch;
+  padding-top: var(--space-2);
+  border-top: var(--control-border-width) solid var(--hairline);
   color: var(--content-tertiary);
   font-size: var(--font-size-xs);
-  line-height: var(--line-height-normal);
+  line-height: var(--line-height-relaxed);
 }

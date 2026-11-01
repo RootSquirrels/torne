@@ -29,6 +29,12 @@ import type { ChartOption } from '@/components/visualization/EChart';
 import { escapeHtml } from '@/components/visualization/html';
 import { useChartTokens } from '@/components/visualization/chartTheme';
 import type { ChartTokens } from '@/components/visualization/chartTheme';
+import {
+  categoryAxis,
+  gridCraft,
+  timeAxis,
+  tooltipChrome,
+} from '@/components/visualization/chartCraft';
 import { Legend } from '@/components/ui/Legend';
 import type { LegendShape } from '@/components/ui/Legend';
 import type { CoverageAvailability, CoverageKind, CoveragePeriod } from '@/types/visualization/coverage';
@@ -263,13 +269,12 @@ export function CoverageTimeline({
   const option = useMemo<ChartOption>(() => {
     return {
       animation: false,
-      grid: { left: 120, right: 28, top: 24, bottom: 48 },
+      backgroundColor: tokens.well,
+      grid: gridCraft({ top: 28, bottom: 44 }),
       legend: { show: false },
       tooltip: {
+        ...tooltipChrome(tokens),
         trigger: 'item',
-        backgroundColor: tokens.surface,
-        borderColor: tokens.border,
-        textStyle: { color: tokens.text, fontSize: 12 },
         formatter: (rawParams: unknown) => {
           const record = rawParams as { dataIndex?: number } | null;
           const bar = record?.dataIndex === undefined ? undefined : bars[record.dataIndex];
@@ -279,29 +284,27 @@ export function CoverageTimeline({
           const from = new Date(bar.start).toISOString().slice(0, 10);
           const to = new Date(bar.end).toISOString().slice(0, 10);
           if (bar.kind === 'gap') {
-            return `<strong>gap</strong><br/>${escapeHtml(bar.subject)}<br/>${from} → ${to}<br/>no coverage`;
+            return (
+              `<div style="font-weight:600">gap</div>` +
+              `<div style="font-size:11px;opacity:.7">${escapeHtml(bar.subject)}</div>` +
+              `<div style="font-family:var(--font-mono);font-size:11px">${escapeHtml(from)} → ${escapeHtml(to)}</div>` +
+              `<div style="font-size:11px;opacity:.7">no coverage</div>`
+            );
           }
           const end = bar.open
             ? 'still open'
             : bar.unknownEnd
               ? 'end not established'
               : to;
-          return `<strong>${KIND_LABEL[bar.kind]}</strong><br/>${escapeHtml(bar.subject)}<br/>${from} → ${end}`;
+          return (
+            `<div style="font-weight:600">${escapeHtml(KIND_LABEL[bar.kind])}</div>` +
+            `<div style="font-size:11px;opacity:.7">${escapeHtml(bar.subject)}</div>` +
+            `<div style="font-family:var(--font-mono);font-size:11px">${escapeHtml(from)} → ${escapeHtml(end)}</div>`
+          );
         },
       },
-      xAxis: {
-        type: 'time',
-        axisLine: { lineStyle: { color: tokens.border } },
-        axisLabel: { color: tokens.label, fontSize: 11, hideOverlap: true },
-        splitLine: { lineStyle: { color: tokens.grid } },
-      },
-      yAxis: {
-        type: 'category',
-        data: subjects,
-        axisLine: { show: false },
-        axisTick: { show: false },
-        axisLabel: { color: tokens.label, fontSize: 11 },
-      },
+      xAxis: timeAxis(tokens),
+      yAxis: categoryAxis(tokens, { data: subjects }),
       series: [
         {
           type: 'custom',
@@ -328,13 +331,13 @@ export function CoverageTimeline({
             const children: Record<string, unknown>[] = [
               {
                 type: 'rect',
-                shape: { x: left, y: startY - height / 2, width, height },
+                shape: { x: left, y: startY - height / 2, width, height, r: 2 },
                 style: {
                   fill: colour,
                   // The fill is what carries the kind's colour; the outline
                   // carries its mark. A gap has no fill at all: it is the
                   // absence of a period, not a pale period.
-                  fillOpacity: isGap ? 0 : 0.85,
+                  fillOpacity: isGap ? 0 : 0.9,
                   stroke: colour,
                   strokeOpacity: 1,
                   lineWidth: dashed ? 1.5 : 0,
@@ -458,7 +461,7 @@ export function CoverageTimeline({
       ariaLabel={`${title}. ${subjects.length} subjects, ${bars.length} periods and gaps.`}
       table={table}
       footnote={availabilityNote}
-      actions={<Legend title="What the kinds mean" items={legendItems} />}
+      actions={<Legend title="What the kinds mean" orientation="row" items={legendItems} />}
     >
       <EChart option={option} height={height} onEvents={onEvents} />
     </ChartFrame>

@@ -1,45 +1,100 @@
+/**
+ * The mission status, on the ordinal science ramp.
+ *
+ * The ramp is sequential by construction — one hue, rising lightness — so the
+ * colour says *how far along* a mission is, and never *which* mission. Each
+ * step paints its own chip and, on top of it, the ink that stays legible on
+ * that step; that pairing is the only one that reads in both skins, which is
+ * why the ink is written on the step rather than beside it.
+ *
+ * The pip is the mark of the step: a small disc of the same ink, haloed so it
+ * reads as a light rather than as a speck of dust.
+ */
+
 .torne-status-indicator {
   display: inline-flex;
+  align-items: center;
   min-width: 0;
 }
 
 .torne-status-indicator__swatch {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: var(--space-2);
   padding: var(--space-1) var(--space-2);
-  border: var(--control-border-width) solid var(--border-subtle);
+  border: var(--control-border-width) solid transparent;
   border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
   line-height: var(--line-height-tight);
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
+.torne-status-indicator__swatch::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+}
+
 /* --------------------------------------------------------- the science ramp */
-/* Each step of the ordinal ramp paints its swatch and, on top of it, the    */
-/* ink that stays legible on that step. The tokens live here, not inline.     */
+/* Each step of the ordinal ramp paints its chip, its ink and its pip. The   */
+/* tokens live here, not inline.                                            */
 .torne-status-indicator--rank-0 .torne-status-indicator__swatch {
   background: var(--science-status-0);
+  border-color: var(--science-status-0);
   color: var(--science-status-0-ink);
+}
+
+.torne-status-indicator--rank-0 .torne-status-indicator__swatch::before {
+  background: var(--science-status-0-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--science-status-0-ink) 35%, transparent);
 }
 
 .torne-status-indicator--rank-1 .torne-status-indicator__swatch {
   background: var(--science-status-1);
+  border-color: var(--science-status-1);
   color: var(--science-status-1-ink);
+}
+
+.torne-status-indicator--rank-1 .torne-status-indicator__swatch::before {
+  background: var(--science-status-1-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--science-status-1-ink) 35%, transparent);
 }
 
 .torne-status-indicator--rank-2 .torne-status-indicator__swatch {
   background: var(--science-status-2);
+  border-color: var(--science-status-2);
   color: var(--science-status-2-ink);
+}
+
+.torne-status-indicator--rank-2 .torne-status-indicator__swatch::before {
+  background: var(--science-status-2-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--science-status-2-ink) 35%, transparent);
 }
 
 .torne-status-indicator--rank-3 .torne-status-indicator__swatch {
   background: var(--science-status-3);
+  border-color: var(--science-status-3);
   color: var(--science-status-3-ink);
+}
+
+.torne-status-indicator--rank-3 .torne-status-indicator__swatch::before {
+  background: var(--science-status-3-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--science-status-3-ink) 35%, transparent);
 }
 
 .torne-status-indicator--rank-4 .torne-status-indicator__swatch {
   background: var(--science-status-4);
+  border-color: var(--science-status-4);
   color: var(--science-status-4-ink);
+}
+
+.torne-status-indicator--rank-4 .torne-status-indicator__swatch::before {
+  background: var(--science-status-4-ink);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--science-status-4-ink) 35%, transparent);
 }

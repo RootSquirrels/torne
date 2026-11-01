@@ -1,75 +1,171 @@
+/**
+ * The top bar.
+ *
+ * It is the bezel of the application: the mark, the spaces the reader may
+ * move between, and the skin it is read in. Nothing here is decorative —
+ * the bar is the only chrome the reader always sees, so it carries the
+ * identity of the instrument and nothing else.
+ */
+
 .torne-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
-  border-bottom: var(--control-border-width) solid var(--border-default);
+  gap: var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--control-border-width) solid var(--border-subtle);
   background: var(--surface-raised);
   flex-wrap: wrap;
 }
 
+/* --------------------------------------------------------------------- brand */
+
 .torne-topbar__brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-3);
   min-width: 0;
 }
 
+/**
+ * The reticle: a ring, a crosshair and a centre.
+ *
+ * Drawn in CSS, so that it stays sharp and costs no request.
+ */
+.torne-topbar__mark {
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border: var(--control-border-width) solid var(--accent);
+  border-radius: var(--radius-full);
+}
+
+.torne-topbar__mark::before {
+  content: '';
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 5px;
+  height: 5px;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  border-radius: var(--radius-full);
+}
+
+.torne-topbar__mark::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto 0;
+  height: var(--control-border-width);
+  background: var(--accent);
+  opacity: 0.35;
+}
+
+.torne-topbar__names {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
 .torne-topbar__name {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-xl);
-  letter-spacing: var(--letter-spacing-tight);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--line-height-tight);
+  color: var(--content-primary);
+}
+
+.torne-topbar__product {
+  color: var(--accent);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
 }
 
 .torne-topbar__subtitle {
-  color: var(--content-secondary);
-  font-size: var(--font-size-sm);
+  padding-left: var(--space-3);
+  border-left: var(--control-border-width) solid var(--border-subtle);
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
 }
+
+/* -------------------------------------------------------------------- spaces */
 
 .torne-topbar__spaces {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  padding: 2px;
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
 }
 
+/**
+ * A space is a mode of the instrument.
+ *
+ * The open one is lifted off the track; the closed one is grey and says so.
+ */
 .torne-topbar__space {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  border: var(--control-border-width) solid var(--border-default);
+  border: var(--control-border-width) solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--content-primary);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
+  color: var(--content-secondary);
+  padding: var(--space-1) var(--space-3);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard);
 }
 
 .torne-topbar__space:hover {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
+  color: var(--content-primary);
 }
 
 .torne-topbar__space.active,
 .torne-topbar__space[aria-current='page'] {
-  background: var(--content-primary);
-  border-color: var(--content-primary);
-  color: var(--content-inverse);
+  background: var(--surface-raised);
+  border-color: var(--border-default);
+  color: var(--content-primary);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-1);
 }
 
 .torne-topbar__space--closed {
   color: var(--content-disabled);
   cursor: not-allowed;
-  background: var(--surface-sunken);
+}
+
+.torne-topbar__space--closed:hover {
+  background: transparent;
+  color: var(--content-disabled);
 }
 
 .torne-topbar__soon {
-  font-size: var(--font-size-2xs);
+  padding: 0 var(--space-1);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  font-size: var(--font-size-3xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: 1.5;
   text-transform: uppercase;
-  letter-spacing: var(--letter-spacing-wide);
 }
+
+/* --------------------------------------------------------------------- tools */
 
 .torne-topbar__tools {
   display: flex;
@@ -77,39 +173,55 @@
   gap: var(--space-3);
 }
 
+/**
+ * The skin switch: a track with one position taken.
+ */
 .torne-topbar__theme {
   display: inline-flex;
-  border: var(--control-border-width) solid var(--border-default);
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
   border-radius: var(--radius-md);
-  overflow: hidden;
 }
 
 .torne-topbar__theme-button {
   border: none;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--content-secondary);
+  color: var(--content-tertiary);
   padding: var(--space-1) var(--space-2);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
   cursor: pointer;
-}
-
-.torne-topbar__theme-button + .torne-topbar__theme-button {
-  border-left: var(--control-border-width) solid var(--border-subtle);
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard);
 }
 
 .torne-topbar__theme-button:hover {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
   color: var(--content-primary);
 }
 
 .torne-topbar__theme-button[aria-pressed='true'] {
-  background: var(--accent-subtle);
-  color: var(--accent-ink);
-  font-weight: var(--font-weight-medium);
+  background: var(--surface-raised);
+  color: var(--accent);
+  font-weight: var(--font-weight-semibold);
+  box-shadow: var(--shadow-1);
+}
+
+@media (max-width: 60rem) {
+  .torne-topbar__subtitle {
+    display: none;
+  }
 }
 
 @media (max-width: 48rem) {
-  .torne-topbar__subtitle {
-    display: none;
+  .torne-topbar {
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
   }
 }

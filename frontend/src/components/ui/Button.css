@@ -1,30 +1,35 @@
+/**
+ * The button.
+ *
+ * Three weights, one grammar. The primary button is the single affirmative
+ * action of a view, so it is the one element of a region allowed to carry
+ * the ember; the secondary button is a panel standing on the canvas; the
+ * ghost button is an action that only matters once you look for it. The
+ * danger weight is the only other colour a button carries, and it carries it
+ * alone.
+ *
+ * A button is separated from its ground by a border, never by a shadow: it
+ * changes colour when it is hovered, it never changes shape.
+ */
+
 .torne-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
+  padding-block: 0;
   border: var(--control-border-width) solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
   font-weight: var(--font-weight-medium);
   line-height: var(--line-height-tight);
+  letter-spacing: var(--letter-spacing-normal);
   white-space: nowrap;
   cursor: pointer;
   transition:
     background-color var(--duration-fast) var(--easing-standard),
     border-color var(--duration-fast) var(--easing-standard),
     color var(--duration-fast) var(--easing-standard);
-}
-
-.torne-button:focus-visible {
-  outline: var(--focus-ring-width) solid var(--border-focus);
-  outline-offset: var(--focus-ring-offset);
-}
-
-.torne-button:disabled {
-  cursor: not-allowed;
-  color: var(--content-disabled);
-  background: var(--surface-sunken);
-  border-color: var(--border-subtle);
 }
 
 /* ------------------------------------------------------------------- sizes */
@@ -74,8 +79,12 @@
 }
 
 .torne-button--secondary:hover:not(:disabled) {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
   border-color: var(--border-strong);
+}
+
+.torne-button--secondary:active:not(:disabled) {
+  background: var(--surface-active);
 }
 
 .torne-button--ghost {
@@ -85,23 +94,51 @@
 }
 
 .torne-button--ghost:hover:not(:disabled) {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
   color: var(--content-primary);
+}
+
+.torne-button--ghost:active:not(:disabled) {
+  background: var(--surface-active);
 }
 
 .torne-button--danger {
   background: var(--semantic-danger);
   border-color: var(--semantic-danger);
-  color: #ffffff;
+  color: var(--content-inverse);
 }
 
+/*
+ * The danger weight has no hover token of its own, so it is mixed towards the
+ * ink: the button darkens on paper and brightens in the cockpit, which is
+ * what "hover" means in each of the two skins.
+ */
 .torne-button--danger:hover:not(:disabled) {
-  filter: brightness(0.92);
+  background: color-mix(in srgb, var(--semantic-danger) 85%, var(--content-primary));
+  border-color: color-mix(in srgb, var(--semantic-danger) 85%, var(--content-primary));
+}
+
+.torne-button--danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--semantic-danger) 75%, var(--content-primary));
+  border-color: color-mix(in srgb, var(--semantic-danger) 75%, var(--content-primary));
+}
+
+/* ---------------------------------------------------------------- disabled */
+.torne-button:disabled {
+  background: var(--surface-sunken);
+  border-color: var(--border-subtle);
+  color: var(--content-disabled);
+  cursor: not-allowed;
 }
 
 /* ----------------------------------------------------------------- loading */
-.torne-button--loading {
+.torne-button--loading,
+.torne-button--loading:disabled {
   cursor: progress;
+}
+
+.torne-button__label {
+  min-width: 0;
 }
 
 .torne-button__spinner {

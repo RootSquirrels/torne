@@ -1,10 +1,19 @@
+/**
+ * The icon button.
+ *
+ * A square control: same height as the text controls beside it, same edge,
+ * same face. The glyph is decorative — the accessible name lives on the
+ * button — so the button carries the state, never the glyph.
+ */
+
 .torne-icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   padding: 0;
   border: var(--control-border-width) solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   line-height: var(--line-height-tight);
   cursor: pointer;
   transition:
@@ -18,13 +27,6 @@
   align-items: center;
   justify-content: center;
   line-height: 0;
-}
-
-.torne-icon-button:disabled {
-  cursor: not-allowed;
-  color: var(--content-disabled);
-  background: var(--surface-sunken);
-  border-color: var(--border-subtle);
 }
 
 /* ------------------------------------------------------------------- sizes */
@@ -48,8 +50,12 @@
 }
 
 .torne-icon-button--secondary:hover:not(:disabled) {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
   border-color: var(--border-strong);
+}
+
+.torne-icon-button--secondary:active:not(:disabled) {
+  background: var(--surface-active);
 }
 
 .torne-icon-button--ghost {
@@ -59,8 +65,12 @@
 }
 
 .torne-icon-button--ghost:hover:not(:disabled) {
-  background: var(--surface-sunken);
+  background: var(--surface-hover);
   color: var(--content-primary);
+}
+
+.torne-icon-button--ghost:active:not(:disabled) {
+  background: var(--surface-active);
 }
 
 .torne-icon-button--danger {
@@ -74,9 +84,22 @@
   border-color: var(--semantic-danger);
 }
 
+/* ---------------------------------------------------------------- disabled */
+.torne-icon-button:disabled {
+  background: var(--surface-sunken);
+  border-color: var(--border-subtle);
+  color: var(--content-disabled);
+  cursor: not-allowed;
+}
+
 /* ------------------------------------------------------------------ toggle */
+/*
+ * A pressed button is the "you are here" mark of the system: the accent wash,
+ * the accent ink, and a rule down the leading edge of the control.
+ */
 .torne-icon-button[aria-pressed='true'] {
   background: var(--accent-subtle);
   border-color: var(--accent);
   color: var(--accent);
+  box-shadow: inset calc(var(--control-border-width) * 2) 0 0 0 var(--accent);
 }

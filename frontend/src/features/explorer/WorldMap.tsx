@@ -156,7 +156,7 @@ export function WorldMap({
       scene={scene}
       title="Where the missions reached"
       description="A country is coloured by the status its own missions earned. Region-wide coverage is not a national status."
-      height={520}
+      height={600}
       fitTo={{ label: 'Europe', bounds: EUROPE_BOUNDS }}
       selectedId={selectedId}
       onSelect={(selection) => {

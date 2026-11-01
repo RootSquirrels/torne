@@ -1,24 +1,37 @@
+/**
+ * The command strip of a view.
+ *
+ * The bar is not a box: it is a strip of the instrument, held between two
+ * hairlines, that holds the controls the reader sets before they read
+ * anything. The controls sit on the strip in their own wells, separated by
+ * space, and the reset action stands apart from them at the end of the
+ * strip.
+ */
+
 .torne-filter-bar {
   display: flex;
   align-items: flex-end;
   gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--space-4);
   background: var(--surface-raised);
-  border: var(--control-border-width) solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  border-bottom: var(--control-border-width) solid var(--hairline);
 }
 
 .torne-filter-bar__controls {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--space-3);
+  gap: var(--space-4);
   flex: 1 1 auto;
   min-width: 0;
 }
 
+/* The reset action is set apart from the controls by a rule, not by a box. */
 .torne-filter-bar__actions {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  align-self: stretch;
   flex: none;
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--control-border-width) solid var(--hairline);
 }

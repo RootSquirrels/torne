@@ -1,3 +1,5 @@
+import './Breadcrumbs.css';
+
 export interface BreadcrumbItem {
   /** The visible text. */
   label: string;

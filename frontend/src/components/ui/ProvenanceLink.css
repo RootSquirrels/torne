@@ -1,39 +1,55 @@
+/**
+ * A reference to the evidence behind a fact.
+ *
+ * The chip is the point: a reference is a small, fixed thing that can be
+ * counted, copied and cited, so it is set in the identifier face at the
+ * smallest size, on a well that says "this is a handle, not a sentence".
+ * A reference that can be followed carries the ember; one that cannot is
+ * plain ink.
+ */
+
 .torne-provenance-link {
-  color: var(--accent);
-  font-size: var(--font-size-sm);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: baseline;
+  padding: var(--space-0) var(--space-1);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--content-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard),
+    color var(--duration-fast) var(--easing-standard);
 }
 
-a.torne-provenance-link:hover {
+a.torne-provenance-link,
+button.torne-provenance-link {
+  color: var(--accent);
+}
+
+a.torne-provenance-link:hover,
+button.torne-provenance-link:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
   color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 button.torne-provenance-link {
-  padding: 0;
-  background: none;
-  border: 0;
-  font: inherit;
   cursor: pointer;
 }
 
-button.torne-provenance-link:hover {
-  color: var(--accent-hover);
-}
-
 .torne-provenance-link--code {
-  padding: var(--space-0) var(--space-1);
-  background: var(--surface-sunken);
-  border: var(--control-border-width) solid var(--border-subtle);
-  border-radius: var(--radius-xs);
   color: var(--content-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  text-decoration: none;
 }
 
-span.torne-provenance-link {
-  color: var(--content-secondary);
-  text-decoration: none;
+.torne-provenance-link--code:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
 }

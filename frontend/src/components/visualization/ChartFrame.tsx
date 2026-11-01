@@ -11,10 +11,27 @@
  *
  * The table is visually hidden by default and can be revealed, which keeps it
  * available to assistive technology without cluttering the page.
+ *
+ * The frame is the **bezel** of the instrument: the caption above, the well
+ * the plot sits in, the disclosure below. The unit travels on a *label
+ * plate* beside the title — the place where a reader looks for it — and the
+ * axis does not repeat it.
  */
 import type { ReactNode } from 'react';
 
 import './ChartFrame.css';
+
+export interface ChartPlate {
+  /** What the plate states. */
+  readonly label: string;
+  /**
+   * The tone of the plate.
+   *
+   * `warning` is for a statement that is true but not established — a unit
+   * the series disagree on. It is worth a warning, not an alarm.
+   */
+  readonly tone?: 'neutral' | 'warning';
+}
 
 export interface ChartFrameProps {
   /** The title of the figure. */
@@ -36,6 +53,8 @@ export interface ChartFrameProps {
   readonly footnote?: ReactNode;
   /** Actions shown beside the title. */
   readonly actions?: ReactNode;
+  /** The plate beside the title: the unit, or the fact that it is not established. */
+  readonly plate?: ChartPlate | null;
 }
 
 export function ChartFrame({
@@ -46,12 +65,20 @@ export function ChartFrame({
   table,
   footnote,
   actions,
+  plate = null,
 }: ChartFrameProps) {
   return (
     <figure className="torne-chart-frame">
       <figcaption className="torne-chart-frame__caption">
         <span className="torne-chart-frame__titles">
-          <span className="torne-chart-frame__title">{title}</span>
+          <span className="torne-chart-frame__head">
+            <span className="torne-chart-frame__title">{title}</span>
+            {plate !== null ? (
+              <span className="torne-chart-frame__plate" data-tone={plate.tone ?? 'neutral'}>
+                {plate.label}
+              </span>
+            ) : null}
+          </span>
           {description !== null && description !== undefined ? (
             <span className="torne-chart-frame__description">{description}</span>
           ) : null}

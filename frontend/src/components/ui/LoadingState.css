@@ -1,10 +1,22 @@
+/**
+ * The state of a view that is still loading.
+ *
+ * The well is empty but not blank: a spinner turns in it, and the label is
+ * the eyebrow of the system, so the reader knows what is being waited for
+ * without the message competing with the content that is coming.
+ */
+
 .torne-loading-state {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: var(--space-3);
-  padding: var(--space-8) var(--space-4);
-  color: var(--content-secondary);
+  padding: var(--space-8) var(--space-5);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  text-align: center;
 }
 
 .torne-loading-state__spinner {
@@ -17,8 +29,13 @@
 }
 
 .torne-loading-state__label {
-  font-size: var(--font-size-sm);
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
   line-height: var(--line-height-snug);
+  text-transform: uppercase;
 }
 
 @keyframes torne-loading-spin {

@@ -1,3 +1,12 @@
+/**
+ * The card: a self-contained piece of content.
+ *
+ * A card is a sheet of paper on a desk — raised, but flat: it is separated
+ * from the canvas by a hairline, never by a shadow. The card is not
+ * interactive, so it does not move and it does not glow when the pointer
+ * passes over it; only the controls it holds react.
+ */
+
 .torne-card {
   display: flex;
   flex-direction: column;
@@ -5,14 +14,6 @@
   background: var(--surface-raised);
   border: var(--control-border-width) solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-1);
-  transition:
-    border-color var(--duration-normal) var(--easing-standard),
-    box-shadow var(--duration-normal) var(--easing-standard);
-}
-
-.torne-card:hover {
-  border-color: var(--border-default);
 }
 
 .torne-card__header {
@@ -32,13 +33,18 @@
 
 .torne-card__title {
   color: var(--content-primary);
+  font-family: var(--font-display);
   font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-snug);
 }
 
 .torne-card__subtitle {
-  color: var(--content-secondary);
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
   font-size: var(--font-size-sm);
-  line-height: var(--line-height-snug);
+  line-height: var(--line-height-normal);
 }
 
 .torne-card__actions {
@@ -59,7 +65,10 @@
 
 .torne-card__footer {
   padding: var(--space-3) var(--space-4);
-  border-top: var(--control-border-width) solid var(--border-subtle);
+  border-top: var(--control-border-width) solid var(--hairline);
+  background: var(--surface-inset);
   color: var(--content-secondary);
+  font-family: var(--font-sans);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
 }

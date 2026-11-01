@@ -9,6 +9,12 @@
  * The three colour registers stay separate, exactly as in the tokens:
  * `--series-*` for data, `--science-status-*` for the ordinal status ramp,
  * `--accent-*` for interaction only.
+ *
+ * The **fonts** are read as well, and they matter as much as the colours: a
+ * canvas that falls back to its own default type looks like a different
+ * application from the one around it. The values read here are the very
+ * stacks the DOM uses, so a chart and the page it sits on are set in the same
+ * letterforms.
  */
 
 import { useEffect, useState } from 'react';
@@ -28,18 +34,31 @@ export interface ChartTokens {
   readonly series: readonly string[];
   /** The science status ramp, from "nothing" to "knowledge". */
   readonly status: readonly string[];
+  /** The ground the plot is drawn on: the well of the instrument. */
+  readonly well: string;
+  /** A raised surface: the body of a panel around the plot. */
+  readonly surface: string;
+  /** A floating surface: a tooltip. */
+  readonly overlay: string;
   readonly axis: string;
   readonly grid: string;
   readonly label: string;
   readonly text: string;
   readonly muted: string;
-  readonly surface: string;
   readonly border: string;
   readonly crosshair: string;
   readonly reference: string;
   readonly uncertainty: string;
   readonly uncertaintyForecast: string;
   readonly accent: string;
+  /** The ink that sits on the accent. */
+  readonly accentInk: string;
+  /** The shadow a floating element casts, read as a concrete value. */
+  readonly shadow: string;
+  /** The text face, as the page uses it. */
+  readonly fontSans: string;
+  /** The figures face: identifiers, instants, measured values. */
+  readonly fontMono: string;
   /** The paint of the map: its background, its land, its boundary and its markers. */
   readonly mapWater: string;
   readonly mapLand: string;
@@ -53,7 +72,13 @@ const STATUS_VARS = Array.from({ length: 5 }, (_, index) => `--science-status-${
 
 function read(root: HTMLElement, name: string, fallback: string): string {
   const value = getComputedStyle(root).getPropertyValue(name).trim();
-  return value === '' ? fallback : value;
+  if (value === '') {
+    return fallback;
+  }
+  // A custom property keeps its own white space, and a font stack declared
+  // over several lines comes back with the line break in it. The canvas wants
+  // a single line, so the space is normalised here.
+  return value.replace(/\s+/g, ' ');
 }
 
 /** The chart tokens, read from the document root. */
@@ -63,23 +88,29 @@ export function readChartTokens(root: HTMLElement): ChartTokens {
   return {
     series,
     status,
-    axis: read(root, '--chart-axis', '#8d939b'),
-    grid: read(root, '--chart-grid', '#e6e3db'),
-    label: read(root, '--chart-label', '#5d636b'),
-    text: read(root, '--content-primary', '#1d1f22'),
-    muted: read(root, '--content-secondary', '#5d636b'),
+    well: read(root, '--chart-well', '#faf9f6'),
     surface: read(root, '--surface-raised', '#ffffff'),
-    border: read(root, '--border-default', '#dcd9d1'),
-    crosshair: read(root, '--chart-crosshair', '#b8b4aa'),
-    reference: read(root, '--chart-reference', '#6b727b'),
-    uncertainty: read(root, '--chart-uncertainty', 'rgba(0,114,178,0.18)'),
-    uncertaintyForecast: read(root, '--chart-uncertainty-forecast', 'rgba(181,83,44,0.18)'),
-    accent: read(root, '--accent', '#b5532c'),
-    mapWater: read(root, '--map-water', '#dfe7ea'),
-    mapLand: read(root, '--map-land', '#e8e5dd'),
-    mapBoundary: read(root, '--map-boundary', '#c9c4b8'),
-    mapMarker: read(root, '--map-marker', '#1d1f22'),
-    mapMarkerSelected: read(root, '--map-marker-selected', '#b5532c'),
+    overlay: read(root, '--surface-overlay', '#ffffff'),
+    axis: read(root, '--chart-axis', '#b3ad9f'),
+    grid: read(root, '--chart-grid', '#e9e5dc'),
+    label: read(root, '--chart-label', '#6a717a'),
+    text: read(root, '--content-primary', '#1a1c20'),
+    muted: read(root, '--content-secondary', '#565c65'),
+    border: read(root, '--border-default', '#d6d1c6'),
+    crosshair: read(root, '--chart-crosshair', '#8b8578'),
+    reference: read(root, '--chart-reference', '#6a717a'),
+    uncertainty: read(root, '--chart-uncertainty', 'rgba(0,114,178,0.16)'),
+    uncertaintyForecast: read(root, '--chart-uncertainty-forecast', 'rgba(164,72,31,0.16)'),
+    accent: read(root, '--accent', '#a4481f'),
+    accentInk: read(root, '--accent-ink', '#ffffff'),
+    shadow: read(root, '--shadow-3', 'none'),
+    fontSans: read(root, '--font-sans', 'system-ui, sans-serif'),
+    fontMono: read(root, '--font-mono', 'ui-monospace, monospace'),
+    mapWater: read(root, '--map-water', '#e2e9ec'),
+    mapLand: read(root, '--map-land', '#eae6dd'),
+    mapBoundary: read(root, '--map-boundary', '#c6c0b3'),
+    mapMarker: read(root, '--map-marker', '#1a1c20'),
+    mapMarkerSelected: read(root, '--map-marker-selected', '#a4481f'),
   };
 }
 
@@ -152,7 +183,9 @@ export function symbolForNature(
   }
 }
 
-/** The text a legend uses for a series, with its nature spelled out. */
+/**
+ * The text a legend uses for a series, with its nature spelled out.
+ */
 export function legendLabelForNature(
   variable: string,
   nature: SeriesNature,

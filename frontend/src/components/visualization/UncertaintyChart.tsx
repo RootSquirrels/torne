@@ -30,6 +30,16 @@ import {
   symbolForNature,
   useChartTokens,
 } from '@/components/visualization/chartTheme';
+import {
+  axisName,
+  axisPointer,
+  gridCraft,
+  legendChrome,
+  timeAxis,
+  tooltipChrome,
+  unitPlate,
+  valueAxis,
+} from '@/components/visualization/chartCraft';
 import type { ChartTokens } from '@/components/visualization/chartTheme';
 import type { SeriesNature, TimeSeries } from '@/types/visualization/timeSeries';
 
@@ -171,33 +181,43 @@ export function UncertaintyChart({
     [series, tokens],
   );
 
-  const option = useMemo<ChartOption>(() => {
-    const seriesOptions = buildUncertaintySeries(plotted, tokens);
+  /**
+   * The label plate: the unit of the values.
+   *
+   * When the series disagree on their unit, the unit is not established, and
+   * the plate says so rather than picking one of them.
+   */
+  const plate = useMemo(() => {
     const declared = new Set(
       series.map((entry) => entry.unit).filter((value): value is string => value !== null),
     );
-    const axisName = unit ?? (declared.size === 1 ? [...declared][0] : null);
+    const conflict = declared.size > 1;
+    const resolved = unit ?? (declared.size === 1 ? ([...declared][0] ?? null) : null);
+    return unitPlate(resolved, conflict);
+  }, [series, unit]);
+
+  const option = useMemo<ChartOption>(() => {
+    const seriesOptions = buildUncertaintySeries(plotted, tokens);
 
     return {
       animation: false,
+      backgroundColor: tokens.well,
       color: [...tokens.series],
-      grid: { left: 60, right: 24, top: 40, bottom: 56 },
+      grid: gridCraft(),
       legend: {
-        type: 'scroll',
-        top: 0,
-        left: 0,
-        textStyle: { color: tokens.label, fontSize: 12 },
-        data: plotted.map((entry) => entry.legendName),
+        ...legendChrome(tokens),
+        data: plotted.map((entry) => ({
+          name: entry.legendName,
+          icon: symbolForNature(entry.series.nature),
+        })),
       },
       tooltip: {
+        ...tooltipChrome(tokens),
         trigger: 'axis',
-        axisPointer: { type: 'cross', crossStyle: { color: tokens.crosshair } },
-        backgroundColor: tokens.surface,
-        borderColor: tokens.border,
-        textStyle: { color: tokens.text, fontSize: 12 },
+        axisPointer: axisPointer(tokens, 'cross'),
         formatter: (rawParams: unknown) => {
           const params = Array.isArray(rawParams) ? rawParams : [rawParams];
-          const lines: string[] = [];
+          const blocks: string[] = [];
           for (const item of params) {
             if (typeof item !== 'object' || item === null) {
               continue;
@@ -219,32 +239,32 @@ export function UncertaintyChart({
               point.v === null && point.missingReason !== null
                 ? ` · absent: ${point.missingReason.replaceAll('_', ' ')}`
                 : '';
-            lines.push(
-              `<strong>${escapeHtml(entry.legendName)}</strong><br/>${formatStamp(point.t)}<br/>${formatValue(point.v, entry.series.unit)}${interval}${missing}`,
+            blocks.push(
+              `<div style="font-weight:600">${escapeHtml(entry.legendName)}</div>` +
+                `<div style="font-family:var(--font-mono);font-size:11px;opacity:.7">${escapeHtml(formatStamp(point.t))}</div>` +
+                `<div>${escapeHtml(formatValue(point.v, entry.series.unit))}${escapeHtml(interval)}${escapeHtml(missing)}</div>` +
+                `<div style="font-size:11px;opacity:.7">quality: ${escapeHtml(point.quality)}</div>`,
             );
           }
-          return lines.join('<br/>');
+          return blocks.join('');
         },
       },
-      xAxis: {
-        type: 'time',
-        axisLine: { lineStyle: { color: tokens.border } },
-        axisLabel: { color: tokens.label, fontSize: 11, hideOverlap: true },
-        splitLine: { show: false },
-      },
-      yAxis: {
-        type: 'value',
-        name: axisName ?? 'unit not established',
-        nameTextStyle: { color: tokens.label, fontSize: 11, align: 'left' },
+      xAxis: timeAxis(tokens),
+      yAxis: valueAxis(tokens, {
+        name: axisName(plate.established ? plate.label : null, false),
+        nameLocation: 'end',
         nameGap: 12,
-        axisLine: { show: false },
-        axisLabel: { color: tokens.label, fontSize: 11 },
-        splitLine: { lineStyle: { color: tokens.grid } },
-      },
-      dataZoom: [{ type: 'inside', filterMode: 'none' }],
+        nameTextStyle: {
+          color: tokens.label,
+          fontSize: 10,
+          fontFamily: tokens.fontMono,
+          align: 'left',
+        },
+      }),
+      dataZoom: [{ type: 'inside', filterMode: 'none', zoomOnMouseWheel: 'ctrl' }],
       series: seriesOptions,
     };
-  }, [plotted, tokens, unit, series]);
+  }, [plotted, tokens, plate]);
 
   const onEvents = useMemo(
     () => ({
@@ -312,6 +332,7 @@ export function UncertaintyChart({
     <ChartFrame
       title={title}
       description={description}
+      plate={{ label: plate.label, tone: plate.established ? 'neutral' : 'warning' }}
       ariaLabel={`${title}. ${plotted.length} series, ${plotted.reduce((sum, entry) => sum + entry.series.points.length, 0)} points. ${timeNote ?? ''}`}
       table={table}
       footnote={

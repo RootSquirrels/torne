@@ -27,6 +27,13 @@ import { ChartFrame } from '@/components/visualization/ChartFrame';
 import { EChart } from '@/components/visualization/EChart';
 import { escapeHtml } from '@/components/visualization/html';
 import { useChartTokens } from '@/components/visualization/chartTheme';
+import {
+  axisPointer,
+  gridCraft,
+  legendChrome,
+  tooltipChrome,
+  valueAxis,
+} from '@/components/visualization/chartCraft';
 import type {
   VerticalCoordinateKind,
   VerticalProfile,
@@ -170,23 +177,19 @@ export function VerticalProfileChart({
 
     return {
       animation: false,
-      grid: { left: 72, right: 28, top: 40, bottom: 40 },
+      backgroundColor: tokens.well,
+      grid: gridCraft({ top: 56, bottom: 56 }),
       legend: {
-        type: 'scroll',
-        top: 0,
-        left: 0,
-        textStyle: { color: tokens.label, fontSize: 12 },
-        data: profiles.map((profile) => profile.name),
+        ...legendChrome(tokens),
+        data: profiles.map((profile) => ({ name: profile.name, icon: 'circle' })),
       },
       tooltip: {
+        ...tooltipChrome(tokens),
         trigger: 'axis',
-        axisPointer: { type: 'cross', crossStyle: { color: tokens.crosshair } },
-        backgroundColor: tokens.surface,
-        borderColor: tokens.border,
-        textStyle: { color: tokens.text, fontSize: 12 },
+        axisPointer: axisPointer(tokens, 'cross'),
         formatter: (rawParams: unknown) => {
           const params = Array.isArray(rawParams) ? rawParams : [rawParams];
-          const lines: string[] = [];
+          const blocks: string[] = [];
           for (const item of params) {
             if (typeof item !== 'object' || item === null) {
               continue;
@@ -203,35 +206,40 @@ export function VerticalProfileChart({
             const raw = record.value;
             const value: unknown = Array.isArray(raw) ? raw[0] : null;
             const numberValue = typeof value === 'number' ? value : null;
-            lines.push(
-              `<strong>${escapeHtml(profile.name)}</strong><br/>${escapeHtml(axis.label)}: ${point.coordinate.value} ${escapeHtml(point.coordinate.unit)}<br/>${escapeHtml(variable.label)}: ${formatValue(numberValue, variable.unit)}<br/>quality: ${escapeHtml(point.quality)}${point.missingReason === null ? '' : `<br/>absent: ${escapeHtml(point.missingReason.replaceAll('_', ' '))}`}`,
+            blocks.push(
+              `<div style="font-weight:600">${escapeHtml(profile.name)}</div>` +
+                `<div style="font-size:11px;opacity:.7">${escapeHtml(axis.label)}: ${escapeHtml(String(point.coordinate.value))} ${escapeHtml(point.coordinate.unit)}</div>` +
+                `<div>${escapeHtml(variable.label)}: ${escapeHtml(formatValue(numberValue, variable.unit))}</div>` +
+                `<div style="font-size:11px;opacity:.7">quality: ${escapeHtml(point.quality)}${point.missingReason === null ? '' : ` · absent: ${escapeHtml(point.missingReason.replaceAll('_', ' '))}`}</div>`,
             );
           }
-          return lines.join('<br/>');
+          return blocks.join('');
         },
       },
-      xAxis: {
-        type: 'value',
+      xAxis: valueAxis(tokens, {
         name: variable.unit === null ? variable.label : `${variable.label} (${variable.unit})`,
         nameLocation: 'middle',
-        nameGap: 28,
-        nameTextStyle: { color: tokens.label, fontSize: 11 },
-        axisLine: { show: false },
-        axisLabel: { color: tokens.label, fontSize: 11 },
-        splitLine: { lineStyle: { color: tokens.grid } },
-      },
-      yAxis: {
-        type: 'value',
+        nameGap: 32,
+        nameTextStyle: {
+          color: tokens.label,
+          fontSize: 10,
+          fontFamily: tokens.fontMono,
+        },
+      }),
+      yAxis: valueAxis(tokens, {
         name: `${axis.label} (${axis.unit})`,
-        nameTextStyle: { color: tokens.label, fontSize: 11, align: 'right' },
+        nameLocation: 'end',
         nameGap: 12,
+        nameTextStyle: {
+          color: tokens.label,
+          fontSize: 10,
+          fontFamily: tokens.fontMono,
+          align: 'left',
+        },
         inverse: axis.direction === 'increasing-down',
         min: coordinates.length > 0 ? Math.min(...coordinates) : undefined,
         max: coordinates.length > 0 ? Math.max(...coordinates) : undefined,
-        axisLine: { show: false },
-        axisLabel: { color: tokens.label, fontSize: 11 },
-        splitLine: { lineStyle: { color: tokens.grid } },
-      },
+      }),
       series: seriesOptions,
     };
   }, [axis, compatible, profiles, tokens, variable]);

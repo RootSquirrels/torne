@@ -1,15 +1,31 @@
 /**
  * TORNE design tokens.
  *
- * Three colour registers live here, and they must never be mixed:
+ * # One system, two skins
+ *
+ * The application has one grammar and two skins:
+ *
+ * - the **cockpit** (dark): an instrument panel. Deep, near-black, a cold blue
+ *   cast, hairline separators, luminous signal colours. This is the skin you
+ *   read an instrument with.
+ * - the **journal** (light): printed matter. Warm paper, ink, editorial
+ *   measure, soft elevation. This is the skin you read a report with.
+ *
+ * A component never chooses: it reads a token, and the skin decides what the
+ * token means. That is the whole contract — a skin is a set of values, never a
+ * fork of the code.
+ *
+ * # Three colour registers, never mixed
  *
  * 1. `--science-status-*` — the **ordinal** ramp of what a mission produced
  *    (nothing → qualification → exploration → demonstration → knowledge).
  *    Sequential by construction: one hue, rising lightness. It is used for
  *    badges, status indicators and the country choropleth, and nowhere else.
  * 2. `--series-*` — **categorical** colours for data series. Okabe–Ito, which
- *    is distinguishable under deuteranopia, protanopia and tritanopia. A
- *    series is never identified by colour alone: the chart contracts also
+ *    is distinguishable under deuteranopia, protanopia and tritanopia. The
+ *    dark skin uses the same eight hues lifted for a dark ground; the hues
+ *    themselves are not re-chosen, so a chart means the same thing in both.
+ *    A series is never identified by colour alone: the chart contracts also
  *    carry a symbol or a dash pattern.
  * 3. `--accent-*` — **decorative and interactive**: the brand mark, the focus
  *    ring, the primary button, the selected entity on the map. It carries no
@@ -18,10 +34,14 @@
  * Semantic colours (`--semantic-*`) answer "is this a problem?", not "which
  * series is this?".
  *
- * Light and dark are expressed with `light-dark()` against a single
- * `color-scheme: light dark` declaration, so the system preference applies
- * by default and an explicit `data-theme` on the root element overrides it.
+ * # How the two skins are expressed
+ *
+ * Light and dark are written with `light-dark()` against a single
+ * `color-scheme: light dark` declaration, so the system preference applies by
+ * default and an explicit `data-theme` on the root element overrides it.
  * There is exactly one definition of every token.
+ *
+ * # Sizing
  *
  * Sizes are in `rem` so that the browser's own text-size setting is honoured.
  */
@@ -29,95 +49,17 @@
 :root {
   color-scheme: light dark;
 
-  /* ---------------------------------------------------------------- surfaces */
-  --surface-canvas: light-dark(#f6f5f1, #15171a);
-  --surface-raised: light-dark(#ffffff, #1e2125);
-  --surface-sunken: light-dark(#efede7, #101214);
-  --surface-overlay: light-dark(#ffffff, #24282d);
-  --surface-inverse: light-dark(#1d1f22, #e9e7e2);
-  --surface-scrim: light-dark(rgb(29 31 34 / 45%), rgb(0 0 0 / 55%));
+  /* ========================================================================
+   * Typography — the same in both skins. Only the colour of the ink changes.
+   * ==================================================================== */
 
-  /* ----------------------------------------------------------------- content */
-  --content-primary: light-dark(#1d1f22, #e9e7e2);
-  --content-secondary: light-dark(#5d636b, #a1a6ad);
-  --content-tertiary: light-dark(#6b727b, #8d939b);
-  --content-disabled: light-dark(#9aa0a8, #5f666e);
-  --content-inverse: light-dark(#f6f5f1, #15171a);
-
-  /* ----------------------------------------------------------------- borders */
-  --border-subtle: light-dark(#e6e3db, #272b30);
-  --border-default: light-dark(#dcd9d1, #33373d);
-  --border-strong: light-dark(#b8b4aa, #4d535a);
-  --border-focus: light-dark(#3f86bf, #4f95cb);
-
-  /* ------------------------------------------------------- accent (brand) */
-  --accent: light-dark(#b5532c, #e08a62);
-  --accent-hover: light-dark(#a04824, #eb9b76);
-  --accent-active: light-dark(#8c3d1d, #f2ac8b);
-  --accent-subtle: light-dark(#f7e9e2, #33241d);
-  --accent-ink: light-dark(#ffffff, #1b1009);
-  --accent-ring: light-dark(rgb(181 83 44 / 35%), rgb(224 138 98 / 40%));
-
-  /* --------------------------------------------------------------- semantic */
-  --semantic-info: light-dark(#2b6ca3, #6fa8d8);
-  --semantic-info-subtle: light-dark(#e6eef5, #1c2a35);
-  --semantic-info-ink: light-dark(#1b4b70, #a8cde8);
-  --semantic-success: light-dark(#1a7f4b, #55b585);
-  --semantic-success-subtle: light-dark(#e3f1e9, #17291f);
-  --semantic-success-ink: light-dark(#14603a, #9bd7b8);
-  --semantic-warning: light-dark(#8a6100, #d9a441);
-  --semantic-warning-subtle: light-dark(#f7edd8, #2e2513);
-  --semantic-warning-ink: light-dark(#6b4b00, #e8c684);
-  --semantic-danger: light-dark(#b3261e, #e07a72);
-  --semantic-danger-subtle: light-dark(#fae7e5, #301a19);
-  --semantic-danger-ink: light-dark(#8c1e18, #f0aca6);
-  --semantic-neutral: light-dark(#5d636b, #a1a6ad);
-  --semantic-neutral-subtle: light-dark(#efede7, #24282d);
-  --semantic-neutral-ink: light-dark(#454b52, #c3c8ce);
-
-  /* --------------------------------------------------- scientific status ramp */
-  --science-status-0: light-dark(#e8e5dd, #2a2e33);
-  --science-status-0-ink: light-dark(#5d636b, #a1a6ad);
-  --science-status-1: light-dark(#cfe0ee, #2c4458);
-  --science-status-1-ink: light-dark(#12324b, #dceaf5);
-  --science-status-2: light-dark(#8fbbdc, #3a6a8f);
-  --science-status-2-ink: light-dark(#0d2638, #f2f8fc);
-  --science-status-3: light-dark(#3f86bf, #4f95cb);
-  --science-status-3-ink: light-dark(#ffffff, #0d2638);
-  --science-status-4: light-dark(#154f7d, #9fd0f3);
-  --science-status-4-ink: light-dark(#ffffff, #0d2638);
-
-  /* ------------------------------------------------------ categorical series */
-  --series-1: light-dark(#0072b2, #56b4e9);
-  --series-2: light-dark(#e69f00, #f0b44d);
-  --series-3: light-dark(#009e73, #3fc18c);
-  --series-4: light-dark(#cc79a7, #e08cc0);
-  --series-5: light-dark(#56b4e9, #7fc8f0);
-  --series-6: light-dark(#d55e00, #f08a5d);
-  --series-7: light-dark(#a6761d, #d6a44a);
-  --series-8: light-dark(#333333, #c9cdd3);
-
-  /* ------------------------------------------------------------ chart chrome */
-  --chart-axis: light-dark(#8d939b, #6b7178);
-  --chart-grid: light-dark(#e6e3db, #272b30);
-  --chart-label: light-dark(#5d636b, #a1a6ad);
-  --chart-crosshair: light-dark(#b8b4aa, #4d535a);
-  --chart-reference: light-dark(#6b727b, #8d939b);
-  --chart-uncertainty: light-dark(rgb(0 114 178 / 18%), rgb(86 180 233 / 20%));
-  --chart-uncertainty-forecast: light-dark(rgb(181 83 44 / 18%), rgb(224 138 98 / 20%));
-
-  /* ---------------------------------------------------------------- map paint */
-  --map-water: light-dark(#dfe7ea, #17242b);
-  --map-land: light-dark(#e8e5dd, #2a2e33);
-  --map-land-hover: light-dark(#dedad0, #333940);
-  --map-boundary: light-dark(#c9c4b8, #41464d);
-  --map-marker: light-dark(#1d1f22, #e9e7e2);
-  --map-marker-selected: light-dark(#b5532c, #e08a62);
-
-  /* --------------------------------------------------------------- typography */
   --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, 'Helvetica Neue', arial, sans-serif;
-  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', menlo, consolas, monospace;
+  --font-display: 'Segoe UI Variable Display', 'SF Pro Display', system-ui, -apple-system,
+    'Segoe UI', roboto, 'Helvetica Neue', arial, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', 'JetBrains Mono', 'Roboto Mono', menlo,
+    consolas, monospace;
 
+  --font-size-3xs: 0.625rem;
   --font-size-2xs: 0.6875rem;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.8125rem;
@@ -126,22 +68,33 @@
   --font-size-xl: 1.125rem;
   --font-size-2xl: 1.375rem;
   --font-size-3xl: 1.75rem;
+  --font-size-4xl: 2.25rem;
 
   --font-weight-regular: 400;
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
 
-  --line-height-tight: 1.2;
-  --line-height-snug: 1.35;
+  --line-height-tight: 1.15;
+  --line-height-snug: 1.3;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.65;
 
-  --letter-spacing-tight: -0.01em;
+  --letter-spacing-tight: -0.022em;
   --letter-spacing-normal: 0;
-  --letter-spacing-wide: 0.04em;
+  --letter-spacing-wide: 0.06em;
+  --letter-spacing-wider: 0.12em;
 
-  /* ----------------------------------------------------------------- spacing */
+  /**
+   * Numbers are read in columns, so they are aligned in columns. Applied to
+   * every figure the reader may compare.
+   */
+  --font-numeric: 'tnum' 1, 'lnum' 1;
+
+  /* ========================================================================
+   * Space, radius, duration — the same in both skins.
+   * ==================================================================== */
+
   --space-0: 0;
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -153,8 +106,15 @@
   --space-10: 2.5rem;
   --space-12: 3rem;
   --space-16: 4rem;
+  --space-20: 5rem;
 
-  /* ------------------------------------------------------------------ sizes */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 999px;
+
   --control-height-sm: 1.75rem;
   --control-height-md: 2.25rem;
   --control-height-lg: 2.75rem;
@@ -166,32 +126,119 @@
   --container-read: 68rem;
   --container-wide: 88rem;
 
-  /* ----------------------------------------------------------------- radii */
-  --radius-xs: 2px;
-  --radius-sm: 4px;
-  --radius-md: 6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
-  --radius-full: 999px;
-
-  /* ---------------------------------------------------------------- shadows */
-  --shadow-1: 0 1px 2px light-dark(rgb(29 31 34 / 6%), rgb(0 0 0 / 40%));
-  --shadow-2: 0 2px 6px light-dark(rgb(29 31 34 / 8%), rgb(0 0 0 / 45%));
-  --shadow-3: 0 8px 24px light-dark(rgb(29 31 34 / 12%), rgb(0 0 0 / 55%));
-  --focus-ring-width: 2px;
-  --focus-ring-offset: 2px;
-
-  /* ------------------------------------------------------------- transitions */
   --duration-fast: 120ms;
   --duration-normal: 200ms;
+  --duration-slow: 320ms;
   --easing-standard: cubic-bezier(0.2, 0, 0.2, 1);
+  --easing-entrance: cubic-bezier(0.05, 0.7, 0.1, 1);
 
-  /* --------------------------------------------------------------- layering */
   --z-base: 0;
   --z-sticky: 100;
   --z-overlay: 200;
   --z-modal: 300;
   --z-tooltip: 400;
+
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ========================================================================
+   * The cockpit — the dark skin.
+   * ==================================================================== */
+
+  /* --- surfaces: elevation is lightness plus a hairline, not a shadow --- */
+  --surface-canvas: light-dark(#f5f3ef, #0b0d11);
+  --surface-raised: light-dark(#ffffff, #12151b);
+  --surface-overlay: light-dark(#ffffff, #181c23);
+  --surface-sunken: light-dark(#eceae4, #070809);
+  --surface-inset: light-dark(#faf9f6, #0d1015);
+  --surface-inverse: light-dark(#191b1f, #e9edf3);
+  --surface-scrim: light-dark(rgb(25 27 31 / 42%), rgb(0 0 0 / 62%));
+  --surface-hover: light-dark(#f0eee9, #1b1f27);
+  --surface-active: light-dark(#e7e4dc, #232833);
+
+  /* --- content --- */
+  --content-primary: light-dark(#1a1c20, #e9edf3);
+  --content-secondary: light-dark(#565c65, #a3adbb);
+  --content-tertiary: light-dark(#727982, #78828f);
+  --content-disabled: light-dark(#9aa0a8, #565e6a);
+  --content-inverse: light-dark(#f5f3ef, #0b0d11);
+
+  /* --- borders: the instrument is mostly hairlines --- */
+  --hairline: light-dark(#eeebe4, #161a20);
+  --border-subtle: light-dark(#e6e2d9, #1e232b);
+  --border-default: light-dark(#d6d1c6, #2b313b);
+  --border-strong: light-dark(#b3ad9f, #454d5b);
+  --border-focus: light-dark(#2f6fa8, #58a6e8);
+
+  /* --- accent: the ember signal --- */
+  --accent: light-dark(#a4481f, #f08a5f);
+  --accent-hover: light-dark(#8d3c18, #ffa47d);
+  --accent-active: light-dark(#75300f, #ffb795);
+  --accent-subtle: light-dark(#f7e9e1, #2a1a12);
+  --accent-ink: light-dark(#ffffff, #190d06);
+  --accent-ring: light-dark(rgb(164 72 31 / 32%), rgb(240 138 95 / 38%));
+
+  /* --- semantic --- */
+  --semantic-info: light-dark(#2b6ca3, #6fb2e8);
+  --semantic-info-subtle: light-dark(#e7eff6, #12242f);
+  --semantic-info-ink: light-dark(#17456b, #bcdcf5);
+  --semantic-success: light-dark(#147048, #4fc38a);
+  --semantic-success-subtle: light-dark(#e2f0e9, #10271b);
+  --semantic-success-ink: light-dark(#0e5636, #a5e0c0);
+  --semantic-warning: light-dark(#8a6100, #e0a53f);
+  --semantic-warning-subtle: light-dark(#f8eed9, #2a2110);
+  --semantic-warning-ink: light-dark(#6a4a00, #f0d296);
+  --semantic-danger: light-dark(#a92820, #e8776c);
+  --semantic-danger-subtle: light-dark(#fae6e4, #2c1614);
+  --semantic-danger-ink: light-dark(#83201a, #f6b5ae);
+  --semantic-neutral: light-dark(#565c65, #a3adbb);
+  --semantic-neutral-subtle: light-dark(#eceae4, #1b1f27);
+  --semantic-neutral-ink: light-dark(#3e444b, #cdd4dd);
+
+  /* --- the scientific status ramp: one hue, rising lightness --- */
+  --science-status-0: light-dark(#e8e4db, #2a3039);
+  --science-status-0-ink: light-dark(#565c65, #8b95a3);
+  --science-status-1: light-dark(#c9dcec, #274059);
+  --science-status-1-ink: light-dark(#12314a, #cfe4f5);
+  --science-status-2: light-dark(#8bb8da, #35618c);
+  --science-status-2-ink: light-dark(#0c2537, #eaf4fc);
+  --science-status-3: light-dark(#3a80bb, #4e97d2);
+  --science-status-3-ink: light-dark(#ffffff, #06182a);
+  --science-status-4: light-dark(#12507f, #a3d1f4);
+  --science-status-4-ink: light-dark(#ffffff, #06182a);
+
+  /* --- the categorical series register: Okabe-Ito, lifted for the dark skin --- */
+  --series-1: light-dark(#0072b2, #5ab6ee);
+  --series-2: light-dark(#e69f00, #f2b53f);
+  --series-3: light-dark(#009e73, #45c58f);
+  --series-4: light-dark(#cc79a7, #e293c4);
+  --series-5: light-dark(#56b4e9, #8ed2f5);
+  --series-6: light-dark(#d55e00, #f5915f);
+  --series-7: light-dark(#a6761d, #dcb05c);
+  --series-8: light-dark(#333333, #c9ced6);
+
+  /* --- chart chrome --- */
+  --chart-well: light-dark(#faf9f6, #0d1015);
+  --chart-axis: light-dark(#b3ad9f, #39414e);
+  --chart-grid: light-dark(#e9e5dc, #181d25);
+  --chart-label: light-dark(#6a717a, #8b95a3);
+  --chart-crosshair: light-dark(#8b8578, #5c6675);
+  --chart-reference: light-dark(#6a717a, #8b95a3);
+  --chart-uncertainty: light-dark(rgb(0 114 178 / 16%), rgb(90 182 238 / 16%));
+  --chart-uncertainty-forecast: light-dark(rgb(164 72 31 / 16%), rgb(240 138 95 / 16%));
+
+  /* --- map paint --- */
+  --map-water: light-dark(#e2e9ec, #0b1319);
+  --map-land: light-dark(#eae6dd, #252b36);
+  --map-land-hover: light-dark(#ded9cd, #2f3643);
+  --map-boundary: light-dark(#c6c0b3, #454e5c);
+  --map-marker: light-dark(#1a1c20, #e9edf3);
+  --map-marker-selected: light-dark(#a4481f, #f08a5f);
+
+  /* --- elevation --- */
+  --shadow-1: 0 1px 2px light-dark(rgb(25 27 31 / 6%), rgb(0 0 0 / 45%));
+  --shadow-2: 0 2px 8px light-dark(rgb(25 27 31 / 8%), rgb(0 0 0 / 50%));
+  --shadow-3: 0 16px 40px -12px light-dark(rgb(25 27 31 / 16%), rgb(0 0 0 / 70%));
 }
 
 /**

@@ -61,7 +61,7 @@ Each line has a place in the code and a test suite that checks it. The full suit
 | Methods | `methods/` | Kalman filter with irregular time steps, ML-estimated variances and RTS smoothing; CRPS, Winkler, pinball, PIT and calibration; effective sample size, block and cluster bootstrap; Benjamini–Hochberg, Bonferroni, Romano–Wolf; CR1 regression; CUSUM breaks; power |
 | Execution, evaluation, knowledge | `execution/`, `evaluation/`, `knowledge/` | replay from configuration with explicit seed; cumulative temporal splits, baselines, metrics, uncertainty; frozen products with lineage verifiable down to raw evidence |
 | Explorer API | `explorer/api/`, `explorer/services/` | a versioned read-only API (`/api/v1`, with `/api` kept and marked deprecated); a Pydantic response model on every route, one coherent error shape, and an OpenAPI document that describes what is served |
-| Explorer front end | `frontend/` | a compiled static application (React, TypeScript strict, Vite) with a design system, scientific chart components and a component workbench; served by FastAPI, and free of any runtime CDN dependency |
+| Explorer front end | `frontend/` | a compiled static application (React, TypeScript strict, Vite) with a design system of one grammar and two skins, scientific chart components and a component workbench; served by FastAPI, and free of any runtime CDN dependency |
 
 **What has been shown on real data.** Mission 002 acquired 33 481 daily discharge values of the Mississippi at
 Grafton (USGS-05587450, 1933–2026), reproduced the agency's published day-of-year statistics to a median 0.11 %,
@@ -119,7 +119,7 @@ BASIN-001 starts when these four are decided and its pre-registration is written
 | HYDRO-001 (`docs/PRE-REGISTRATION-HYDRO-001.md`, `experiments/mission_003_hydro001.py`) | **source qualification**: is Hub'EAU's published discharge a deterministic function of its published stage? | protocol and code written; no run is recorded in the repository | the Hub'EAU access pattern that works (`hubeau_feed`), and the dependence of Q on H |
 | ATMO-001 (`docs/ATMO-001.md`) | source inventory and exploratory profile of four French stations | exploration done; no product | the forcing sources and their limits; effective sample size ≈ 7 % of the number of days |
 | Surface observation (no mission document) | registry of 13 Copernicus surface products, their coverage and declared dependence | code integrated | the EO modality and its dependence ledger |
-| EXPLORER-FOUNDATIONS-001 (`docs/EXPLORER-FOUNDATIONS-001.md`, `docs/ADR-EXPLORER-FOUNDATIONS-001.md`) | **application foundations**: the frontend component system, the scientific charts, and the versioned typed API | done; no product | the way BASIN-001's products will be published and read: a `/api/v1` catalogue, reusable components, and a client that renders a product without being rewritten |
+| EXPLORER-FOUNDATIONS-001 (`docs/EXPLORER-FOUNDATIONS-001.md`, `docs/ADR-EXPLORER-FOUNDATIONS-001.md`) | **application foundations**: the frontend component system, the scientific charts, the versioned typed API, and the identity of the instrument — one design system over two skins, a dark cockpit and a light journal | done; no product | the way BASIN-001's products will be published and read: a `/api/v1` catalogue, reusable components, and a client that renders a product without being rewritten |
 
 ## 6. Open decisions and known limits
 

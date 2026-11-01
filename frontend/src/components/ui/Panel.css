@@ -1,3 +1,12 @@
+/**
+ * The panel: the workhorse region of a page.
+ *
+ * A panel is a named region, so it says what it is in the eyebrow of its
+ * header — small, uppercase, quiet — and keeps the body free of chrome.
+ * The panel is separated from the canvas by its own hairline, never by a
+ * shadow: the instrument is drawn with lines.
+ */
+
 .torne-panel {
   display: flex;
   flex-direction: column;
@@ -5,41 +14,59 @@
   background: var(--surface-raised);
   border: var(--control-border-width) solid var(--border-subtle);
   border-radius: var(--radius-lg);
+  overflow: hidden;
 }
 
 .torne-panel__header {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  border-bottom: var(--control-border-width) solid var(--border-subtle);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-bottom: var(--control-border-width) solid var(--hairline);
 }
 
 .torne-panel__title {
-  color: var(--content-primary);
-  font-size: var(--font-size-lg);
+  color: var(--content-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
 }
 
 .torne-panel__description {
-  color: var(--content-secondary);
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
   font-size: var(--font-size-sm);
-  line-height: var(--line-height-snug);
+  line-height: var(--line-height-normal);
 }
 
 .torne-panel__body {
   flex: 1 1 auto;
   min-width: 0;
-  padding: var(--space-4);
+  min-height: 0;
+  padding: var(--space-5);
 }
 
+/*
+ * A body that scrolls is a well: the readout is recessed into the panel, so
+ * the rows are read against a different ground than the chrome around them.
+ * The height is bounded by the panel when the panel is bounded, and by a
+ * readable measure when it is not.
+ */
 .torne-panel__body--scrollable {
-  max-height: calc(var(--space-16) * 6);
-  overflow-y: auto;
+  max-height: min(100%, calc(var(--space-16) * 6));
+  overflow: auto;
+  background: var(--surface-inset);
 }
 
 .torne-panel__footer {
-  padding: var(--space-3) var(--space-4);
-  border-top: var(--control-border-width) solid var(--border-subtle);
+  padding: var(--space-3) var(--space-5);
+  border-top: var(--control-border-width) solid var(--hairline);
+  background: var(--surface-inset);
   color: var(--content-secondary);
+  font-family: var(--font-sans);
   font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
 }

@@ -24,6 +24,14 @@ export interface LegendItem {
 export interface LegendProps {
   items: ReadonlyArray<LegendItem>;
   title?: string;
+  /**
+   * How the entries are laid out.
+   *
+   * `column` is for a key that stands beside a figure, where the names are
+   * read one under the other. `row` is for a short key that sits on the same
+   * line as the title of a figure.
+   */
+  readonly orientation?: 'column' | 'row';
 }
 
 /**
@@ -40,9 +48,9 @@ export interface LegendProps {
  *
  * States: normal, hover (no visual change).
  */
-export function Legend({ items, title }: LegendProps) {
+export function Legend({ items, title, orientation = 'column' }: LegendProps) {
   return (
-    <div className="torne-legend">
+    <div className={`torne-legend torne-legend--${orientation}`}>
       {title !== undefined && <p className="torne-legend__title">{title}</p>}
       <ul className="torne-legend__items">
         {items.map((item) => {

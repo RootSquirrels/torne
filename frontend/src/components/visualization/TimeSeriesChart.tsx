@@ -28,6 +28,17 @@ import {
   symbolForNature,
   useChartTokens,
 } from '@/components/visualization/chartTheme';
+import {
+  axisName,
+  axisPointer,
+  gridCraft,
+  legendChrome,
+  timeAxis,
+  tooltipChrome,
+  unitPlate,
+  valueAxis,
+  zoomChrome,
+} from '@/components/visualization/chartCraft';
 import { ChartFrame } from '@/components/visualization/ChartFrame';
 import { EChart } from '@/components/visualization/EChart';
 import { escapeHtml } from '@/components/visualization/html';
@@ -213,6 +224,7 @@ export function buildTimeSeriesSeries(
       connectNulls: false,
       showSymbol: false,
       symbol: symbolForNature(entry.series.nature),
+      symbolSize: 5,
       sampling: 'lttb',
       lineStyle: {
         width: 2,
@@ -220,7 +232,7 @@ export function buildTimeSeriesSeries(
         type: dashForNature(entry.series.nature) ?? 'solid',
       },
       itemStyle: { color: entry.colour },
-      emphasis: { focus: 'series' },
+      emphasis: { focus: 'series', lineStyle: { width: 3 } },
       z: 5,
       ...(boundary === null
         ? {}
@@ -231,8 +243,10 @@ export function buildTimeSeriesSeries(
               label: {
                 formatter: boundary.nature,
                 color: tokens.label,
-                fontSize: 11,
+                fontSize: 10,
+                fontFamily: tokens.fontMono,
                 position: 'insideEndTop',
+                distance: 4,
               },
               lineStyle: { color: tokens.reference, type: 'dashed', width: 1 },
               data: [{ xAxis: boundary.at }],
@@ -252,7 +266,24 @@ export function buildTimeSeriesSeries(
       z: 0,
       markArea: {
         silent: true,
-        itemStyle: { color: tokens.uncertainty, opacity: 0.5 },
+        // A reference band is an annotation, not a measurement: it is tinted
+        // like a well and closed by a dashed rule, and it is named where it
+        // is drawn, so it is never a slab of colour with no meaning.
+        itemStyle: {
+          color: tokens.uncertainty,
+          opacity: 0.45,
+          borderColor: tokens.reference,
+          borderWidth: 1,
+          borderType: 'dashed',
+        },
+        label: {
+          show: true,
+          position: 'insideTopLeft',
+          distance: 4,
+          color: tokens.label,
+          fontSize: 10,
+          fontFamily: tokens.fontMono,
+        },
         data: referenceBands.map((band) => [
           {
             xAxis: band.start === null ? undefined : toMillis(band.start),
@@ -278,10 +309,19 @@ export function buildTimeSeriesSeries(
       tooltip: { show: false },
       z: 6,
       markPoint: {
-        symbol: 'pin',
-        symbolSize: 28,
-        itemStyle: { color: tokens.reference },
-        label: { color: tokens.surface, fontSize: 10 },
+        // An annotation, not a flag: a small ringed dot in the accent, named
+        // inside the plot so it never collides with the legend above.
+        symbol: 'circle',
+        symbolSize: 7,
+        itemStyle: { color: tokens.accent, borderColor: tokens.well, borderWidth: 1.5 },
+        label: {
+          show: true,
+          position: 'bottom',
+          distance: 4,
+          color: tokens.label,
+          fontSize: 10,
+          fontFamily: tokens.fontMono,
+        },
         data: markers.map((marker) => ({
           name: marker.label,
           xAxis: toMillis(marker.at),
@@ -319,6 +359,13 @@ export function TimeSeriesChart({
 
   const unitConflict = units.size > 1;
 
+  /**
+   * The label plate: the unit, stated once, where the reader reads the
+   * figure. When the series disagree on their unit, the plate says that the
+   * unit is not established rather than picking one of them.
+   */
+  const plate = unitPlate(unit, unitConflict);
+
   const plotted = useMemo<PlottedSeries[]>(
     () =>
       series.map((entry, index) => ({
@@ -355,28 +402,34 @@ export function TimeSeriesChart({
   const option = useMemo(() => {
     const seriesOptions = buildTimeSeriesSeries(plotted, tokens, referenceBands, markers);
 
-    const axisName = yAxisLabel ?? (unitConflict ? 'unit not established' : unit);
+    // The unit is stated once, on the label plate. The axis only repeats it
+    // when it is established, and then it is the axis's own name — never a
+    // phrase that says nothing ("unit not established") in the one place
+    // where the reader is looking at the numbers.
+    const plate = unitPlate(unit, unitConflict);
+    const axisUnit = yAxisLabel ?? (plate.established ? plate.label : null);
 
     return {
       animation: false,
+      backgroundColor: tokens.well,
       color: [...tokens.series],
-      grid: { left: 56, right: 24, top: 40, bottom: 64, containLabel: false },
+      grid: gridCraft(),
       legend: {
-        type: 'scroll',
-        top: 0,
-        left: 0,
-        textStyle: { color: tokens.label, fontSize: 12 },
-        data: plotted.map((entry) => entry.legendName),
+        ...legendChrome(tokens),
+        data: plotted.map((entry) => ({
+          name: entry.legendName,
+          // The legend carries the mark of the series, so a series is never
+          // identified by its colour alone.
+          icon: symbolForNature(entry.series.nature),
+        })),
       },
       tooltip: {
+        ...tooltipChrome(tokens),
         trigger: 'axis',
-        axisPointer: { type: 'cross', crossStyle: { color: tokens.crosshair } },
-        backgroundColor: tokens.surface,
-        borderColor: tokens.border,
-        textStyle: { color: tokens.text, fontSize: 12 },
+        axisPointer: axisPointer(tokens, 'cross'),
         formatter: (rawParams: unknown) => {
           const params = Array.isArray(rawParams) ? rawParams : [rawParams];
-          const lines: string[] = [];
+          const blocks: string[] = [];
           for (const item of params) {
             if (typeof item !== 'object' || item === null) {
               continue;
@@ -401,40 +454,29 @@ export function TimeSeriesChart({
               point.value === null && point.missingReason !== null
                 ? ` · absent: ${point.missingReason.replaceAll('_', ' ')}`
                 : '';
-            lines.push(
-              `<strong>${escapeHtml(point.label)}</strong>${nature}<br/>${formatStamp(point.stamp)}<br/>${formatValue(point.value, point.unit)}${interval}${missing}<br/>quality: ${escapeHtml(point.quality)}`,
+            blocks.push(
+              `<div style="font-weight:600">${escapeHtml(point.label)}${escapeHtml(nature)}</div>` +
+                `<div style="font-family:var(--font-mono);font-size:11px;opacity:.7">${escapeHtml(formatStamp(point.stamp))}</div>` +
+                `<div>${escapeHtml(formatValue(point.value, point.unit))}${escapeHtml(interval)}${escapeHtml(missing)}</div>` +
+                `<div style="font-size:11px;opacity:.7">quality: ${escapeHtml(point.quality)}</div>`,
             );
           }
-          return lines.join('<br/>');
+          return blocks.join('');
         },
       },
-      xAxis: {
-        type: 'time',
-        axisLine: { lineStyle: { color: tokens.border } },
-        axisLabel: { color: tokens.label, fontSize: 11, hideOverlap: true },
-        splitLine: { show: false },
-      },
-      yAxis: {
-        type: 'value',
-        name: axisName ?? undefined,
-        nameTextStyle: { color: tokens.label, fontSize: 11, align: 'left' },
+      xAxis: timeAxis(tokens),
+      yAxis: valueAxis(tokens, {
+        name: axisName(axisUnit, false),
+        nameLocation: 'end',
         nameGap: 12,
-        axisLine: { show: false },
-        axisLabel: { color: tokens.label, fontSize: 11 },
-        splitLine: { lineStyle: { color: tokens.grid } },
-      },
-      dataZoom: [
-        { type: 'inside', filterMode: 'none' },
-        {
-          type: 'slider',
-          height: 22,
-          bottom: 8,
-          borderColor: tokens.border,
-          fillerColor: tokens.uncertainty,
-          handleStyle: { color: tokens.surface, borderColor: tokens.border },
-          textStyle: { color: tokens.label, fontSize: 10 },
+        nameTextStyle: {
+          color: tokens.label,
+          fontSize: 10,
+          fontFamily: tokens.fontMono,
+          align: 'left',
         },
-      ],
+      }),
+      dataZoom: zoomChrome(tokens),
       series: seriesOptions,
     };
   }, [plotted, meta, tokens, unit, unitConflict, yAxisLabel, referenceBands, markers]);
@@ -521,6 +563,7 @@ export function TimeSeriesChart({
     <ChartFrame
       title={title}
       description={description}
+      plate={{ label: plate.label, tone: plate.established ? 'neutral' : 'warning' }}
       ariaLabel={`${title}. ${plotted.length} series, ${plotted.reduce((sum, entry) => sum + entry.series.points.length, 0)} points. ${timeNote ?? ''}`}
       table={table}
       footnote={

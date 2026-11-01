@@ -1,3 +1,16 @@
+/**
+ * The key of an instrument.
+ *
+ * The legend answers "what am I looking at?", so it is laid out like an
+ * instrument legend: a title, then a column of marks, then the names in a
+ * column that lines up. The mark repeats the shape the chart draws, so an
+ * entry is never carried by colour alone.
+ *
+ * The colours of the marks are the caller's — they arrive inline — so the
+ * rules below never set a fill on a square or a circle: they only say what
+ * shape the mark has.
+ */
+
 .torne-legend {
   display: flex;
   flex-direction: column;
@@ -6,9 +19,14 @@
 }
 
 .torne-legend__title {
-  color: var(--content-primary);
-  font-size: var(--font-size-sm);
+  margin: 0;
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
   font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wide);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
 }
 
 .torne-legend__items {
@@ -17,42 +35,70 @@
   gap: var(--space-2);
 }
 
+/*
+ * A short key that sits on the same line as the title of a figure: the
+ * entries run across, and the marks keep their own column so the names still
+ * read as a list.
+ */
+.torne-legend--row .torne-legend__items {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+}
+
+.torne-legend--row .torne-legend__item {
+  grid-template-columns: var(--space-4) auto;
+}
+
+/*
+ * The mark column is a fixed width, so the names line up: the reader compares
+ * names, not the distance between a name and its mark. A description takes
+ * the line below its name, still in the name column.
+ */
 .torne-legend__item {
-  display: flex;
+  display: grid;
+  grid-template-columns: var(--space-4) minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-sm);
+  column-gap: var(--space-2);
+  row-gap: var(--space-1);
+  font-size: var(--font-size-xs);
   line-height: var(--line-height-snug);
 }
 
 .torne-legend__swatch {
-  flex: none;
-  width: var(--space-3);
-  height: var(--space-3);
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  align-self: center;
+  width: 10px;
+  height: 10px;
 }
 
 .torne-legend__swatch--square {
   border-radius: var(--radius-xs);
 }
 
-.torne-legend__swatch--empty {
-  border-width: calc(var(--control-border-width) * 2);
-  border-style: dashed;
-  border-radius: var(--radius-xs);
-  background: none;
-}
-
 .torne-legend__swatch--circle {
   border-radius: var(--radius-full);
 }
 
+/*
+ * An absence is drawn, not merely named: the empty mark is an outlined box
+ * with no fill, so a reader sees the gap in the chart as well as reads it
+ * in the key.
+ */
+.torne-legend__swatch--empty {
+  border: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-xs);
+  background: transparent;
+}
+
 .torne-legend__swatch--line,
 .torne-legend__swatch--dash {
-  width: var(--space-6);
+  width: 14px;
   height: 0;
-  border-top-width: calc(var(--control-border-width) * 2);
-  border-top-style: solid;
-  background: none;
+  border-top: calc(var(--control-border-width) * 2) solid var(--border-default);
+  background: transparent;
 }
 
 .torne-legend__swatch--dash {
@@ -60,10 +106,15 @@
 }
 
 .torne-legend__label {
-  color: var(--content-primary);
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--content-secondary);
 }
 
 .torne-legend__description {
+  grid-column: 2;
+  grid-row: 2;
   color: var(--content-tertiary);
   font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
 }

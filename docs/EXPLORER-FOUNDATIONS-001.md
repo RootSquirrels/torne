@@ -83,6 +83,11 @@ states and the palettes. Light and dark are expressed with `light-dark()` agains
 `color-scheme: light dark`, so every token has exactly one definition and there is no preprocessor
 in the build.
 
+**One system, two skins.** The tokens carry two complete values for every colour: a dark *cockpit*
+skin — near-black, a cold blue cast, hairline separators, an ember signal — and a light *journal*
+skin — warm paper, ink, soft elevation. A component never chooses: it reads a token, and the skin
+decides what the token means. A skin is a set of values, never a fork of the code. See §8.
+
 Three colour registers are kept strictly apart, and the naming enforces it:
 
 | Register | Meaning | Rule |
@@ -328,30 +333,102 @@ that is not yet declared — see the limits.
 
 ---
 
-## 8. What could not be verified
+## 8. The identity of the instrument
+
+The Explorer worked and read correctly, and looked like a working prototype. It was rebuilt as an
+**instrument**: one design system, two skins, and a canvas that is drawn with the same furniture as
+the page around it.
+
+### 8.1 One system, two skins
+
+A skin is a set of values, never a fork of the code.
+
+| | cockpit (dark) | journal (light) |
+|---|---|---|
+| ground | near-black, cold blue cast (`#0b0d11`) | warm paper (`#f5f3ef`) |
+| separation | hairline rules, lightness | hairline rules, soft shadow |
+| accent | ember signal (`#f08a5f`) | deep ember (`#a4481f`) |
+| reading | a panel of an instrument | printed matter |
+
+Every token carries both values through `light-dark()`, and the component reads the token. The two
+skins were built at the same time and neither is a filter over the other: the dark skin is not the
+light skin darkened, and the light skin is not the dark skin lightened. The categorical series
+register keeps the **same eight Okabe–Ito hues** in both — the dark skin lifts their lightness, it
+does not re-choose them — so a chart means the same thing whichever skin the reader is in.
+
+The rule that keeps it one system: **a component never hardcodes a colour.** There is one
+definition of every token, and a stylesheet that names a colour is a stylesheet that has left the
+system.
+
+### 8.2 The canvas is part of the system
+
+A canvas has no stylesheets: the grid, the axes, the ticks, the tooltip and the zoom track are
+options, in concrete values, for every chart. Left to itself, each chart describes its own
+furniture and the four charts end up looking like four applications.
+
+`src/components/visualization/chartCraft.ts` is that furniture, built from the chart tokens: one
+grid, one time axis, one value axis, one category axis, one tooltip, one legend, one zoom. The
+charts now agree on what a number looks like — **the figures are set in the mono face**, because
+an instant, a measurement and an identifier are read in columns — and on what a plot is: a ruled
+field with a hairline down the left, hairlines across it, and ticks on both axes.
+
+Three defects of the previous rendering are closed:
+
+- **The legend collided with the axis name.** The legend now sits on its own line above the plot,
+  and each entry carries the *mark* of its series — a circle for an observation, a rectangle for
+  an estimate — so a series is never identified by colour alone, in the canvas either.
+- **The unit was written twice, badly.** It is now written once, on a **label plate** beside the
+  title, where the reader reads the figure. When the series disagree on their unit, the plate says
+  *unit not established* in the warning tone — and the axis says nothing, because an axis labelled
+  "unit not established" states nothing a reader can use.
+- **The zoom track was a grey bar with a preview of the data on it.** The preview is gone: it
+  repeated the plot above it at one pixel of height and read as noise. The track now shows the
+  chosen window, and the axis shows the record.
+
+### 8.3 The map became a panel
+
+The entity list was unbounded and stretched its column; it is now bounded and scrolls, beside a
+map that is 600 px tall and a side column that follows the reader down the page. The zoom control
+moved from the top left to the bottom right — the top of a map is for the reading — and a **scale
+bar** was added, because a map of Europe without a scale is a picture.
+
+**The map now shows which entity is being read.** This closes the item left open in the previous
+lot. The selection is an **outline**, never a change of fill: the fill of a country is what the
+choropleth encodes — the highest status its own missions earned — and that does not change because
+the reader is looking at it. A station carries no status, so the station takes the fill. This is
+the rule the whole system obeys, applied to the drawing code instead of described in a document.
+
+### 8.4 What was kept on purpose
+
+- **The three colour registers**, untouched. The refonte is a change of craft, not of semantics.
+- **The Okabe–Ito hues**, untouched for the same reason.
+- **Every scientific rule of the previous lots**, untouched: a hole is a hole, an absence is never
+  a zero, a band is drawn only when an interval exists, the legend's swatch is derived from the
+  mark, and a planned feature stays a plan.
+
+---
+
+## 9. What could not be verified
 
 1. **The brief is truncated.** It ends mid-sentence at §13, "Préserver la compatibilité avec les
    routes `/api` actuelles pendant la transition, ou documenter précisément une migration si un
    maintien temporaire est techni…". Everything after §13 — and any third part — is unknown. The
    version choice was made on the part that survived.
-2. **The map does not show which entity is being read.** `selectedId` reaches the entity list,
-   which marks the current entity, but nothing in the drawing code reads it: the
-   `--map-marker-selected` token is computed and never used, and the map never outlines the
-   country being read. The status fill is what the choropleth encodes, so the marker must not
-   replace it — the outline is the place for it. This was found while closing the keyboard
-   affordance and is left as a decision rather than a silent change.
-3. **The sampling of a time series is not declared.** A series with more points than the axis has
+2. **The sampling of a time series is not declared.** A series with more points than the axis has
    pixels is drawn from a sampled subset — the absent points survive, so the gaps are honest, but
    the reader cannot point at a value that was left out, and the chart does not say so.
-4. **The deferred charts were not written.** Heatmaps, scalar-field maps, scatter plots,
+3. **The deferred charts were not written.** Heatmaps, scalar-field maps, scatter plots,
    distributions, correlation matrices, network diagrams and calibration plots were studied and
    left alone, as §6.6 allows. A component is written when its contract and its use are clear.
-5. **No application beyond the Explorer was built.** The foundations are exercised by the Explorer
+4. **No application beyond the Explorer was built.** The foundations are exercised by the Explorer
    itself, which is the honest test available before Water Intelligence exists.
+5. **Only one viewport was looked at.** The identity was judged on a 1600 × 1000 desktop window
+   and in the three engines of the browser suite. The layout collapses at 64 rem and the map
+   column at 60 rem, and those rules were written but not exercised by a screenshot.
 
 ---
 
-## 9. The products
+## 10. The products
 
 | Product | Where |
 |---|---|
@@ -359,6 +436,7 @@ that is not yet declared — see the limits.
 | the design tokens | `frontend/src/styles/tokens.css` |
 | the UI components | `frontend/src/components/ui/`, `frontend/src/components/data/` |
 | the scientific charts | `frontend/src/components/visualization/` |
+| the craft of the canvas | `frontend/src/components/visualization/chartCraft.ts` |
 | the data contracts | `frontend/src/types/api/`, `frontend/src/types/visualization/` |
 | the ported Explorer | `frontend/src/features/explorer/` |
 | the Component Workbench | `frontend/src/features/workbench/`, `frontend/src/dev/` |

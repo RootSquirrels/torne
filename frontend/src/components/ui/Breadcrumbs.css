@@ -1,3 +1,11 @@
+/**
+ * The breadcrumb trail.
+ *
+ * The trail is quiet: it is read to know where you are, not to be read. Only
+ * the current page is inked; everything before it is a step, and the glyph
+ * between two steps is barely there.
+ */
+
 .torne-breadcrumbs {
   min-width: 0;
 }
@@ -13,43 +21,46 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   line-height: var(--line-height-snug);
 }
 
 .torne-breadcrumbs__separator {
-  color: var(--content-tertiary);
+  color: var(--content-disabled);
 }
 
 .torne-breadcrumbs__link {
-  color: var(--content-secondary);
+  color: var(--content-tertiary);
   text-decoration: none;
   border-radius: var(--radius-xs);
+  transition: color var(--duration-fast) var(--easing-standard);
 }
 
 .torne-breadcrumbs__link:hover {
-  color: var(--accent-hover);
+  color: var(--content-primary);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .torne-breadcrumbs__button {
   padding: 0;
   background: none;
   border: 0;
-  color: var(--content-secondary);
-  font-size: inherit;
-  line-height: inherit;
+  color: var(--content-tertiary);
+  font: inherit;
   cursor: pointer;
   border-radius: var(--radius-xs);
+  transition: color var(--duration-fast) var(--easing-standard);
 }
 
 .torne-breadcrumbs__button:hover {
-  color: var(--accent-hover);
+  color: var(--content-primary);
   text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 .torne-breadcrumbs__text {
-  color: var(--content-secondary);
+  color: var(--content-tertiary);
 }
 
 .torne-breadcrumbs__current {

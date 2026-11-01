@@ -1,16 +1,32 @@
+/**
+ * The page shown when a route could not be resolved.
+ *
+ * An editorial page: the title is set in the display face, the message below
+ * it in the reading size, and the whole thing sits on the measure of a
+ * column rather than filling the screen.
+ */
+
 .torne-error-page {
-  max-width: 40rem;
+  max-width: var(--container-read);
   margin: var(--space-16) auto;
   padding: 0 var(--space-4);
   text-align: center;
 }
 
 .torne-error-page__title {
-  font-size: var(--font-size-2xl);
   margin-bottom: var(--space-3);
+  color: var(--content-primary);
+  font-family: var(--font-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-tight);
 }
 
 .torne-error-page__message {
-  color: var(--content-secondary);
   margin-bottom: var(--space-4);
+  color: var(--content-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-normal);
 }

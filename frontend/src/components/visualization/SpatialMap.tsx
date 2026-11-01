@@ -142,7 +142,7 @@ export function SpatialMap({
     let instance: L.Map;
     try {
       instance = L.map(element, {
-        zoomControl: true,
+        zoomControl: false,
         attributionControl: false,
         worldCopyJump: true,
         zoomSnap: 0.25,
@@ -155,6 +155,15 @@ export function SpatialMap({
       setFailure(error instanceof Error ? error.message : 'the map could not be created');
       return;
     }
+
+    // The zoom sits at the bottom right and the scale at the bottom left:
+    // the top of the map is for the reading, and the controls do not cover
+    // the first thing the reader looks at.
+    L.control.zoom({ position: 'bottomright' }).addTo(instance);
+    L.control.scale({ position: 'bottomleft', metric: true, imperial: false, maxWidth: 120 }).addTo(
+      instance,
+    );
+
     map.current = instance;
     return () => {
       instance.remove();
@@ -178,11 +187,16 @@ export function SpatialMap({
       groups.current.set(layer.id, group);
 
       for (const point of scene.points.filter((entry) => entry.layerId === layer.id)) {
+        // A point carries no status, so the selection may take the fill. An
+        // area carries one, and there the selection is an outline only: the
+        // fill says what the country has reached, and that does not change
+        // because the reader is looking at it.
+        const isSelected = selectedId === point.id;
         const marker = L.circleMarker([point.position[1], point.position[0]], {
-          radius: 6,
-          color: style.ink,
-          weight: 1,
-          fillColor: style.marker,
+          radius: isSelected ? 7 : 6,
+          color: isSelected ? style.selected : style.ink,
+          weight: isSelected ? 2 : 1,
+          fillColor: isSelected ? style.selected : style.marker,
           fillOpacity: 1,
         });
         marker.bindTooltip(`${escapeHtml(point.label)} · ${escapeHtml(point.kind)}`, {
@@ -199,8 +213,8 @@ export function SpatialMap({
       for (const area of scene.areas.filter((entry) => entry.layerId === layer.id)) {
         const rings = area.rings.map((ring) => ring.map(([lon, lat]) => [lat, lon] as [number, number]));
         const polygon = L.polygon(rings, {
-          color: style.stroke,
-          weight: 1,
+          color: selectedId === area.id ? style.selected : style.stroke,
+          weight: selectedId === area.id ? 2.5 : 1,
           fillColor: area.fill ?? style.fill,
           fillOpacity: area.fillOpacity ?? (area.fill === null ? 0.6 : 1),
         });
@@ -233,7 +247,7 @@ export function SpatialMap({
         group.addTo(instance);
       }
     }
-  }, [scene, style, hidden, onSelect, onNavigate]);
+  }, [scene, style, hidden, onSelect, onNavigate, selectedId]);
 
   const fitExtent = useCallback(
     (target: L.Map, extent: readonly (readonly [number, number])[]) => {

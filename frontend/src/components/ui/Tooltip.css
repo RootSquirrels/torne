@@ -1,3 +1,11 @@
+/**
+ * The tooltip.
+ *
+ * One of the few things that genuinely floats, so it is one of the few things
+ * that genuinely casts a shadow: it is raised above the instrument, it has
+ * an edge, and it is never flatter than the surface it covers.
+ */
+
 .torne-tooltip {
   position: relative;
   display: inline-flex;
@@ -10,12 +18,14 @@
   width: max-content;
   max-width: var(--container-read);
   padding: var(--space-2) var(--space-3);
-  background: var(--surface-inverse);
-  border-radius: var(--radius-sm);
-  color: var(--content-inverse);
-  font-size: var(--font-size-xs);
+  background: var(--surface-overlay);
+  border: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--content-primary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
   line-height: var(--line-height-snug);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-3);
   pointer-events: none;
 }
 

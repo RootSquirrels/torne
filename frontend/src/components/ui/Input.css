@@ -1,3 +1,13 @@
+/**
+ * The text field.
+ *
+ * A field is a receptacle: the control is a well cut into the surface, so
+ * the value sits *in* the instrument rather than on it. The label is the
+ * eyebrow of the system — small, uppercase, quiet — and the focus state adds
+ * a rule down the leading edge of the well, which is how the instrument
+ * says that it has been engaged.
+ */
+
 .torne-input {
   display: flex;
   flex-direction: column;
@@ -6,10 +16,13 @@
 }
 
 .torne-input__label {
-  color: var(--content-secondary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
   line-height: var(--line-height-snug);
+  text-transform: uppercase;
 }
 
 .torne-input__required {
@@ -21,10 +34,11 @@
   width: 100%;
   height: var(--control-height-md);
   padding-inline: var(--control-padding-inline-md);
-  background: var(--surface-raised);
+  background: var(--surface-inset);
   border: var(--control-border-width) solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--content-primary);
+  font-family: var(--font-sans);
   font-size: var(--font-size-md);
   line-height: var(--line-height-normal);
   transition:
@@ -40,6 +54,16 @@
   border-color: var(--border-strong);
 }
 
+/*
+ * Engaged: the edge takes the focus colour and a rule appears down the
+ * leading edge of the well. The rule is painted inside the control, so it
+ * never moves the layout.
+ */
+.torne-input__control:focus {
+  border-color: var(--border-focus);
+  box-shadow: inset var(--control-border-width) 0 0 0 var(--accent);
+}
+
 .torne-input__control:read-only {
   background: var(--surface-sunken);
   color: var(--content-secondary);
@@ -52,7 +76,9 @@
   cursor: not-allowed;
 }
 
+/* ---------------------------------------------------------------- invalid */
 .torne-input[data-state='error'] .torne-input__control {
+  background: var(--semantic-danger-subtle);
   border-color: var(--semantic-danger);
 }
 
@@ -60,6 +86,12 @@
   border-color: var(--semantic-danger);
 }
 
+.torne-input[data-state='error'] .torne-input__control:focus {
+  border-color: var(--semantic-danger);
+  box-shadow: inset var(--control-border-width) 0 0 0 var(--semantic-danger);
+}
+
+/* --------------------------------------------------------------- messages */
 .torne-input__hint {
   color: var(--content-tertiary);
   font-size: var(--font-size-xs);

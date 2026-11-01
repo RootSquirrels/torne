@@ -1,23 +1,38 @@
+/**
+ * The state of a view that failed.
+ *
+ * A failure is a measurement, not an apology: the well carries the danger
+ * wash, the ink is the danger ink, and a rule down the leading edge marks it
+ * as the thing that went wrong. The message itself is never restyled into
+ * something softer — it is what the system said.
+ */
+
 .torne-error-state {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--space-2);
-  padding: var(--space-6) var(--space-4);
+  padding: var(--space-8) var(--space-5);
   background: var(--semantic-danger-subtle);
-  border: var(--control-border-width) solid var(--semantic-danger);
-  border-radius: var(--radius-md);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-inline-start-width: calc(var(--control-border-width) * 2);
+  border-inline-start-color: var(--semantic-danger);
+  border-radius: var(--radius-lg);
+  text-align: center;
 }
 
 .torne-error-state__title {
   color: var(--semantic-danger-ink);
+  font-family: var(--font-sans);
   font-size: var(--font-size-md);
   font-weight: var(--font-weight-semibold);
   line-height: var(--line-height-snug);
 }
 
 .torne-error-state__message {
-  color: var(--content-primary);
+  max-width: var(--container-read);
+  color: var(--semantic-danger-ink);
+  font-family: var(--font-sans);
   font-size: var(--font-size-sm);
   line-height: var(--line-height-normal);
 }
