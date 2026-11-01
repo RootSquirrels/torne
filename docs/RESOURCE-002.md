@@ -1,5 +1,18 @@
 # RESOURCE-002 — Faisabilité d'observation du volume LNG déchargé
 
+> ### ⚠️ Ce dossier est **partiellement superseded** par `docs/RESOURCE-002-CORRECTION.md`.
+>
+> Une revue physique a montré que **la conversion hydrostatique publiée ici était fausse**
+> (3,5 t/cm au lieu de **111,3 t/cm**, soit 0,001 % au lieu de **1,4 %** d'incertitude), que
+> **Sentinel-1 ne mesure pas le tirant d'eau**, que le tirant d'eau des méthaniers qui ballastent
+> simultanément est **constant par construction**, et que **la cargaison est déjà mesurée** trois
+> fois par trois parties. **La recommandation « GO sous condition » du §6 est donc caduque** : la
+> note de correction conclut à un **NO-GO** sur la reconstruction de la cargaison par tirant d'eau,
+> et à un **changement de grandeur visée** plutôt qu'à l'abandon de la piste.
+>
+> Ce qui reste valable ici : le périmètre, l'échantillon, la référence mensuelle et sa latence,
+> l'opportunité d'observation radar et son coût. **La note de correction corrige le reste.**
+
 > **Mission bornée.** Elle ne construit **ni modèle ni produit**. Elle mesure, sur un échantillon de
 > terminaux d'importation de GNL, ce qu'il faut pour **reconstruire le volume effectivement
 > déchargé** — et elle rend sa mesure rejouable. Le livrable est un **rapport de coût
@@ -47,10 +60,12 @@ uv run python experiments/resource_002_latence_reference.py     # la latence de 
    **La porte de validation physique est donc ouverte** : la référence contre laquelle confronter
    l'estimation existe, elle est datée, et elle est par terminal. **[FAIT]**
 
-4. **L'incertitude de la méthode n'est pas le verrou ; l'observation l'est.** Un centimètre de
-   tirant d'eau vaut environ **3,5 tonnes** de GNL : une erreur de ±10 cm sur la différence de
-   deux tirants d'eau représente **±0,7 tonne**, soit **0,001 %** d'une cargaison typique. La
-   méthode est **très précise**. Ce qui manque, c'est de l'observation — et elle coûte cher. **[INFÉRENCE]**
+4. ~~L'incertitude de la méthode n'est pas le verrou.~~ **CORRIGÉ** — voir la note de correction :
+   un centimètre de tirant d'eau vaut **111,3 tonnes** de GNL, pas 3,5 ; l'incertitude est de
+   **1,4 %** pour ±10 cm, pas 0,001 %. Et surtout, le verrou n'est ni la mesure ni le coût :
+   c'est que **Sentinel-1 ne mesure pas le tirant d'eau**, que le tirant d'eau est **constant par
+   construction** sur les méthaniers qui ballastent simultanément, et que **la cargaison est déjà
+   mesurée**. **[FAIT] et [INFÉRENCE] — voir `docs/RESOURCE-002-CORRECTION.md` §1, §2 et §6.**
 
 5. **La source maritime qui semblait la fondation est la moins commode à utiliser au niveau du
    terminal.** L'interface ouverte de PortWatch refuse les filtres par nom de port, refuse les
@@ -233,24 +248,23 @@ long de la trace** : la plus grande part du volume téléchargé ne concerne pas
 
 ### 2.5 L'incertitude de la méthode
 
-**[INFÉRENCE] La méthode elle-même est très précise.** Pour un méthanier de 174 000 m³
-(L = 300 m entre perpendiculaires, B = 43 m, tirant d'eau de référence 11,5 m, coefficient de
-bloc Cb ≈ 0,70, masse volumique du GNL ≈ 450 kg/m³) :
-
-```
-Δvolume   = Cb · L · B · Δtirant / tirant
-          = 0,70 × 300 × 43 × 0,01 / 11,5  =  7,85 m³ par centimètre
-Δmasse    = 7,85 × 450                          ≈  3,5 t par centimètre
-```
-
-| Source du tirant d'eau | Résolution | Erreur sur la différence | Sur une cargaison de 67 000 t |
-|---|---|---|---|
-| AIS, message statique | décimètre | ±7 cm → ±250 t | **0,4 %** |
-| SAR, mesure au mouillage | [NON VÉRIFIÉ] ±20 cm | ±28 cm → ±1 000 t | **1,5 %** |
-
-> **La conclusion est nette : l'incertitude de la méthode n'est pas le verrou.** Un point de
-> pourcentage sur la cargaison est excellent. Le verrou est **l'observer**, son coût, et — pour la
-> différence de tirants d'eau — sa **couverture**, qui n'est que de 2 à 15 % par escale de 24 h.
+> ⚠️ **Cette section était fausse et est corrigée par `docs/RESOURCE-002-CORRECTION.md` §1.**
+> La relation n'est pas `ΔV = Cb · L · B · Δd / d` — la division par le tirant d'eau n'a rien à
+> faire là. La relation correcte est :
+>
+> ```
+> d(déplacement)/dT = ρ_sw · Cb · Lpp · B        [tonnes par mètre]
+> ```
+>
+> Pour un méthanier de 177 000 m³ (Lpp 280 m, B 52 m, tirant d'eau 11,7 m, déplacement plein
+> 130 233 t), cela donne **111,3 t/cm** — et non 3,5 t/cm. L'incertitude sur une cargaison de
+> 80 000 t est donc de **1,39 %** pour ±10 cm et de **4,17 %** pour ±0,3 m.
+>
+> **[FAIT] Trois inconnues structurelles dominent de loin la précision de la conversion** : la
+> compensation par le ballast (qui **annule** le signal sur une part de la flotte), l'état des
+> autres compartiments (ballast, combustibles, eau douce, stores) et l'assiette. Elles ne sont pas
+> couvertes par la conversion. Et **Sentinel-1 ne mesure pas le tirant d'eau** : à 20 m de
+> résolution, il détecte les navires et estime leur longueur à ±15 %, mal leur largeur.
 >
 > **[NON VÉRIFIÉ]** l'exactitude d'une mesure de tirant d'eau par Sentinel-1 au mouillage, et
 > l'incertitude qu'on peut en attendre. **La marche à suivre** : la littérature SAR sur le tirant
@@ -323,7 +337,7 @@ est très faible**. C'est un point favorable pour la piste, et il est mesuré.
 | 1 | **Appels de navires identifiables et rattachables à un terminal** | PortWatch donne un **compte** par port et par jour, par type de cargaison — **sans identité de navire**, et l'extraction terminale est **refusée par l'API**. L'exploitant donne le **nombre de navires** par plante, sans identité non plus | **partiel** : le décompte existe des deux côtés, l'identification non |
 | 2 | **Proportion d'escales avec tirant d'eau exploitable avant et après** | SAR : **18 à 31 passages** par terminal et par mois, écart médian **12 h** ; P(1 image / 24 h) **36–70 %** ; **P(2 images distinctes / 24 h) = 2–15 %** ; P(1 image / 48 h) **52–85 %** | **défavorable pour la différence**, favorable pour un tirant d'eau **absolu** |
 | 3 | **Proportion d'escales avec caractéristiques de navire suffisantes** | aucune source ouverte de caractéristiques par navire ; la flotte GNL est petite et les opérateurs publient leurs **flottes affrétées** — voie à vérifier ; Equasis est accessible mais sur inscription | **non établi** |
-| 4 | **Incertitude de chaque cargaison estimée** | **±0,4 %** (AIS) à **±1,5 %** (SAR) sur la cargaison | **favorable** — ce n'est pas le frein |
+| 4 | **Incertitude de chaque cargaison estimée** | **1,4 %** (AIS, ±10 cm) à **4,2 %** (SAR, ±0,3 m) — mais le signal est **annulé** sur les méthaniers qui ballastent simultanément, et le capteur ne sait pas mesurer le tirant d'eau | **défavorable** — et le verrou est ailleurs (voir la note de correction) |
 | 5 | **Coût d'acquisition et de traitement** | **263–486 Go** par terminal et par mois ; **10,4–20,6 Go** par passage ; **~75 Go** utiles | **défavorable** — c'est le frein mesuré |
 | 6 | **Lacunes, latence, disponibilité historique** | référence : **~1 mois** de retard, disponible par mois ; SAR : catalogue sur toute l'historique, coût d'archive croissant linéairement ; PortWatch : historique quotidien sur 1,85 M lignes, extraction terminale **impossible par l'API** | **favorable pour la référence**, à chiffrer pour l'historique SAR |
 
@@ -355,6 +369,14 @@ est très faible**. C'est un point favorable pour la piste, et il est mesuré.
 ---
 
 ## 6. La recommandation
+
+> ⚠️ **SUPERSÉDÉDÉ — voir `docs/RESOURCE-002-CORRECTION.md` §6.**
+> Le « GO sous condition » ci-dessous a été suspendu à la suite d'une revue physique : la conversion
+> hydrostatique était fausse, Sentinel-1 ne mesure pas le tirant d'eau, le tirant d'eau est
+> constant sur les méthaniers qui ballastent simultanément, et la cargaison **est déjà mesurée**.
+> La conclusion corrigée est un **NO-GO sur la reconstruction de la cargaison par tirant d'eau**, et
+> un **changement de grandeur visée** — la piste LNG reste la première candidate.
+> Le raisonnement d'origine est conservé ci-dessous comme trace.
 
 > **GO, sous condition.** La piste LNG n'est pas écartée : elle est **faisable**. La grandeur est
 > spécifiable, la méthode est précise à mieux d'un pourcent, la **référence existe, datée, par
