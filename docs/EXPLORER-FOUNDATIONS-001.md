@@ -361,6 +361,10 @@ The rule that keeps it one system: **a component never hardcodes a colour.** The
 definition of every token, and a stylesheet that names a colour is a stylesheet that has left the
 system.
 
+**And one language.** The interface speaks **English**, decided by the owner. A skin does not
+change it: a reader who moves from the cockpit to the journal reads the same words. The owner's
+mission folders stay in French — they are the owner's dossiers, not the system's.
+
 ### 8.2 The canvas is part of the system
 
 A canvas has no stylesheets: the grid, the axes, the ticks, the tooltip and the zoom track are

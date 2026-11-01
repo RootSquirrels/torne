@@ -128,6 +128,12 @@ pays for the compromise.
 *Why not two systems.* Two systems is twice the work and two chances to drift apart, and the
 second skin would arrive with the wrong semantics baked in.
 
+**And one language.** The interface is **English**, like every other repository-authored content,
+and a skin does not change it: a reader who moves from the cockpit to the journal reads the same
+words. This was decided by the owner, not inferred from the code, and it is recorded here so that
+the question is closed rather than re-asked. The owner's mission folders stay in French: they are
+the owner's dossiers, not the system's.
+
 ### 10. The canvas is part of the system
 
 A canvas has no stylesheets: the grid, the axes, the ticks, the tooltip and the zoom track are

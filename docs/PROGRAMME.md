@@ -167,6 +167,9 @@ None of these is an oversight; each is recorded so that it is not smoothed over.
 - **The front end ships as a build artefact.** `src/torne/explorer/static/` is produced by `npm run build` in
   `frontend/` and committed, so the Python wheel is self-contained. A change to the front end is only complete
   when the artefact has been rebuilt.
+- **The interface speaks English.** Decided by the owner: the Explorer's wording is English, like every other
+  repository-authored content, and a skin does not change it. The mission folders of the owner stay in French;
+  they are the owner's dossiers, not the system's.
 
 **Inherited limits**
 
