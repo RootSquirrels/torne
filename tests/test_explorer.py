@@ -341,28 +341,59 @@ def test_the_api_exposes_no_write_route(client):
     assert methods <= {"GET", "HEAD"}
 
 
-def test_the_map_is_served_at_the_root(client):
+def test_the_compiled_frontend_is_served_at_the_root(client):
     response = client.get("/")
 
     assert response.status_code == 200
     assert "TORNE Explorer" in response.text
+    assert '<div id="root">' in response.text
 
 
 # --------------------------------------------------------------------------
 # The front end
 # --------------------------------------------------------------------------
 
+FRONTEND = ROOT / "frontend" / "src"
+
+
+def _frontend_sources() -> list[Path]:
+    return sorted(path for path in FRONTEND.rglob("*.ts*") if path.is_file())
+
 
 def test_the_front_end_calls_no_data_provider():
-    """It reads /api only; the map boundaries are the only external data."""
-    code = (STATIC / "app.js").read_text(encoding="utf-8")
-    for provider in ("hubeau", "usgs.gov", "dataspace.copernicus", "meteofrance", "ncei.noaa"):
-        assert provider not in code, provider
-    assert "/api/manifest" in code
+    """It reads the API only; it never contacts a data provider."""
+    sources = _frontend_sources()
+    assert sources, "the frontend sources must be present"
+    for path in sources:
+        code = path.read_text(encoding="utf-8")
+        for provider in (
+            "hubeau",
+            "usgs.gov",
+            "dataspace.copernicus",
+            "meteofrance",
+            "ncei.noaa",
+        ):
+            assert provider not in code, f"{provider} in {path.name}"
 
 
-def test_planned_features_are_disabled_in_the_page():
-    page = (STATIC / "index.html").read_text(encoding="utf-8")
+def test_the_front_end_reads_the_versioned_api():
+    code = (FRONTEND / "services" / "api" / "client.ts").read_text(encoding="utf-8")
 
-    assert page.count("disabled") >= 3
-    assert "Market Intelligence" in page
+    assert "/api/v1" in code
+
+
+def test_the_front_end_has_no_runtime_cdn_dependency():
+    """Nothing is fetched from a CDN at runtime: the application is self-contained."""
+    for path in _frontend_sources():
+        code = path.read_text(encoding="utf-8")
+        assert "cdn.jsdelivr.net" not in code, path.name
+        assert "cdnjs.cloudflare.com" not in code, path.name
+
+
+def test_planned_features_are_advertised_rather_than_implemented():
+    """The API says what is planned instead of pretending to serve it."""
+    manifest = build_manifest()
+
+    features = {entry["feature"] for entry in manifest["planned"]}
+    assert features, "the manifest must say what is planned"
+    assert manifest["market_intelligence"]["open"] is False

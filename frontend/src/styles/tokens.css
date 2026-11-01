@@ -1,0 +1,207 @@
+/**
+ * TORNE design tokens.
+ *
+ * Three colour registers live here, and they must never be mixed:
+ *
+ * 1. `--science-status-*` — the **ordinal** ramp of what a mission produced
+ *    (nothing → qualification → exploration → demonstration → knowledge).
+ *    Sequential by construction: one hue, rising lightness. It is used for
+ *    badges, status indicators and the country choropleth, and nowhere else.
+ * 2. `--series-*` — **categorical** colours for data series. Okabe–Ito, which
+ *    is distinguishable under deuteranopia, protanopia and tritanopia. A
+ *    series is never identified by colour alone: the chart contracts also
+ *    carry a symbol or a dash pattern.
+ * 3. `--accent-*` — **decorative and interactive**: the brand mark, the focus
+ *    ring, the primary button, the selected entity on the map. It carries no
+ *    data meaning and is never used as a series colour.
+ *
+ * Semantic colours (`--semantic-*`) answer "is this a problem?", not "which
+ * series is this?".
+ *
+ * Light and dark are expressed with `light-dark()` against a single
+ * `color-scheme: light dark` declaration, so the system preference applies
+ * by default and an explicit `data-theme` on the root element overrides it.
+ * There is exactly one definition of every token.
+ *
+ * Sizes are in `rem` so that the browser's own text-size setting is honoured.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---------------------------------------------------------------- surfaces */
+  --surface-canvas: light-dark(#f6f5f1, #15171a);
+  --surface-raised: light-dark(#ffffff, #1e2125);
+  --surface-sunken: light-dark(#efede7, #101214);
+  --surface-overlay: light-dark(#ffffff, #24282d);
+  --surface-inverse: light-dark(#1d1f22, #e9e7e2);
+  --surface-scrim: light-dark(rgb(29 31 34 / 45%), rgb(0 0 0 / 55%));
+
+  /* ----------------------------------------------------------------- content */
+  --content-primary: light-dark(#1d1f22, #e9e7e2);
+  --content-secondary: light-dark(#5d636b, #a1a6ad);
+  --content-tertiary: light-dark(#6b727b, #8d939b);
+  --content-disabled: light-dark(#9aa0a8, #5f666e);
+  --content-inverse: light-dark(#f6f5f1, #15171a);
+
+  /* ----------------------------------------------------------------- borders */
+  --border-subtle: light-dark(#e6e3db, #272b30);
+  --border-default: light-dark(#dcd9d1, #33373d);
+  --border-strong: light-dark(#b8b4aa, #4d535a);
+  --border-focus: light-dark(#3f86bf, #4f95cb);
+
+  /* ------------------------------------------------------- accent (brand) */
+  --accent: light-dark(#b5532c, #e08a62);
+  --accent-hover: light-dark(#a04824, #eb9b76);
+  --accent-active: light-dark(#8c3d1d, #f2ac8b);
+  --accent-subtle: light-dark(#f7e9e2, #33241d);
+  --accent-ink: light-dark(#ffffff, #1b1009);
+  --accent-ring: light-dark(rgb(181 83 44 / 35%), rgb(224 138 98 / 40%));
+
+  /* --------------------------------------------------------------- semantic */
+  --semantic-info: light-dark(#2b6ca3, #6fa8d8);
+  --semantic-info-subtle: light-dark(#e6eef5, #1c2a35);
+  --semantic-info-ink: light-dark(#1b4b70, #a8cde8);
+  --semantic-success: light-dark(#1a7f4b, #55b585);
+  --semantic-success-subtle: light-dark(#e3f1e9, #17291f);
+  --semantic-success-ink: light-dark(#14603a, #9bd7b8);
+  --semantic-warning: light-dark(#8a6100, #d9a441);
+  --semantic-warning-subtle: light-dark(#f7edd8, #2e2513);
+  --semantic-warning-ink: light-dark(#6b4b00, #e8c684);
+  --semantic-danger: light-dark(#b3261e, #e07a72);
+  --semantic-danger-subtle: light-dark(#fae7e5, #301a19);
+  --semantic-danger-ink: light-dark(#8c1e18, #f0aca6);
+  --semantic-neutral: light-dark(#5d636b, #a1a6ad);
+  --semantic-neutral-subtle: light-dark(#efede7, #24282d);
+  --semantic-neutral-ink: light-dark(#454b52, #c3c8ce);
+
+  /* --------------------------------------------------- scientific status ramp */
+  --science-status-0: light-dark(#e8e5dd, #2a2e33);
+  --science-status-0-ink: light-dark(#5d636b, #a1a6ad);
+  --science-status-1: light-dark(#cfe0ee, #2c4458);
+  --science-status-1-ink: light-dark(#12324b, #dceaf5);
+  --science-status-2: light-dark(#8fbbdc, #3a6a8f);
+  --science-status-2-ink: light-dark(#0d2638, #f2f8fc);
+  --science-status-3: light-dark(#3f86bf, #4f95cb);
+  --science-status-3-ink: light-dark(#ffffff, #0d2638);
+  --science-status-4: light-dark(#154f7d, #9fd0f3);
+  --science-status-4-ink: light-dark(#ffffff, #0d2638);
+
+  /* ------------------------------------------------------ categorical series */
+  --series-1: light-dark(#0072b2, #56b4e9);
+  --series-2: light-dark(#e69f00, #f0b44d);
+  --series-3: light-dark(#009e73, #3fc18c);
+  --series-4: light-dark(#cc79a7, #e08cc0);
+  --series-5: light-dark(#56b4e9, #7fc8f0);
+  --series-6: light-dark(#d55e00, #f08a5d);
+  --series-7: light-dark(#a6761d, #d6a44a);
+  --series-8: light-dark(#333333, #c9cdd3);
+
+  /* ------------------------------------------------------------ chart chrome */
+  --chart-axis: light-dark(#8d939b, #6b7178);
+  --chart-grid: light-dark(#e6e3db, #272b30);
+  --chart-label: light-dark(#5d636b, #a1a6ad);
+  --chart-crosshair: light-dark(#b8b4aa, #4d535a);
+  --chart-reference: light-dark(#6b727b, #8d939b);
+  --chart-uncertainty: light-dark(rgb(0 114 178 / 18%), rgb(86 180 233 / 20%));
+  --chart-uncertainty-forecast: light-dark(rgb(181 83 44 / 18%), rgb(224 138 98 / 20%));
+
+  /* ---------------------------------------------------------------- map paint */
+  --map-water: light-dark(#dfe7ea, #17242b);
+  --map-land: light-dark(#e8e5dd, #2a2e33);
+  --map-land-hover: light-dark(#dedad0, #333940);
+  --map-boundary: light-dark(#c9c4b8, #41464d);
+  --map-marker: light-dark(#1d1f22, #e9e7e2);
+  --map-marker-selected: light-dark(#b5532c, #e08a62);
+
+  /* --------------------------------------------------------------- typography */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', roboto, 'Helvetica Neue', arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Roboto Mono', menlo, consolas, monospace;
+
+  --font-size-2xs: 0.6875rem;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.8125rem;
+  --font-size-md: 0.875rem;
+  --font-size-lg: 1rem;
+  --font-size-xl: 1.125rem;
+  --font-size-2xl: 1.375rem;
+  --font-size-3xl: 1.75rem;
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.2;
+  --line-height-snug: 1.35;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.65;
+
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-normal: 0;
+  --letter-spacing-wide: 0.04em;
+
+  /* ----------------------------------------------------------------- spacing */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ------------------------------------------------------------------ sizes */
+  --control-height-sm: 1.75rem;
+  --control-height-md: 2.25rem;
+  --control-height-lg: 2.75rem;
+  --control-padding-inline-sm: 0.5rem;
+  --control-padding-inline-md: 0.75rem;
+  --control-padding-inline-lg: 1rem;
+  --control-border-width: 1px;
+
+  --container-read: 68rem;
+  --container-wide: 88rem;
+
+  /* ----------------------------------------------------------------- radii */
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-full: 999px;
+
+  /* ---------------------------------------------------------------- shadows */
+  --shadow-1: 0 1px 2px light-dark(rgb(29 31 34 / 6%), rgb(0 0 0 / 40%));
+  --shadow-2: 0 2px 6px light-dark(rgb(29 31 34 / 8%), rgb(0 0 0 / 45%));
+  --shadow-3: 0 8px 24px light-dark(rgb(29 31 34 / 12%), rgb(0 0 0 / 55%));
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* ------------------------------------------------------------- transitions */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0.2, 1);
+
+  /* --------------------------------------------------------------- layering */
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-overlay: 200;
+  --z-modal: 300;
+  --z-tooltip: 400;
+}
+
+/**
+ * An explicit theme on the root element overrides the operating system's
+ * preference. Without it, `color-scheme: light dark` follows the system.
+ */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}

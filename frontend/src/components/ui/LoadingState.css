@@ -1,0 +1,28 @@
+.torne-loading-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-8) var(--space-4);
+  color: var(--content-secondary);
+}
+
+.torne-loading-state__spinner {
+  width: var(--space-4);
+  height: var(--space-4);
+  border: var(--control-border-width) solid var(--border-strong);
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: torne-loading-spin 700ms linear infinite;
+}
+
+.torne-loading-state__label {
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
+}
+
+@keyframes torne-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

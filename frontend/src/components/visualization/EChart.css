@@ -1,0 +1,18 @@
+.torne-echart {
+  width: 100%;
+  min-width: 0;
+}
+
+.torne-echart__failure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 6rem;
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+  border: var(--control-border-width) dashed var(--border-default);
+  border-radius: var(--radius-md);
+}

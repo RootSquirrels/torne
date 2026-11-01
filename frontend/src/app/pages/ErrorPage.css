@@ -1,0 +1,16 @@
+.torne-error-page {
+  max-width: 40rem;
+  margin: var(--space-16) auto;
+  padding: 0 var(--space-4);
+  text-align: center;
+}
+
+.torne-error-page__title {
+  font-size: var(--font-size-2xl);
+  margin-bottom: var(--space-3);
+}
+
+.torne-error-page__message {
+  color: var(--content-secondary);
+  margin-bottom: var(--space-4);
+}

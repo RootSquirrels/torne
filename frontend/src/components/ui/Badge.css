@@ -1,0 +1,52 @@
+.torne-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: var(--control-border-width) solid transparent;
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------- sizes */
+.torne-badge--sm {
+  padding: var(--space-0) var(--space-2);
+  font-size: var(--font-size-2xs);
+}
+
+.torne-badge--md {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+}
+
+/* ------------------------------------------------------------------- tones */
+.torne-badge--neutral {
+  background: var(--semantic-neutral-subtle);
+  border-color: var(--semantic-neutral);
+  color: var(--semantic-neutral-ink);
+}
+
+.torne-badge--info {
+  background: var(--semantic-info-subtle);
+  border-color: var(--semantic-info);
+  color: var(--semantic-info-ink);
+}
+
+.torne-badge--success {
+  background: var(--semantic-success-subtle);
+  border-color: var(--semantic-success);
+  color: var(--semantic-success-ink);
+}
+
+.torne-badge--warning {
+  background: var(--semantic-warning-subtle);
+  border-color: var(--semantic-warning);
+  color: var(--semantic-warning-ink);
+}
+
+.torne-badge--danger {
+  background: var(--semantic-danger-subtle);
+  border-color: var(--semantic-danger);
+  color: var(--semantic-danger-ink);
+}

@@ -1,0 +1,315 @@
+/**
+ * The uncertainty chart.
+ *
+ * It shows an estimate with the uncertainty that qualifies it: a central
+ * interval, quantiles, an envelope, and the separation between what was
+ * observed, what was estimated and what is forecast.
+ *
+ * The rule that gives the component its meaning:
+ *
+ * - **no band without uncertainty.** When no point of a series carries an
+ *   interval, the series gets **no band at all**. A band of zero width would
+ *   look like a statement while saying nothing, and a band drawn at the
+ *   central value would be a lie about the precision of the estimate.
+ *
+ * The other rules are the ones the whole system obeys: a hole in the
+ * measurements stays a hole, the nature of the values is carried by the dash
+ * pattern as well as by the legend text, and the unit is explicit or declared
+ * unknown.
+ */
+import { useMemo } from 'react';
+
+import { ChartFrame } from '@/components/visualization/ChartFrame';
+import { EChart } from '@/components/visualization/EChart';
+import type { ChartOption } from '@/components/visualization/EChart';
+import {
+  dashForNature,
+  legendLabelForNature,
+  symbolForNature,
+  useChartTokens,
+} from '@/components/visualization/chartTheme';
+import type { ChartTokens } from '@/components/visualization/chartTheme';
+import type { SeriesNature, TimeSeries } from '@/types/visualization/timeSeries';
+
+export interface UncertaintyChartProps {
+  /** The series to draw. */
+  readonly series: readonly TimeSeries[];
+  readonly title: string;
+  readonly description?: string | null;
+  /** The unit the values are in, or null when it is not established. */
+  readonly unit?: string | null;
+  readonly height?: number;
+  /** Called when the reader shows or hides a series in the legend. */
+  readonly onLegendChange?: (seriesId: string, visible: boolean) => void;
+}
+
+interface UncertainSeries {
+  readonly series: TimeSeries;
+  readonly legendName: string;
+  readonly colour: string;
+  readonly hasInterval: boolean;
+}
+
+function toMillis(stamp: string): number {
+  const parsed = Date.parse(stamp);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function formatValue(value: number | null, unit: string | null): string {
+  if (value === null) {
+    return 'no value';
+  }
+  const rendered = Number.isInteger(value) ? String(value) : value.toPrecision(6);
+  return unit === null ? rendered : `${rendered} ${unit}`;
+}
+
+function formatStamp(stamp: string): string {
+  const date = new Date(stamp);
+  if (Number.isNaN(date.getTime())) {
+    return stamp;
+  }
+  return date.toISOString().replace('T', ' ').replace(/\.\d+Z$/, 'Z');
+}
+
+/**
+ * The ECharts series of the uncertainty chart.
+ *
+ * A pure function, so that the rules it enforces can be tested without a
+ * canvas.
+ */
+export function buildUncertaintySeries(
+  plotted: readonly UncertainSeries[],
+  tokens: ChartTokens,
+): Record<string, unknown>[] {
+  const seriesOptions: Record<string, unknown>[] = [];
+
+  for (const entry of plotted) {
+    const points = entry.series.points;
+
+    // The envelope exists only when the series carries an interval.
+    if (entry.hasInterval) {
+      const bandColour =
+        entry.series.nature === 'forecast' ? tokens.uncertaintyForecast : tokens.uncertainty;
+      seriesOptions.push({
+        id: `${entry.series.id}-band-lower`,
+        name: `${entry.legendName} (lower bound)`,
+        type: 'line',
+        data: points.map((point) => [toMillis(point.t), point.lower]),
+        stack: `${entry.series.id}-band`,
+        step: 'middle',
+        symbol: 'none',
+        lineStyle: { opacity: 0 },
+        areaStyle: { opacity: 0 },
+        silent: true,
+        tooltip: { show: false },
+        legendHoverLink: false,
+        z: 1,
+      });
+      seriesOptions.push({
+        id: `${entry.series.id}-band`,
+        name: `${entry.legendName} (interval)`,
+        type: 'line',
+        data: points.map((point) => [
+          toMillis(point.t),
+          point.lower === null || point.upper === null ? null : point.upper - point.lower,
+        ]),
+        stack: `${entry.series.id}-band`,
+        step: 'middle',
+        symbol: 'none',
+        lineStyle: { opacity: 0 },
+        areaStyle: { color: bandColour, opacity: 1 },
+        silent: true,
+        tooltip: { show: false },
+        legendHoverLink: false,
+        z: 2,
+      });
+    }
+
+    seriesOptions.push({
+      id: entry.series.id,
+      name: entry.legendName,
+      type: 'line',
+      data: points.map((point) => [toMillis(point.t), point.v]),
+      connectNulls: false,
+      showSymbol: true,
+      symbol: symbolForNature(entry.series.nature),
+      symbolSize: 4,
+      lineStyle: {
+        width: 2,
+        color: entry.colour,
+        type: dashForNature(entry.series.nature) ?? 'solid',
+      },
+      itemStyle: { color: entry.colour },
+      emphasis: { focus: 'series' },
+      z: 5,
+    });
+  }
+
+  return seriesOptions;
+}
+
+export function UncertaintyChart({
+  series,
+  title,
+  description = null,
+  unit = null,
+  height = 300,
+  onLegendChange,
+}: UncertaintyChartProps) {
+  const tokens = useChartTokens();
+
+  const plotted = useMemo<UncertainSeries[]>(
+    () =>
+      series.map((entry, index) => ({
+        series: entry,
+        legendName: legendLabelForNature(entry.variable, entry.nature),
+        colour: tokens.series[index % tokens.series.length] ?? tokens.accent,
+        hasInterval: entry.points.some((point) => point.lower !== null && point.upper !== null),
+      })),
+    [series, tokens],
+  );
+
+  const option = useMemo<ChartOption>(() => {
+    const seriesOptions = buildUncertaintySeries(plotted, tokens);
+    const declared = new Set(
+      series.map((entry) => entry.unit).filter((value): value is string => value !== null),
+    );
+    const axisName = unit ?? (declared.size === 1 ? [...declared][0] : null);
+
+    return {
+      animation: false,
+      color: [...tokens.series],
+      grid: { left: 60, right: 24, top: 40, bottom: 56 },
+      legend: {
+        type: 'scroll',
+        top: 0,
+        left: 0,
+        textStyle: { color: tokens.label, fontSize: 12 },
+        data: plotted.map((entry) => entry.legendName),
+      },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross', crossStyle: { color: tokens.crosshair } },
+        backgroundColor: tokens.surface,
+        borderColor: tokens.border,
+        textStyle: { color: tokens.text, fontSize: 12 },
+        formatter: (rawParams: unknown) => {
+          const params = Array.isArray(rawParams) ? rawParams : [rawParams];
+          const lines: string[] = [];
+          for (const item of params) {
+            if (typeof item !== 'object' || item === null) {
+              continue;
+            }
+            const record = item as { seriesIndex?: number; dataIndex?: number };
+            const entry = plotted[record.seriesIndex ?? 0];
+            if (entry === undefined) {
+              continue;
+            }
+            const point = entry.series.points[record.dataIndex ?? -1];
+            if (point === undefined) {
+              continue;
+            }
+            const interval =
+              point.lower !== null && point.upper !== null
+                ? ` (${formatValue(point.lower, null)} – ${formatValue(point.upper, null)})`
+                : '';
+            const missing =
+              point.v === null && point.missingReason !== null
+                ? ` · absent: ${point.missingReason.replaceAll('_', ' ')}`
+                : '';
+            lines.push(
+              `<strong>${entry.legendName}</strong><br/>${formatStamp(point.t)}<br/>${formatValue(point.v, entry.series.unit)}${interval}${missing}`,
+            );
+          }
+          return lines.join('<br/>');
+        },
+      },
+      xAxis: {
+        type: 'time',
+        axisLine: { lineStyle: { color: tokens.border } },
+        axisLabel: { color: tokens.label, fontSize: 11, hideOverlap: true },
+        splitLine: { show: false },
+      },
+      yAxis: {
+        type: 'value',
+        name: axisName ?? 'unit not established',
+        nameTextStyle: { color: tokens.label, fontSize: 11, align: 'left' },
+        nameGap: 12,
+        axisLine: { show: false },
+        axisLabel: { color: tokens.label, fontSize: 11 },
+        splitLine: { lineStyle: { color: tokens.grid } },
+      },
+      dataZoom: [{ type: 'inside', filterMode: 'none' }],
+      series: seriesOptions,
+    };
+  }, [plotted, tokens, unit, series]);
+
+  const onEvents = useMemo(
+    () => ({
+      legendselectchanged: (rawParams: unknown) => {
+        const record = rawParams as { selected?: Record<string, boolean> } | null;
+        const selected = record?.selected;
+        if (selected === undefined) {
+          return;
+        }
+        for (const entry of plotted) {
+          const visible = selected[entry.legendName];
+          if (visible !== undefined) {
+            onLegendChange?.(entry.series.id, visible);
+          }
+        }
+      },
+    }),
+    [plotted, onLegendChange],
+  );
+
+  const table = (
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Instant</th>
+          <th scope="col">Series</th>
+          <th scope="col">Value</th>
+          <th scope="col">Lower</th>
+          <th scope="col">Upper</th>
+        </tr>
+      </thead>
+      <tbody>
+        {plotted.flatMap((entry) =>
+          entry.series.points.map((point) => (
+            <tr key={`${entry.series.id}-${point.t}`}>
+              <td>{formatStamp(point.t)}</td>
+              <td>{entry.legendName}</td>
+              <td>{point.v === null ? 'no value' : formatValue(point.v, entry.series.unit)}</td>
+              <td>{point.lower === null ? '—' : formatValue(point.lower, null)}</td>
+              <td>{point.upper === null ? '—' : formatValue(point.upper, null)}</td>
+            </tr>
+          )),
+        )}
+      </tbody>
+    </table>
+  );
+
+  const withoutInterval = plotted.filter((entry) => !entry.hasInterval).map((entry) => entry.legendName);
+
+  return (
+    <ChartFrame
+      title={title}
+      description={description}
+      ariaLabel={`${title}. ${plotted.length} series, ${plotted.reduce((sum, entry) => sum + entry.series.points.length, 0)} points.`}
+      table={table}
+      footnote={
+        withoutInterval.length === 0 ? null : (
+          <>
+            No uncertainty band is drawn for {withoutInterval.join(', ')}: no interval is provided
+            for it.
+          </>
+        )
+      }
+    >
+      <EChart option={option} height={height} onEvents={onEvents} />
+    </ChartFrame>
+  );
+}
+
+export type { SeriesNature };

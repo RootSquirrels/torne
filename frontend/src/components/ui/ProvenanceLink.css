@@ -1,0 +1,39 @@
+.torne-provenance-link {
+  color: var(--accent);
+  font-size: var(--font-size-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+a.torne-provenance-link:hover {
+  color: var(--accent-hover);
+}
+
+button.torne-provenance-link {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.torne-provenance-link:hover {
+  color: var(--accent-hover);
+}
+
+.torne-provenance-link--code {
+  padding: var(--space-0) var(--space-1);
+  background: var(--surface-sunken);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  color: var(--content-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  text-decoration: none;
+}
+
+span.torne-provenance-link {
+  color: var(--content-secondary);
+  text-decoration: none;
+}

@@ -32,6 +32,14 @@ resultats/
 *.duckdb
 *.db
 
+# Les frontieres vendues par le frontend sont une source versionnee, pas une
+# sortie de production : elles doivent etre suivies. `data/` ci-dessus ignore
+# tout repertoire nomme `data`, a toute profondeur ; ces deux-la sont
+# explicitement re-inclus. Un repertoire ignore ne peut pas contenir de
+# fichier re-inclus : il faut donc re-inclure le repertoire lui-meme.
+!frontend/public/data/
+!src/torne/explorer/static/data/
+
 # --- Secrets ---
 .env
 .env.*

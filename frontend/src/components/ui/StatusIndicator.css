@@ -1,0 +1,45 @@
+.torne-status-indicator {
+  display: inline-flex;
+  min-width: 0;
+}
+
+.torne-status-indicator__swatch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1) var(--space-2);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------- the science ramp */
+/* Each step of the ordinal ramp paints its swatch and, on top of it, the    */
+/* ink that stays legible on that step. The tokens live here, not inline.     */
+.torne-status-indicator--rank-0 .torne-status-indicator__swatch {
+  background: var(--science-status-0);
+  color: var(--science-status-0-ink);
+}
+
+.torne-status-indicator--rank-1 .torne-status-indicator__swatch {
+  background: var(--science-status-1);
+  color: var(--science-status-1-ink);
+}
+
+.torne-status-indicator--rank-2 .torne-status-indicator__swatch {
+  background: var(--science-status-2);
+  color: var(--science-status-2-ink);
+}
+
+.torne-status-indicator--rank-3 .torne-status-indicator__swatch {
+  background: var(--science-status-3);
+  color: var(--science-status-3-ink);
+}
+
+.torne-status-indicator--rank-4 .torne-status-indicator__swatch {
+  background: var(--science-status-4);
+  color: var(--science-status-4-ink);
+}

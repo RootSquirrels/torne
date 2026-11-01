@@ -1,0 +1,62 @@
+.torne-legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.torne-legend__title {
+  color: var(--content-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.torne-legend__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.torne-legend__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-snug);
+}
+
+.torne-legend__swatch {
+  flex: none;
+  width: var(--space-3);
+  height: var(--space-3);
+}
+
+.torne-legend__swatch--square {
+  border-radius: var(--radius-xs);
+}
+
+.torne-legend__swatch--circle {
+  border-radius: var(--radius-full);
+}
+
+.torne-legend__swatch--line,
+.torne-legend__swatch--dash {
+  width: var(--space-6);
+  height: 0;
+  border-top-width: calc(var(--control-border-width) * 2);
+  border-top-style: solid;
+  background: none;
+}
+
+.torne-legend__swatch--dash {
+  border-top-style: dashed;
+}
+
+.torne-legend__label {
+  color: var(--content-primary);
+}
+
+.torne-legend__description {
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+}

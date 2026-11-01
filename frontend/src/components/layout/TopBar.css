@@ -1,0 +1,115 @@
+.torne-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: var(--control-border-width) solid var(--border-default);
+  background: var(--surface-raised);
+  flex-wrap: wrap;
+}
+
+.torne-topbar__brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.torne-topbar__name {
+  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-xl);
+  letter-spacing: var(--letter-spacing-tight);
+}
+
+.torne-topbar__subtitle {
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.torne-topbar__spaces {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.torne-topbar__space {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: var(--control-border-width) solid var(--border-default);
+  background: transparent;
+  color: var(--content-primary);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.torne-topbar__space:hover {
+  background: var(--surface-sunken);
+}
+
+.torne-topbar__space.active,
+.torne-topbar__space[aria-current='page'] {
+  background: var(--content-primary);
+  border-color: var(--content-primary);
+  color: var(--content-inverse);
+}
+
+.torne-topbar__space--closed {
+  color: var(--content-disabled);
+  cursor: not-allowed;
+  background: var(--surface-sunken);
+}
+
+.torne-topbar__soon {
+  font-size: var(--font-size-2xs);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-wide);
+}
+
+.torne-topbar__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.torne-topbar__theme {
+  display: inline-flex;
+  border: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.torne-topbar__theme-button {
+  border: none;
+  background: transparent;
+  color: var(--content-secondary);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.torne-topbar__theme-button + .torne-topbar__theme-button {
+  border-left: var(--control-border-width) solid var(--border-subtle);
+}
+
+.torne-topbar__theme-button:hover {
+  background: var(--surface-sunken);
+  color: var(--content-primary);
+}
+
+.torne-topbar__theme-button[aria-pressed='true'] {
+  background: var(--accent-subtle);
+  color: var(--accent-ink);
+  font-weight: var(--font-weight-medium);
+}
+
+@media (max-width: 48rem) {
+  .torne-topbar__subtitle {
+    display: none;
+  }
+}

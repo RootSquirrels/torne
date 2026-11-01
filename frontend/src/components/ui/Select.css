@@ -1,0 +1,60 @@
+.torne-select {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.torne-select__label {
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-snug);
+}
+
+.torne-select__control {
+  width: 100%;
+  height: var(--control-height-md);
+  padding-inline: var(--control-padding-inline-md);
+  background: var(--surface-raised);
+  border: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-md);
+  color: var(--content-primary);
+  font-size: var(--font-size-md);
+  line-height: var(--line-height-normal);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--easing-standard),
+    border-color var(--duration-fast) var(--easing-standard);
+}
+
+.torne-select__control:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.torne-select__control:disabled {
+  background: var(--surface-sunken);
+  border-color: var(--border-subtle);
+  color: var(--content-disabled);
+  cursor: not-allowed;
+}
+
+.torne-select[data-state='error'] .torne-select__control {
+  border-color: var(--semantic-danger);
+}
+
+.torne-select[data-state='error'] .torne-select__control:hover:not(:disabled) {
+  border-color: var(--semantic-danger);
+}
+
+.torne-select__hint {
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+}
+
+.torne-select__error {
+  color: var(--semantic-danger-ink);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-snug);
+}

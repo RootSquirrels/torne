@@ -103,12 +103,27 @@ knowledge products — none yet, and the explorer says why.
 
 ```bash
 uv sync --extra explorer
-uv run torne-explorer        # http://127.0.0.1:8765 — API under /api, docs at /docs
+uv run torne-explorer        # http://127.0.0.1:8765 — API under /api/v1, docs at /api/v1/docs
 ```
 
 The explorer computes nothing and calls no provider; it serves a manifest derived from the repository
 (`src/torne/explorer/`). Market Intelligence has a place in its navigation and stays closed while objective B is
 deferred.
+
+The front end is a compiled static application of its own, in `frontend/` (React, TypeScript, Vite). It is
+built into the Python package and served by FastAPI:
+
+```bash
+cd frontend
+npm install
+npm run dev       # Vite on :5173, proxying /api to FastAPI on :8765
+npm run build     # type-checks, lints and builds into src/torne/explorer/static/
+npm test          # the component and contract suite
+npm run test:e2e  # the browser journeys, against the application FastAPI serves
+```
+
+The decisions are in `docs/ADR-EXPLORER-FOUNDATIONS-001.md`. The mission record — what was built, what was measured, and
+what remains open — is in `docs/EXPLORER-FOUNDATIONS-001.md`.
 
 ## Repository layout
 
@@ -124,6 +139,7 @@ src/torne/
   atmosphere/     semantic layer: station temperature and precipitation, climatology, regimes, profile
   eo/             semantic layer: surface products, their coverage and their dependence
   explorer/       read-only application: manifest, FastAPI API and the map front end
+frontend/         the compiled front end: React, TypeScript, Vite — built into the Python package
 docs/             reference documents and mission records
 tests/            the test suite
 experiments/      exploratory scripts
