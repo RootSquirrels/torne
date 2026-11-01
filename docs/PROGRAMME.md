@@ -150,6 +150,13 @@ None of these is an oversight; each is recorded so that it is not smoothed over.
 8. **A9** — the body of a `4xx` refusal is not kept as evidence, so a source's explanation of its refusal is lost
    from the audit trail.
 
+**Explorer**
+
+- **Knowledge records are not persisted.** `knowledge.record.ExecutionRecord` lives in memory and mission scripts
+  write their evidence to temporary directories. TORNE Explorer therefore lists no knowledge product, and says so.
+  A persisted record format is the prerequisite for the explorer's "intelligence" level; BASIN-001's first product is
+  the natural occasion to define it.
+
 **Inherited limits**
 
 9. Quality statuses of sources are not systematically mapped to the closed vocabulary (`docs/CORE_CONTRACTS.md`

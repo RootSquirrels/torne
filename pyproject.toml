@@ -34,6 +34,18 @@ dependencies = [
 # Point d'entree console provisoire : il ne fait qu'etatiser le paquet. Aucun code
 # metier ici tant que le premier slice vertical n'est pas choisi.
 torne = "torne:main"
+# TORNE Explorer: read-only API and map over what the repository has really
+# produced. Requires the `explorer` extra (`uv sync --extra explorer`).
+torne-explorer = "torne.explorer.api:main"
+
+[project.optional-dependencies]
+# The explorer is an application (docs/ARCHITECTURE.md section 5): its web
+# stack is optional and never imported by the socle, the semantic layers or
+# the methods.
+explorer = [
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
 
 [dependency-groups]
 # Dependances de developpement : elles ne sont jamais importees par le paquet
@@ -46,7 +58,10 @@ torne = "torne:main"
 # etat anterieur (apres la premiere transition), et l'ecart mesure tombe sous
 # 1e-9. La comparaison par simple beginning de serie n'aurait pas ete
 # justifiable : elle depend de la convention d'initialisation.
+# fastapi and httpx (FastAPI's TestClient) let the suite test the explorer API.
 dev = [
+    "fastapi>=0.115",
+    "httpx>=0.27",
     "pytest>=8.0",
     "ruff>=0.6",
     "statsmodels>=0.14",

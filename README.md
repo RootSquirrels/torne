@@ -95,6 +95,21 @@ uv build
 
 Python 3.12, `uv` pinned by CI. The `torne` console entry point reports the package state.
 
+## TORNE Explorer
+
+A read-only map of what TORNE has really established: countries, domains, missions and the status each one earned
+(qualification, exploration, demonstration, knowledge), the physical assets touched, the sources read, and the
+knowledge products — none yet, and the explorer says why.
+
+```bash
+uv sync --extra explorer
+uv run torne-explorer        # http://127.0.0.1:8765 — API under /api, docs at /docs
+```
+
+The explorer computes nothing and calls no provider; it serves a manifest derived from the repository
+(`src/torne/explorer/`). Market Intelligence has a place in its navigation and stays closed while objective B is
+deferred.
+
 ## Repository layout
 
 ```text
@@ -108,6 +123,7 @@ src/torne/
   hydrology/      semantic layer: discharge and stage observations, climatology, anomaly, rating relation
   atmosphere/     semantic layer: station temperature and precipitation, climatology, regimes, profile
   eo/             semantic layer: surface products, their coverage and their dependence
+  explorer/       read-only application: manifest, FastAPI API and the map front end
 docs/             reference documents and mission records
 tests/            the test suite
 experiments/      exploratory scripts

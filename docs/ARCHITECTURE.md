@@ -149,7 +149,13 @@ a research hypothesis. Financial intelligence is one application among others, n
 **What it does not do:** it does not decide the validity of a model. An application that succeeds does not validate
 the upstream models retroactively.
 
-**This boundary is not open.** The "world-to-market" branch — turning physical-world intelligence into a financial
+**TORNE Explorer** (`src/torne/explorer/`) is the first application. It is read-only and bound by three rules: it
+performs no scientific computation and never calls a data provider; it only shows metadata and results the repository
+has actually established (a mission's status is earned by its evidence, and `knowledge` requires a persisted record);
+and it never shapes the engines to its display needs. Its web stack (FastAPI, uvicorn) is an optional extra that no
+other package imports.
+
+**The financial branch is not open.** The "world-to-market" branch — turning physical-world intelligence into a financial
 decision — is **deferred** until the physical intelligence engine is mature. The deferral is deliberate and follows
 from the rule above: a financial application that succeeds does not validate the physical models upstream, and has
 nothing to say about their correctness. It will open when the knowledge products it consumes are themselves
