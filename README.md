@@ -65,10 +65,10 @@ TORNE attaque les quatre points à la fois : qualifier les sources, reconstruire
 | **Trois sources réellement intégrées**, interrogées sur le réseau : Hub'EAU v2, USGS « Water Data for the Nation » (API OGC), catalogue Copernicus Data Space | Aucune source n'est qualifiée au sens de la classe de publication — établie, bornée, inconnue |
 | Objets et temporalité : cinq objets, trois dimensions, `usable_at` dérivé, absence qualifiée | Pas de moteur, pas de registre ; la couche sémantique n'existe que pour l'hydrologie |
 | **Première couche sémantique du domaine** (`hydrology/`) : enregistrement → observation, climatologie journalière, anomalie standardisée | Un seul domaine, une seule station : la généralisation n'est pas faite |
-| Méthodes : filtre de Kalman en espace d'état, régression et erreur-type CR1, rupture CUSUM, puissance, comparaison appariée | Aucune performance démontrée : le modèle tourne sur des données réelles, mais aucune performance n'est *établie* |
-| **Un jalon sur le monde réel** : 33 481 relevés quotidiens acquis, climatologie reproduisant les statistiques publiées de l'agence à 0,11 % près, premier produit de connaissance publié | Une seule variable dérivée ; aucune preuve prospective — le pré-enregistrement est écrit, mais pas outillé |
+| Méthodes : filtre de Kalman en espace d'état — état filtré et lissé Rauch-Tung-Striebel, variances estimées, observations irrégulières —, scores stricts pour prévisions probabilistes (CRPS gaussien et d'ensemble, intervalle de Winkler, pinball, PIT et son diagnostic de calibration), inférence qui survit à la dépendance (taille d'échantillon effective, bootstrap par blocs et par grappes, sensibilité à l'unité indépendante), contrôle de multiplicité (Benjamini-Hochberg, Bonferroni, Romano-Wolf), régression à erreur-type CR1, rupture CUSUM, puissance, comparaison appariée | Aucune performance démontrée : le modèle tourne sur des données réelles, mais aucune performance n'est *établie* |
+| **Un jalon sur le monde réel** : 33 481 relevés quotidiens acquis, climatologie reproduisant les statistiques publiées de l'agence à 0,11 % près, premier produit de connaissance publié | Une seule grandeur dérivée, une seule station : la généralisation à d'autres domaines n'est pas faite |
 | Exécution rejouable, évaluation — découpage cumulatif, références, métriques, incertitude —, enregistrement avec lignée vérifiable | Aucune preuve prospective : le pré-enregistrement est écrit, mais pas outillé |
-| Plus de 490 tests verts ; la CI construit le paquet, l'installe et le lance | Une source peut accepter un filtre sans l'appliquer — cas mesuré sur Hub'EAU, voir `docs/SOURCES.md` §I.1 |
+| Plus de 600 tests verts ; la CI construit le paquet, l'installe et le lance | Une source peut accepter un filtre sans l'appliquer — cas mesuré sur Hub'EAU, voir `docs/SOURCES.md` §I.1 |
 | La conformité d'acquisition bloque ce qui n'est pas conforme, et la preuve brute est conservée | La licence du dépôt n'est pas choisie — c'est une décision du propriétaire |
 
 Le détail — et surtout **ce qui manque** — sont dans [`docs/PROGRAMME.md`](docs/PROGRAMME.md).
@@ -113,7 +113,7 @@ torne 0.1.0 — exécution, évaluation et preuve implémentées ; premier jalon
 src/torne/
   acquisition/    socle transversal : transport, fetcher, magasin brut, contrat de connecteur, adaptateurs
   contracts/      objets et temporalité : source, preuve brute, observation, variable dérivée, produit
-  methods/        couche scientifique : Kalman, régression, rupture, puissance, comparaison
+  methods/        couche scientifique : Kalman, scores, dépendance, multiplicité, régression, rupture, puissance
   evaluation/     découpage temporel, références, métriques, incertitude, rapport
   execution/      exécution rejouable d'un modèle
   knowledge/      enregistrement d'un produit et vérification de sa lignée
