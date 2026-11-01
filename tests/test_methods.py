@@ -103,7 +103,7 @@ def test_le_modele_declare_son_identite_et_ses_hypotheses():
     """La spec doit porter une identité versionnée, des natures et un domaine de validité."""
     spec = MODELE.spec
     assert spec.model_id == "torne.methods.kalman.local_linear_trend"
-    assert spec.version == "0.1.0"
+    assert spec.version == "0.2.0"
     assert ResultNature.RECONSTRUCTED in spec.natures
     assert ResultNature.PREDICTED in spec.natures
     assert spec.assumptions
@@ -140,7 +140,14 @@ def test_le_resultat_expose_les_sorties_nommees():
     assert len(resultat.outputs["forecast_level"]) == len(SERIE_REFERENCE)
     assert len(resultat.intervals["forecast_level"]) == len(SERIE_REFERENCE)
     assert len(resultat.intervals["level"]) == len(SERIE_REFERENCE)
-    assert set(resultat.diagnostics) == {"n", "log_likelihood", "initial_level", "initial_slope"}
+    assert set(resultat.diagnostics) == {
+        "n",
+        "log_likelihood",
+        "initial_level",
+        "initial_slope",
+        "irregular_time",
+        "parameters_estimated",
+    }
     assert resultat.diagnostics["n"] == len(SERIE_REFERENCE)
     assert resultat.diagnostics["initial_level"] == SERIE_REFERENCE[0]
     assert resultat.diagnostics["initial_slope"] == 0.0
@@ -470,14 +477,14 @@ def test_les_entrees_invalides_sont_refusees():
         _executer(SERIE_REFERENCE, level_process_variance=-0.1)
     with pytest.raises(ValueError, match="slope_process_variance"):
         _executer(SERIE_REFERENCE, slope_process_variance=-0.1)
-    with pytest.raises(ValueError, match="inconnu"):
+    with pytest.raises(ValueError, match="unknown"):
         _executer(SERIE_REFERENCE, variance_du_bruit=1.0)
-    with pytest.raises(ValueError, match="absent"):
+    with pytest.raises(ValueError, match="missing"):
         MODELE.run(
             ModelInputs(series={"y": (1.0, 2.0)}),
             ModelParameters(values={"measurement_variance": 1.0}),
         )
-    with pytest.raises(ValueError, match="fini"):
+    with pytest.raises(ValueError, match="finite"):
         _executer(SERIE_REFERENCE, measurement_variance=float("inf"))
 
 

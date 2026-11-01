@@ -587,6 +587,16 @@ d'implémentation.
 |---|---|---|
 | **INV-43** | **La nature d'un résultat et le statut opérationnel d'un produit sont deux choses distinctes, et ne se déduisent pas l'un de l'autre.** Une grandeur dérivée porte sa nature (`estimated`, `reconstructed`, `predicted`, `simulated`, `derived`) ; un produit de connaissance porte son statut opérationnel (`usable`, `degraded`, `withdrawn`, `inconclusive`). Le dépôt n'en distingue aujourd'hui que deux axes ; les deux autres, et la règle de non-contamination qui les gouverne, sont posés en doctrine (`docs/RESEARCH_AND_VALIDATION.md` §12). | Question : un produit `inconclusive` peut-il porter une nature d'estimation ? Et un produit `usable` porte-t-il toujours une nature ? Attendu : oui et oui. |
 
+### 4.11 Ce qui utilise le futur, et ce qui a été estimé
+
+| Réf. | Invariant | Forme vérifiable |
+|---|---|---|
+| **INV-44** | **Une sortie qui utilise l'information future est déclarée comme telle, et la déclaration est conservée avec le produit.** Le lissage de Rauch–Tung–Striebel reconstruit un état historique en employant les observations **postérieures** à l'instant qu'il estime : c'est une meilleure reconstruction, mais ce n'est pas une estimation qui était disponible à cet instant. Filtrer et lisser sont donc deux sorties distinctes, et la seconde est nommée dans `ModelResult.outputs_using_future`. Une sortie déclarée doit exister : la déclaration décrit un résultat, elle ne peut pas en désigner un qui n'y est pas. | Question : une sortie lissée est-elle déclarée comme utilisant le futur ? Et la déclaration est-elle conservée dans l'enregistrement ? Attendu : oui et oui. |
+| **INV-45** | **Les paramètres qu'une méthode a estimés sont conservés avec le produit.** Les paramètres de la configuration sont les paramètres *demandés* ; les paramètres *utilisés* — estimés sur l'historique d'entraînement, lorsque la méthode le fait — sont portés par le résultat et conservés dans l'enregistrement. Un artefact qui ne dit pas quels paramètres ont servi ne permet pas de rejouer le calcul : l'estimation devient une affirmation non vérifiable. | Question : l'enregistrement porte-t-il les paramètres **utilisés** ? Et un paramètre estimé se distingue-t-il du paramètre demandé ? Attendu : oui, et la différence est visible. |
+
+> Les deux invariants répondent à la même question sous deux formes : *ce qui a été calculé* est-il reproductible ?
+> Une déclaration qui n'est pas conservée avec le produit ne protège personne ; elle protège seulement celui qui l'a écrite.
+
 ---
 
 ## 5. La politique de réutilisation, et les arbitrages « un seul de chaque »
@@ -631,6 +641,23 @@ Chaque fichier porte en tête le dépôt d'origine, le commit (`athanor@6dacc87`
 licence, les dépendances tierces et la référence publiée. Les tests correspondants vérifient les résultats contre
 les définitions publiées — `scipy`, `statsmodels` — et **non** contre une réimplémentation interne : une brique
 qui ne se distingue pas de sa référence n'est pas une brique.
+
+**Écritures originales.** Sept modules ne viennent d'aucun dépôt historique : ils sont écrits contre la littérature,
+qu'ils citent module par module. Ils obéissent aux mêmes exigences — une référence par routine, un test qui vérifie
+le résultat contre la définition publiée et non contre une réimplémentation interne — mais leur provenance est
+**une publication**, pas un commit.
+
+| Besoin | Module TORNE | Référence publiée |
+|---|---|---|
+| Filtre de Kalman en espace d'état, tendance linéaire locale, lissage de Rauch–Tung–Striebel | `src/torne/methods/kalman.py` | Durbin & Koopman (2012), *Chapitre 4* ; Rauch, Tung & Striebel (1965), *AIAA Journal* 3(6) |
+| Comparaison appariée d'une prévision et recherche de rupture de régime | `src/torne/methods/compare.py` | Diebold & Mariano (1995), *JBES* 13(3) ; Newey & West (1987), *Econometrica* 55(3) ; Ploberger & Krämer (1992), *Econometrica* 60(2) |
+| CRPS, score d'intervalle, score pinball, PIT et diagnostics de calibration | `src/torne/methods/scores.py` | Gneiting & Raftery (2007), *JASA* 102(477) ; Winkler (1970), *JASA* 65(290) ; Ferro (2014), *QJRMS* 140(681) |
+| Taille d'échantillon effective, bootstrap par blocs, bootstrap par grappes, sensibilité à l'unité indépendante | `src/torne/methods/dependence.py` | Politis & White (2004), *Econometric Reviews* 23(1) ; Künsch (1989), *Ann. Statist.* 17(3) ; Geyer (1992), *Biometrika* 79(3) |
+| Contrôle de la multiplicité : Benjamini–Hochberg, Bonferroni, Romano–Wolf max-t | `src/torne/methods/multiplicity.py` | Benjamini & Hochberg (1995), *JRSS-B* 57(1) ; Romano & Wolf (2005), *Econometrica* 73(4) |
+
+Toutes ces routines stochastiques — le bootstrap, le multiplicateur de Romano–Wolf — prennent une graine explicite et
+construisent leur propre générateur : l'aléa global n'est jamais touché (INV-35, INV-36).
+
 
 ### 5.3 Une responsabilité, une implémentation
 
@@ -751,6 +778,8 @@ avant tout ce qui dépend d'une source précise.
 - L'aléa global n'est jamais touché, et un composant qui échantillonne est déterministe à graine fixée
   (INV-35, INV-36).
 - La nature d'un résultat et son statut opérationnel sont deux choses distinctes (INV-43).
+- La séparation entre une estimation disponible en temps réel et une reconstruction qui utilise le futur, et la
+  conservation des paramètres estimés (INV-44, INV-45).
 
 ### 6.2 Ce qui attend la qualification des sources
 

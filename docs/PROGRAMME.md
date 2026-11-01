@@ -182,60 +182,78 @@ lui vaut.
 
 ## 8. Les améliorations mathématiques, par priorité
 
-Classées par importance, et non par nouveauté académique. Aucune n'est engagée tant qu'un flux physique réel ne
-la justifie.
+Classées par importance, et non par nouveauté académique. L'état annoncé est celui du code : chaque « livré » est
+un module exécuté, testé, et vérifié contre la référence publiée qu'il cite. Ce qui reste exige un flux physique
+réel, ou une décision du propriétaire.
 
-**Priorité 1 — Corriger les garanties non testées.** Une garantie mathématique non testée n'est pas une garantie.
-Le test d'anti-fuite de bout en bout modifiait les données futures, mais recalculait ensuite la prévision depuis le
-bloc d'entraînement d'origine : la série modifiée n'entrait jamais dans le calcul. Le test est corrigé — la
-prévision est recalculée depuis la série modifiée, puis comparée — et vérifie désormais que les résultats
-antérieurs restent inchangés.
+**Priorité 1 — Corriger les garanties non testées.** *(livré)* Une garantie mathématique non testée n'est pas une
+garantie. Le test d'anti-fuite de bout en bout modifiait les données futures, mais recalculait ensuite la prévision
+depuis le bloc d'entraînement d'origine : la série modifiée n'entrait jamais dans le calcul. Le test est corrigé — la
+prévision est recalculée depuis la série modifiée, puis comparée — et vérifie désormais que les résultats antérieurs
+restent inchangés.
 
-**Priorité 2 — Faire évoluer le filtre vers un outil de reconstruction physique.** Le modèle actuel est un filtre
-linéaire gaussien univarié à tendance linéaire locale : il suppose des observations régulièrement espacées, une
-variance de mesure connue, des variances de bruit de processus connues, et un état latent évoluant selon une
-tendance lisse. C'est une bonne implémentation de référence, mais elle ne représente pas encore la variété des
-systèmes physiques. Trois évolutions, à introduire lorsqu'un vrai flux les justifie :
+**Priorité 2 — Faire évoluer le filtre vers un outil de reconstruction physique.** *(livré)* Le modèle était un
+filtre linéaire gaussien univarié à tendance linéaire locale : il supposait des observations régulièrement espacées,
+une variance de mesure connue, des variances de bruit de processus connues, et un état latent évoluant selon une
+tendance lisse. Les trois évolutions attendues sont faites, dans `src/torne/methods/kalman.py` :
 
-- **Temporalité irrégulière.** Le modèle reçoit une série numérique sans horodatage : il ne peut donc pas adapter
-  sa dynamique à un intervalle de trois heures, à une interruption de deux jours ou à un mois sans mesure. Une
-  transition dépendant de `Δt`, avec une covariance de processus cohérente, sera nécessaire.
-- **Estimation des paramètres.** Les variances sont imposées par l'appelant. Il faudra pouvoir les estimer sur le
-  seul historique d'entraînement, puis **conserver les paramètres estimés dans l'artefact**.
-- **Filtrage et lissage.** Pour reconstruire un état historique avec l'ensemble des observations ultérieures, un
-  lisseur de Rauch–Tung–Striebel sera pertinent. Le résultat filtré et le résultat lissé devront être publiés
-  séparément : le second utilise le futur, et ne doit **jamais** être présenté comme une estimation disponible en
-  temps réel.
+- **Temporalité irrégulière.** *(livré)* Le modèle reçoit une série horodatée. La transition devient
+  `F(Δt) = [[1, Δt], [0, 1]]` et la covariance de processus `Q(Δt) = diag(q_mu·Δt, q_beta·Δt)`. Une série
+  régulièrement espacée donne un résultat **identique** à la même série sans horodatage : les horodatages ne
+  changent pas la sémantique, ils la rendent explicite — et ils entrent dans l'empreinte de rejouabilité.
+- **Estimation des paramètres.** *(livré)* Les trois variances sont estimées par maximum de vraisemblance sur le
+  seul historique d'entraînement, par une optimisation déterministe de Nelder–Mead. Les valeurs estimées sont
+  conservées avec le produit, distinctes des paramètres demandés
+  (`docs/CONTRATS_FONDAMENTAUX.md` §4.11, INV-45).
+- **Filtrage et lissage.** *(livré)* Le lissage de Rauch–Tung–Striebel est publié **séparément** du filtrage, et
+  chaque sortie lissée est déclarée comme utilisant le futur (INV-44). Elle n'est jamais présentée comme une
+  estimation disponible en temps réel.
 
-**Priorité 3 — Renforcer l'incertitude et la calibration.** Le socle distingue déjà plusieurs incertitudes, mais la
-couverture n'est pas démontrée au-delà :
+Ce que le filtre n'est pas encore : un modèle multi-séries corrélées, un niveau stationnaire, ou des variances qui
+changent dans le temps. Rien de tout cela n'est justifié par un flux physique réel aujourd'hui.
+
+**Priorité 3 — Renforcer l'incertitude et la calibration.** *(partiellement livré)* Le socle distingue plusieurs
+incertitudes ; la couverture est la suivante :
 
 | Incertitude | Couverture |
 |---|---|
 | Incertitude conditionnelle de l'état latent, sous le modèle du filtre | oui |
 | Incertitude de prévision | oui |
 | Incertitude des métriques d'évaluation | oui, par HAC |
-| Incertitude sur les paramètres estimés | pas encore |
+| Incertitude sur les paramètres estimés | pas encore — le maximum de vraisemblance donne une valeur, pas une région |
 | Incertitude liée à la mauvaise spécification du modèle | pas encore |
 | Robustesse de la couverture selon les régimes physiques | pas démontrée |
 
-Pour les prochaines prévisions probabilistes : scores CRPS et scores d'intervalles, en complément de RMSE et MAE ;
-PIT et diagnostics de calibration ; couverture conditionnelle par régime, par saison ou par classe de bassin ;
-recalibration adaptée aux séries dépendantes ; et, éventuellement, conformal adaptatif — **avec ses hypothèses et
-ses garanties explicitement testées**. Pas d'implémentation générique de conformal tout de suite : une application
-naïve des méthodes split-conformal à des séries temporelles peut donner une couverture trompeuse.
+Ce qui est livré, dans `src/torne/methods/scores.py` : le CRPS d'une loi gaussienne, le CRPS d'une loi empirique
+(estimateur **juste**, c'est-à-dire non biaisé par la taille finie de l'ensemble), le score d'intervalle de
+Winkler, le score pinball, le PIT, et un rapport de calibration qui croise un test du chi-deux sur l'histogramme
+des PIT et un test de Kolmogorov–Smirnov sur les valeurs elles-mêmes — deux tests indépendants, parce qu'un
+histogramme peut cacher ce qu'un test de rang voit. La couverture empirique est rapportée pour quelques niveaux
+nomiaux.
 
-**Priorité 4 — Reprendre les meilleures pratiques statistiques.** Trois familles, par ordre de valeur :
+Ce qui reste : la couverture conditionnelle par régime, par saison ou par classe de bassin ; la recalibration
+adaptée aux séries dépendantes ; l'incertitude sur les paramètres estimés ; et, éventuellement, le conformal
+adaptatif — **avec ses hypothèses et ses garanties explicitement testées**. Pas d'implémentation générique de
+conformal tout de suite : une application naïve des méthodes split-conformal à des séries temporelles peut donner
+une couverture trompeuse.
 
-- **Multiplicité et sélection de modèles.** Bonferroni, Benjamini–Hochberg ou Romano–Wolf selon la question, avec la
-  règle que le choix de la procédure est déterminé **avant** l'examen confirmatoire des résultats (§2.3).
-- **Inférence séquentielle.** E-values et confidence sequences lorsque TORNE surveillera continuellement un
-  phénomène ou accumulera des observations. Les hypothèses mathématiques devront être adaptées aux grandeurs
-  physiques considérées : une procédure pour moyenne bornée ne se transpose pas sans précaution à un débit non
-  borné.
-- **Validation sous dépendance.** Bootstrap par blocs, bootstrap par grappes, et tests de sensibilité à l'unité
-  indépendante. Pour une étude multi-bassins, 100 000 mesures sur trois bassins ne constituent pas 100 000
-  expériences indépendantes.
+**Priorité 4 — Reprendre les meilleures pratiques statistiques.** *(partiellement livré)* Deux des trois familles
+sont faites ; l'inférence séquentielle ne l'est pas.
+
+- **Multiplicité et sélection de modèles.** *(livré)* `src/torne/methods/multiplicity.py` implémente
+  Benjamini–Hochberg, Bonferroni et Romano–Wolf (max-t à descente pas à pas, bootstrap multiplicateur). Les
+  valeurs ajustées de Benjamini–Hochberg reproduisent celles de `scipy` à la précision machine. La règle que le
+  choix de la procédure est déterminé **avant** l'examen confirmatoire des résultats reste une règle du programme
+  (§2.3 de `docs/RESEARCH_AND_VALIDATION.md`), pas une propriété du code : aucun module ne peut la faire
+  respecter.
+- **Validation sous dépendance.** *(livré)* `src/torne/methods/dependence.py` implémente la taille d'échantillon
+  effective, le bootstrap par blocs (longueur de bloc choisie par la règle automatique de Politis–White 2004), le
+  bootstrap par grappes, et la sensibilité à l'unité indépendante. Le point est explicite : 100 000 mesures sur
+  trois bassins ne sont pas 100 000 expériences indépendantes, et le module le montre.
+- **Inférence séquentielle.** *(non fait)* E-values et confidence sequences pour le moment où TORNE surveillera
+  continuellement un phénomène ou accumulera des observations. Les hypothèses mathématiques devront être adaptées
+  aux grandeurs physiques considérées : une procédure pour moyenne bornée ne se transpose pas sans précaution à un
+  débit non borné.
 
 Ce qui n'est **pas** repris : les métriques de backtesting financier de type PBO ou Deflated Sharpe, qui ne
 deviennent pas des outils génériques de TORNE.

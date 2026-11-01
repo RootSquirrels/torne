@@ -342,6 +342,11 @@ class ExecutionRecord:
                     if nom in self.result.intervals
                 },
                 "output_natures": {nom: self.result.output_nature(nom).value for nom in publiees},
+                "outputs_using_future": list(self.result.outputs_using_future),
+                # Les paramètres **effectivement utilisés** par la méthode, qui
+                # peuvent avoir été estimés sur les données d'entraînement : ils
+                # ne sont pas nécessairement ceux de la configuration.
+                "used_parameters": dict(self.result.parameters.as_dict()),
                 "diagnostics": dict(self.result.diagnostics),
             },
             "derived_variables": [variable.as_dict() for variable in self.derived_variables],

@@ -152,6 +152,7 @@ class ModelResult:
     intervals: Mapping[str, tuple[tuple[float, float], ...]] = field(default_factory=dict)
     diagnostics: Mapping[str, float | int | str | bool] = field(default_factory=dict)
     output_natures: Mapping[str, ResultNature] = field(default_factory=dict)
+    outputs_using_future: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -170,7 +171,9 @@ class ModelResult:
             MappingProxyType({name: tuple(pairs) for name, pairs in self.intervals.items()}),
         )
         object.__setattr__(self, "diagnostics", MappingProxyType(dict(self.diagnostics)))
+        object.__setattr__(self, "outputs_using_future", tuple(self.outputs_using_future))
         self._verifier_intervalles()
+        self._verifier_sorties_utilisant_le_futur()
         if self.output_natures:
             if set(self.output_natures) != set(self.outputs):
                 raise ValueError(
@@ -238,6 +241,21 @@ class ModelResult:
                         f"intervalle « {nom} » : l'intervalle {indice} n'est pas ordonné "
                         f"({bas} > {haut})"
                     )
+
+    def _verifier_sorties_utilisant_le_futur(self) -> None:
+        """Vérifie que chaque sortie déclarée comme utilisant le futur existe.
+
+        Une sortie qui utilise l'information future — une grandeur lissée, par
+        exemple — n'est jamais une estimation disponible en temps réel. Le dire
+        est nécessaire, mais ce n'est pas suffisant : il faut que la sortie
+        existe, sinon la déclaration ne décrit rien.
+        """
+        for nom in self.outputs_using_future:
+            if nom not in self.outputs:
+                raise ValueError(
+                    f"sortie utilisant le futur « {nom} » : aucune sortie de ce nom dans le "
+                    f"résultat (sorties : {sorted(self.outputs)})"
+                )
 
     def _verifier_natures_de_sortie(self) -> None:
         """Vérifie que chaque nature déclarée par sortie est une nature connue.
