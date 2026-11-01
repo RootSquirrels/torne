@@ -312,6 +312,11 @@ def test_l_information_future_nentre_pas_dans_une_prevision(serie):
 
     C'est la preuve la plus directe qu'aucune information future n'a pu
     s'infiltrer dans le modèle : si elle l'avait fait, la prévision changerait.
+
+    La prévision est recalculée **depuis la série modifiée**, et non depuis la
+    série d'origine : recalculer deux fois la même prévision sur le même bloc
+    d'entraînement ne prouverait rien, puisque la modification n'entrerait
+    jamais dans le calcul.
     """
     valeurs, _ = serie
     plis = walk_forward(valeurs, initial_size=TAILLE_ENTRAINEMENT, step=1)
@@ -322,7 +327,13 @@ def test_l_information_future_nentre_pas_dans_une_prevision(serie):
         altere[index] = 1e6
 
     prevu_initial = _prevoir(premier.train)[0]
-    prevu_apres_perturbation = _prevoir(premier.train)[0]
+
+    # Le découpage est refait sur la série modifiée : c'est ce qui fait
+    # réellement passer la perturbation dans le calcul. Si le découpage
+    # laissait fuiter un point futur dans l'entraînement, la prévision
+    # changerait — et ce test le verrait.
+    plis_alteres = walk_forward(altere, initial_size=TAILLE_ENTRAINEMENT, step=1)
+    prevu_apres_perturbation = _prevoir(plis_alteres[0].train)[0]
 
     assert prevu_initial == prevu_apres_perturbation
     assert prevu_initial != altere[premier.test_start]

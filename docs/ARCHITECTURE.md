@@ -227,6 +227,11 @@ Deux règles complètent cette liste, et elles ont bite sur ce que le dépôt a 
   dans `docs/CONTRATS_FONDAMENTAUX.md` §5.
 - **Aucune dépendance runtime sans import réel.** Une dépendance qui n'est jamais importée n'est pas une
   dépendance : elle ne figure ni dans `pyproject.toml`, ni dans le verrou.
+- **Aucun modèle générique remplacé par son état de l'art.** Un modèle n'entre pas parce qu'il a été qualifié
+  ailleurs, mais parce que les données disponibles et la grandeur à reconstruire le demandent.
+- **Aucune bibliothèque de modèles d'un domaine avant que ce domaine ait un premier problème.**
+- **Aucun framework bayésien global, aucun moteur de validation, de simulation ou de sélection** : ces
+  briques ne sont justifiées par aucun besoin concret démontré (`docs/PROGRAMME.md` §9).
 
 Une proposition d'architecture nouvelle doit répondre à quatre questions avant d'être acceptée :
 

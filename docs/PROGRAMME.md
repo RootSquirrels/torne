@@ -186,3 +186,77 @@ Ce n'est plus l'expérience fondatrice de TORNE pour l'instant : c'est une **hyp
 l'observatoire des sources pourra confirmer, nuancer ou infirmer. Un pré-enregistrement écrit à l'avance et jamais
 consulté n'a rien prouvé ; un pré-enregistrement consulté après exploration reste pré-enregistré, et c'est ce qui
 lui vaut.
+
+## 8. Les améliorations mathématiques, par priorité
+
+Classées par importance, et non par nouveauté académique. Aucune n'est engagée tant qu'un flux physique réel ne
+la justifie.
+
+**Priorité 1 — Corriger les garanties non testées.** Une garantie mathématique non testée n'est pas une garantie.
+Le test d'anti-fuite de bout en bout modifiait les données futures, mais recalculait ensuite la prévision depuis le
+bloc d'entraînement d'origine : la série modifiée n'entrait jamais dans le calcul. Le test est corrigé — la
+prévision est recalculée depuis la série modifiée, puis comparée — et vérifie désormais que les résultats
+antérieurs restent inchangés.
+
+**Priorité 2 — Faire évoluer le filtre vers un outil de reconstruction physique.** Le modèle actuel est un filtre
+linéaire gaussien univarié à tendance linéaire locale : il suppose des observations régulièrement espacées, une
+variance de mesure connue, des variances de bruit de processus connues, et un état latent évoluant selon une
+tendance lisse. C'est une bonne implémentation de référence, mais elle ne représente pas encore la variété des
+systèmes physiques. Trois évolutions, à introduire lorsqu'un vrai flux les justifie :
+
+- **Temporalité irrégulière.** Le modèle reçoit une série numérique sans horodatage : il ne peut donc pas adapter
+  sa dynamique à un intervalle de trois heures, à une interruption de deux jours ou à un mois sans mesure. Une
+  transition dépendant de `Δt`, avec une covariance de processus cohérente, sera nécessaire.
+- **Estimation des paramètres.** Les variances sont imposées par l'appelant. Il faudra pouvoir les estimer sur le
+  seul historique d'entraînement, puis **conserver les paramètres estimés dans l'artefact**.
+- **Filtrage et lissage.** Pour reconstruire un état historique avec l'ensemble des observations ultérieures, un
+  lisseur de Rauch–Tung–Striebel sera pertinent. Le résultat filtré et le résultat lissé devront être publiés
+  séparément : le second utilise le futur, et ne doit **jamais** être présenté comme une estimation disponible en
+  temps réel.
+
+**Priorité 3 — Renforcer l'incertitude et la calibration.** Le socle distingue déjà plusieurs incertitudes, mais la
+couverture n'est pas démontrée au-delà :
+
+| Incertitude | Couverture |
+|---|---|
+| Incertitude conditionnelle de l'état latent, sous le modèle du filtre | oui |
+| Incertitude de prévision | oui |
+| Incertitude des métriques d'évaluation | oui, par HAC |
+| Incertitude sur les paramètres estimés | pas encore |
+| Incertitude liée à la mauvaise spécification du modèle | pas encore |
+| Robustesse de la couverture selon les régimes physiques | pas démontrée |
+
+Pour les prochaines prévisions probabilistes : scores CRPS et scores d'intervalles, en complément de RMSE et MAE ;
+PIT et diagnostics de calibration ; couverture conditionnelle par régime, par saison ou par classe de bassin ;
+recalibration adaptée aux séries dépendantes ; et, éventuellement, conformal adaptatif — **avec ses hypothèses et
+ses garanties explicitement testées**. Pas d'implémentation générique de conformal tout de suite : une application
+naïve des méthodes split-conformal à des séries temporelles peut donner une couverture trompeuse.
+
+**Priorité 4 — Reprendre les meilleures pratiques statistiques.** Trois familles, par ordre de valeur :
+
+- **Multiplicité et sélection de modèles.** Bonferroni, Benjamini–Hochberg ou Romano–Wolf selon la question, avec la
+  règle que le choix de la procédure est déterminé **avant** l'examen confirmatoire des résultats (§2.3).
+- **Inférence séquentielle.** E-values et confidence sequences lorsque TORNE surveillera continuellement un
+  phénomène ou accumulera des observations. Les hypothèses mathématiques devront être adaptées aux grandeurs
+  physiques considérées : une procédure pour moyenne bornée ne se transpose pas sans précaution à un débit non
+  borné.
+- **Validation sous dépendance.** Bootstrap par blocs, bootstrap par grappes, et tests de sensibilité à l'unité
+  indépendante. Pour une étude multi-bassins, 100 000 mesures sur trois bassins ne constituent pas 100 000
+  expériences indépendantes.
+
+Ce qui n'est **pas** repris : les métriques de backtesting financier de type PBO ou Deflated Sharpe, qui ne
+deviennent pas des outils génériques de TORNE.
+
+## 9. Ce qu'on n'ajoute pas maintenant
+
+- TabPFN, TabICL ou d'autres modèles génériques, au seul motif qu'ils ont été qualifiés d'état de l'art ailleurs ;
+- une collection de transformers et de modèles temporels pré-entraînés ;
+- un framework bayésien global ;
+- une bibliothèque de modèles hydrologiques, avant d'avoir défini le premier problème physique ;
+- un nouveau moteur de validation, de simulation ou de sélection.
+
+Pour la question hydrologique, les candidats sérieux pourront inclure des modèles conceptuels, des modèles de type
+LSTM, des modèles intégrant les processus physiques et, lorsque plusieurs stations sont pertinentes, des modèles
+spatio-temporels. Mais **le choix doit découler des données disponibles et de la grandeur que nous cherchons à
+reconstruire**, pas d'une mode algorithmique.
+
