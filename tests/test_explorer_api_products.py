@@ -245,6 +245,28 @@ def test_the_countries_that_published_nothing_are_declared(client):
     assert len(storage["coverage"]) == len(published) + len(without)
 
 
+def test_the_installations_without_data_are_declared(client):
+    """The terminals the platform could not read are named.
+
+    Six installations publish nothing. The product says so, and the API serves
+    the list: a reader must be able to tell an installation that published
+    nothing from an installation that does not exist.
+    """
+    answer = client.get(f"/api/products/{GAS_PRODUCT}")
+    assert answer.status_code == 200
+
+    terminals = answer.json()["indicators"]["terminals"]
+    without = terminals["installations_without_data"]
+    assert len(without) == 6
+    assert all(isinstance(eic, str) and eic for eic in without)
+
+    states = client.get(
+        f"/api/products/{GAS_PRODUCT}/states", params={"layer": "terminals"}
+    ).json()["states"]
+    published = {state["entity"] for state in states}
+    assert not set(without) & published, "an installation is either published or absent, not both"
+
+
 def test_a_country_that_published_nothing_has_no_state(client):
     """The eleven countries that published nothing are absent from the states."""
     states = client.get(f"/api/products/{GAS_PRODUCT}/states", params={"layer": "storage"}).json()[
