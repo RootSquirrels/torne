@@ -66,6 +66,27 @@ Autrement dit :
 **L'ordre compte.** On valide d'abord la physique, puis l'économie. Et l'on **rapporte les deux
 séparément** — jamais un seul score agrégé qui les masque l'un l'autre.
 
+### 2.4 La portée de TORNE s'arrête au *knowledge product* (1ᵉʳ novembre 2026)
+
+> **Décision de l'owner.** La recherche de valeur économique n'est plus du ressort de TORNE :
+> elle appartient à une autre partie du système. **Une mission de TORNE se termine au
+> *knowledge product*** — une grandeur nouvelle, produite régulièrement, avec son incertitude et sa
+> **validation physique**.
+
+Ce que cela change, et ce qui ne change pas :
+
+| | Avant | Depuis le 1ᵉʳ novembre 2026 |
+|---|---|---|
+| Issue admissible d'une mission | *Knowledge Product* \| *Opportunity Product* \| *NO-GO documenté* | *Knowledge Product* \| *NO-GO documenté* — l'*Opportunity Product* relève du composant aval |
+| Validation exigée pour clore une mission | physique **et** économique | **physique** ; la validation économique est produite en aval, par le composant qui en a la charge |
+| Ce qu'une mission doit démontrer | la valeur physique **et** l'utilité économique | la **valeur physique** : la grandeur est-elle nouvelle, et décrit-elle correctement le monde réel ? |
+
+> **Ce qui ne change pas.** Le refus de l'« utilité économique » n'est pas une dérogation à
+> l'exigence de rigueur : la validation physique reste **exigente**, et une estimation
+> physiquement fausse reste fausse, quel que soit son intérêt. Une mission dont la grandeur
+> dérivée n'est pas nouvelle — ou dont l'incertitude n'est pas bornée — reste un travail de
+> recherche, pas un produit.
+
 ---
 
 ## 3. La règle de portefeuille

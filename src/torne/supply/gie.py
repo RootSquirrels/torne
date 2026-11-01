@@ -65,16 +65,26 @@ def _publication(element: Mapping[str, object]) -> datetime:
     return datetime.now(UTC)
 
 
-def decoder_agsi(element: Mapping[str, object]) -> GasDay | None:
-    """Un enregistrement AGSI+, traduit en etat de stockage."""
+def decoder_agsi(element: Mapping[str, object], pays: str | None = None) -> GasDay | None:
+    """Un enregistrement AGSI+, traduit en etat de stockage.
+
+    L'element porte le code EIC de l'installation — un pays pour l'agregat
+    national, un **site** pour une installation. Le pays est donc passe par
+    l'appelant : il n'est pas dans la source.
+
+    `nom` est repris tel que la source le publie : c'est ce qui rend le
+    controle d'identifiant lisible quand on compare une installation a une
+    autre.
+    """
     jour = _jour(element.get("gasDayStart"))
     stock = _nombre(element.get("gasInStorage"))
     capacite = _nombre(element.get("workingGasVolume"))
     if jour is None or stock is None or capacite is None:
         return None
+    code = str(element.get("code") or "")
     return GasDay(
-        installation=str(element.get("code") or ""),
-        pays=str(element.get("code") or ""),
+        installation=code,
+        pays=pays if pays is not None else code,
         couche=STOCKAGE_SOUTERRAIN,
         jour_gaz=jour,
         date_publication=_publication(element),
@@ -86,6 +96,7 @@ def decoder_agsi(element: Mapping[str, object]) -> GasDay | None:
         rempli=_nombre(element.get("full")),
         autonomie_publiee=_nombre(element.get("consumptionFull")),
         precision=0.1,
+        nom=str(element.get("name") or ""),
     )
 
 
