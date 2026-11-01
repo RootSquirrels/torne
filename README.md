@@ -61,12 +61,14 @@ TORNE attaque les quatre points à la fois : qualifier les sources, reconstruire
 
 | Ce qui est en place | Ce qui ne l'est pas |
 |---|---|
-| Socle d'acquisition exécutable : transport durci, magasin brut adressé par le contenu, fetcher paginé, contrat de connecteur à quatre contrôles | Aucune observation issue de données réelles n'a encore été produite |
-| **Trois sources réellement intégrées**, interrogées sur le réseau : Hub'EAU v2, USGS NWIS, catalogue Copernicus Data Space | Aucune source n'est qualifiée au sens de la classe de publication — établie, bornée, inconnue |
-| Objets et temporalité : cinq objets, trois dimensions, `usable_at` dérivé, absence qualifiée | Pas de couche sémantique, pas d'objet de domaine, pas de moteur, pas de registre |
-| Méthodes : filtre de Kalman en espace d'état, régression et erreur-type CR1, rupture CUSUM, puissance, comparaison appariée | Aucun modèle ajusté sur des données réelles ; aucune performance démontrée |
+| Socle d'acquisition exécutable : transport durci, magasin brut adressé par le contenu, fetcher paginé, contrat de connecteur à quatre contrôles | Une seule source a produit des observations ; les deux autres restent à qualifier |
+| **Trois sources réellement intégrées**, interrogées sur le réseau : Hub'EAU v2, USGS « Water Data for the Nation » (API OGC), catalogue Copernicus Data Space | Aucune source n'est qualifiée au sens de la classe de publication — établie, bornée, inconnue |
+| Objets et temporalité : cinq objets, trois dimensions, `usable_at` dérivé, absence qualifiée | Pas de moteur, pas de registre ; la couche sémantique n'existe que pour l'hydrologie |
+| **Première couche sémantique du domaine** (`hydrology/`) : enregistrement → observation, climatologie journalière, anomalie standardisée | Un seul domaine, une seule station : la généralisation n'est pas faite |
+| Méthodes : filtre de Kalman en espace d'état, régression et erreur-type CR1, rupture CUSUM, puissance, comparaison appariée | Aucune performance démontrée : le modèle tourne sur des données réelles, mais aucune performance n'est *établie* |
+| **Un jalon sur le monde réel** : 33 481 relevés quotidiens acquis, climatologie reproduisant les statistiques publiées de l'agence à 0,11 % près, premier produit de connaissance publié | Une seule variable dérivée ; aucune preuve prospective — le pré-enregistrement est écrit, mais pas outillé |
 | Exécution rejouable, évaluation — découpage cumulatif, références, métriques, incertitude —, enregistrement avec lignée vérifiable | Aucune preuve prospective : le pré-enregistrement est écrit, mais pas outillé |
-| Plus de 400 tests verts ; la CI construit le paquet, l'installe et le lance | Une source peut accepter un filtre sans l'appliquer — cas mesuré sur Hub'EAU, voir `docs/SOURCES.md` §I.1 |
+| Plus de 490 tests verts ; la CI construit le paquet, l'installe et le lance | Une source peut accepter un filtre sans l'appliquer — cas mesuré sur Hub'EAU, voir `docs/SOURCES.md` §I.1 |
 | La conformité d'acquisition bloque ce qui n'est pas conforme, et la preuve brute est conservée | La licence du dépôt n'est pas choisie — c'est une décision du propriétaire |
 
 Le détail — et surtout **ce qui manque** — sont dans [`docs/PROGRAMME.md`](docs/PROGRAMME.md).
@@ -102,7 +104,7 @@ Python 3.12, `uv` épinglé par la CI. Le point d'entrée console `torne` décri
 
 ```console
 $ torne
-torne 0.1.0 — exécution, évaluation et preuve implémentées ; aucune performance sur le monde réel n'est démontrée
+torne 0.1.0 — exécution, évaluation et preuve implémentées ; premier jalon sur données réelles publié ; aucune performance démontrée
 ```
 
 ## Structure du dépôt
@@ -115,6 +117,7 @@ src/torne/
   evaluation/     découpage temporel, références, métriques, incertitude, rapport
   execution/      exécution rejouable d'un modèle
   knowledge/      enregistrement d'un produit et vérification de sa lignée
+  hydrology/      couche sémantique du domaine : enregistrement → observation, variable dérivée
 docs/             les documents de référence
 tests/            la suite de tests
 experiments/      explorations jettables

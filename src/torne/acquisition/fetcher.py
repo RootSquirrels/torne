@@ -37,6 +37,14 @@ et elle est conservée. Les deux axes restent distincts, et c'est
 `exploitable` qui décide de l'usage. La réponse brute est conservée : une
 réponse qui a répondu à côté est une preuve, et elle est d'autant plus
 utile qu'on sait qu'elle ne convient pas.
+
+A verdict **indeterminate** — a requested criterion the source did not allow
+to be verified — does not shut the gate in the same way. It proves no
+violation: the traversal continues, and the raw evidence accumulates page
+after page. What it does shut is the door on **use**: the issue carries the
+most unfavourable of all the verdicts rendered, and it is therefore not
+exploitable. Observations are never built on a conformity that is not
+established.
 """
 
 from __future__ import annotations
@@ -60,6 +68,7 @@ from .contracts import (
     HttpResponse,
     SourceAdapter,
     VerdictConformite,
+    worst_verdict,
 )
 from .store import RawStore
 from .transport import Transport, TransportError
@@ -147,7 +156,7 @@ class Fetcher:
         preuves: list[RawEvidence] = []
         erreur: AcquisitionErrorKind | None = None
         detail: str | None = None
-        verdict: VerdictConformite | None = None
+        verdicts: list[VerdictConformite] = []
         page = 0
         tronque = False
         interrompu = False
@@ -187,20 +196,30 @@ class Fetcher:
             # consigné.
             try:
                 suivante = adapter.next_request(demande, reponse_effective)
-                verdict = adapter.verdict_conformite(demande, reponse_effective)
+                verdict_page = adapter.verdict_conformite(demande, reponse_effective)
             except (ValueError, KeyError) as erreur_adaptateur:
                 erreur = AcquisitionErrorKind.MALFORMED
                 detail = f"la source a renvoyé une réponse illisible : {erreur_adaptateur}"
                 interrompu = True
                 break
+            verdicts.append(verdict_page)
 
-            # La porte : un verdict défavorable **bloque**. L'**acquisition**
-            # n'a pas échoué — la réponse est arrivée et elle est conservée —
-            # mais ce qui échoue, c'est la **conformité**, et elle est portée
-            # par son verdict, pas par le statut ni par une cause d'erreur.
-            # Le parcours s'arrête là : demander la page suivante d'une source
-            # qui a répondu à côté n'apporterait rien.
-            if verdict.conformite is Conformite.NON_CONFORME:
+            # The gate: an **unfavourable** verdict blocks. The **acquisition**
+            # did not fail — the response arrived and it is kept — what fails
+            # is the **conformity**, and it is carried by its verdict, not by
+            # the status nor by an error cause. The traversal stops there:
+            # asking a source that answered beside the question for its next
+            # page would bring nothing.
+            #
+            # Only a **violation** stops the traversal. An **indeterminate**
+            # verdict — a requested criterion that could not be verified —
+            # does not: the source did not answer beside the question, it
+            # left one point in the dark, and the traversal can go on without
+            # any risk of contamination. What is shut instead is the **gate**:
+            # the issue carries the most unfavourable verdict, and it is
+            # therefore not exploitable. The raw evidence, on the other hand,
+            # is kept page after page.
+            if verdict_page.conformite is Conformite.NON_CONFORME:
                 interrompu = suivante is not None
                 break
 
@@ -209,6 +228,11 @@ class Fetcher:
             demande = suivante
 
         finished_at = self._clock()
+
+        # The verdict of the issue is the **most unfavourable** of all those
+        # rendered: a page that could not be certified cannot be covered by a
+        # conformant page that came later.
+        verdict = worst_verdict(verdicts)
 
         # L'axe de l'ACQUISITION : la réponse est-elle arrivée, et le parcours
         # est-il complet ? La non-conformité n'y entre pas : une réponse non

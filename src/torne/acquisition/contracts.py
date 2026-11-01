@@ -29,7 +29,7 @@ hydrologique » (`docs/PROGRAMME.md`).
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -143,19 +143,43 @@ class Conformite(StrEnum):
     de la *complétude* du parcours, l'autre de la *justesse* de la réponse au
     regard de la question posée.
 
+    La table de vérité est celle de l'axe d'applicabilité des produits de
+    connaissance (`docs/RESEARCH_AND_VALIDATION.md` §12.1) : **la même règle,
+    au même mot, à deux étages.**
+
+    | Ce que porte le verdict | Verdict |
+    |---|---|
+    | tous les critères vérifiés et satisfaits | `CONFORME` |
+    | au moins un critère vérifié et violé | `NON_CONFORME` |
+    | aucun critère violé, au moins un demandé mais non vérifiable | `INDETERMINATE` |
+    | la source ne fournit aucun prédicat | `NON_APPLICABLE` |
+
     - `CONFORME` — la page répond bien à la question posée, et cela a été
       **vérifié** sur ce qui a été reçu.
-    - `NON_CONFORME` — la conformité n'est **pas établie**. La page ne répond
-      pas à la question posée, ou bien la réponse ne permet pas de le montrer.
-      C'est un verdict **bloquant** : elle ne produit aucune observation.
+    - `NON_CONFORME` — au moins un critère demandé a été **violé**. C'est un
+      constat : la réponse ne répond pas à la question posée.
+    - `INDETERMINATE` — aucun critère n'a été violé, mais au moins un critère
+      **demandé n'a pas pu être vérifié**. C'est une **abstention** : la
+      conformité n'est établie ni dans un sens ni dans l'autre. Elle n'est pas
+      exploitable, et elle n'est pas non plus un constat.
     - `NON_APPLICABLE` — la source ne fournit **aucun prédicat** : il n'y a
-      rien à vérifier. Ce n'est **pas** une conformité : une absence de
-      prédicat n'est jamais un prédicat satisfait, et elle ne vaut pas
-      davantage qu'une non-conformité pour ouvrir la porte.
+      rien à vérifier, et donc aucune contrainte à enfreindre.
+
+    > **Non-contamination : un critère n'est jamais « violé » par la seule
+    > absence de vérification.** Un prédicat non applicable ne fait pas un
+    > constat d'inapplicabilité ; il fait une abstention.
+
+    **The gate.** Only one of these four verdicts authorises use: `CONFORME`.
+    The three others are an abstention (`INDETERMINATE`, `NON_APPLICABLE`) or
+    a finding of non-conformity (`NON_CONFORME`), and observations are never
+    built on an abstention. That is the rule carried by
+    `AcquisitionOutcome.exploitable`, and it holds for every verdict,
+    whichever adapter produced it.
     """
 
     CONFORME = "conforme"
     NON_CONFORME = "non_conforme"
+    INDETERMINATE = "indeterminate"
     NON_APPLICABLE = "non_applicable"
 
 
@@ -219,6 +243,10 @@ class VerdictConformite:
         object.__setattr__(self, "criteres", MappingProxyType(dict(self.criteres)))
         if self.conformite is Conformite.NON_CONFORME and not self.motif:
             raise ValueError("un verdict non conforme porte son motif")
+        if self.conformite is Conformite.INDETERMINATE and not self.motif:
+            raise ValueError(
+                "an abstention carries its motif: it must say what could not be verified"
+            )
         for nom, critere in self.criteres.items():
             if not isinstance(critere, CritereConformite):
                 raise TypeError(f"le critère « {nom} » n'est pas un CritereConformite")
@@ -235,6 +263,103 @@ class VerdictConformite:
             "motif": self.motif,
             "criteres": {nom: critere.as_dict() for nom, critere in self.criteres.items()},
         }
+
+
+def verdict_from_criteria(criteria: Mapping[str, CritereConformite]) -> VerdictConformite:
+    """Applies the truth table to the criteria collected by an adapter.
+
+    The **socle** decides, not each adapter: the rule is the same everywhere
+    and it is written exactly once. An adapter **collects** criteria — what
+    the request asked for, what the response allowed to be verified — it does
+    not decide the verdict. That is what prevents an adapter from forgetting
+    a case and opening the gate on a conformity that was never established.
+
+    | Collected criteria | Verdict |
+    |---|---|
+    | none | `NON_APPLICABLE` — the source declares no predicate |
+    | at least one violated | `NON_CONFORME` — a criterion was explicitly violated |
+    | none violated, at least one not verifiable | `INDETERMINATE` — conformity is not established |
+    | all verified and satisfied | `CONFORME` |
+
+    The order of the branches is not arbitrary: **a finding always beats an
+    abstention**. When one criterion is violated *and* another remains
+    unknown, the verdict is `NON_CONFORME`: that is an established fact,
+    where the other is merely silence.
+
+    The motif always states **what was asked, what was received, and what
+    could not be verified**: a verdict without a motif is not auditable.
+    """
+    if not criteria:
+        return VerdictConformite(
+            conformite=Conformite.NON_APPLICABLE,
+            motif="the source declares no semantic criterion: there is nothing to verify",
+        )
+
+    violations = [name for name, criterion in criteria.items() if criterion.conforme is False]
+    unverifiable = [name for name, criterion in criteria.items() if not criterion.verifie]
+
+    if violations:
+        details = " ; ".join(
+            f"{name} requested « {criteria[name].demande} », received « {criteria[name].recu} »"
+            for name in violations
+        )
+        return VerdictConformite(
+            conformite=Conformite.NON_CONFORME,
+            motif=(f"the source returned records that are not the ones requested: {details}"),
+            criteres=criteria,
+        )
+
+    if unverifiable:
+        details = " ; ".join(
+            f"{name} requested « {criteria[name].demande} », not verifiable ({criteria[name].recu})"
+            for name in unverifiable
+        )
+        return VerdictConformite(
+            conformite=Conformite.INDETERMINATE,
+            motif=f"conformity cannot be established: {details}",
+            criteres=criteria,
+        )
+
+    return VerdictConformite(conformite=Conformite.CONFORME, criteres=criteria)
+
+
+_SEVERITE_CONFORMITE = {
+    Conformite.CONFORME: 0,
+    Conformite.NON_APPLICABLE: 1,
+    Conformite.INDETERMINATE: 2,
+    Conformite.NON_CONFORME: 3,
+}
+"""Severity order of the verdicts, from least to most severe.
+
+A more severe verdict **overwrites** a less severe one: a single page whose
+conformity is not established is enough to prevent the whole acquisition from
+being exploited. That is the "worst wins" rule, and it holds page by page as
+well as for the issue as a whole.
+"""
+
+
+def worst_verdict(
+    verdicts: Iterable[VerdictConformite],
+) -> VerdictConformite | None:
+    """The most severe of the verdicts rendered, or `None` if there is none.
+
+    A traversal spans several pages, and each of them is checked. The issue
+    carries the **most unfavourable** verdict: an acquisition cannot be
+    declared conformant on the strength of its last page alone, if a page in
+    the middle failed to be certified.
+
+    This is the counterpart, on the conformity axis, of the raw-evidence
+    rule: **what is acquired is kept**, even when what is acquired cannot be
+    used.
+    """
+    worst: VerdictConformite | None = None
+    for verdict in verdicts:
+        if worst is None:
+            worst = verdict
+            continue
+        if _SEVERITE_CONFORMITE[verdict.conformite] > _SEVERITE_CONFORMITE[worst.conformite]:
+            worst = verdict
+    return worst
 
 
 @dataclass(frozen=True, slots=True)
@@ -390,29 +515,35 @@ class AcquisitionOutcome:
 
     @property
     def conformite(self) -> Conformite:
-        """Ce que l'on sait de la conformité de la réponse à la question posée.
+        """What is known about the conformity of the response to the question asked.
 
-        `NON_APPLICABLE` quand aucun verdict n'a pu être rendu : une absence
-        de contrôle n'est jamais une conformité.
+        `INDETERMINATE` when no verdict could be rendered — a transport
+        failure, for instance. The absence of a check is never a conformity;
+        it is not an inapplicability either: it is an **abstention**, and
+        that is the only exact word for it.
         """
         if self.verdict_conformite is None:
-            return Conformite.NON_APPLICABLE
+            return Conformite.INDETERMINATE
         return self.verdict_conformite.conformite
 
     @property
     def exploitable(self) -> bool:
-        """L'issue peut-elle être transformée en observations ?
+        """Can the outcome be turned into observations?
 
-        **C'est la porte**, et c'est la seule question à poser avant de
-        construire des observations. Elle n'ouvre que sur une **certification
-        positive** : `conformite` vaut `CONFORME`. Tant que la conformité
-        n'est pas établie — refusée, ou simplement absente — la porte reste
-        fermée. C'est le prix à payer pour être certain de ne pas attribuer à
-        une station les observations d'une autre.
+        **This is the gate**, and it is the only question to ask before
+        building observations.
 
-        Elle est fausse **sans rien retirer à la preuve** : la réponse non
-        conforme reste reçue, conservée, empreinte et journalisée. Ce qui ne
-        se fait pas, c'est l'usage.
+        It opens on an **established** verdict only: `CONFORME`, and nothing
+        else. It stays shut on `NON_CONFORME` (a criterion was violated), on
+        `INDETERMINATE` (nothing violated, but at least one criterion could
+        not be verified) and on `NON_APPLICABLE` (the source declares no
+        predicate): an abstention is not a certification, and observations
+        are never built on an abstention. A source whose conformity has not
+        been **established** is not a conformant source.
+
+        It is false **without taking anything away from the evidence**: the
+        non-conformant response is still received, kept, hashed and
+        journalled. What does not happen is the use.
         """
         return self.conformite is Conformite.CONFORME
 
@@ -550,15 +681,21 @@ class SourceAdapter(Protocol):
         (exhaustivité). Le socle **orcestre** celui-ci : il appelle le
         prédicat, enregistre le verdict, et bloque quand il est défavorable.
 
-        Le prédicat connaît ce que la source **expose** dans sa réponse, et
-        ce que la demande a **demandé** : c'est à lui de confronter les
-        deux. Il ne dit pas ce que les données signifient — il dit seulement
-        si ce qui est arrivé répond à ce qui a été demandé.
+        The predicate knows what the source **exposes** in its response, and
+        what the request **asked for**: it is up to it to confront the two. It
+        does not say what the data mean — it only says whether what arrived
+        answers what was asked.
 
-        Trois états sont possibles : `CONFORME`, `NON_CONFORME` (bloquant) et
-        `NON_APPLICABLE` (cette source ne déclare aucun critère sémantique).
-        Une source qui renvoie les lignes d'une autre station rend un verdict
-        `NON_CONFORME`.
+        The predicate **collects** criteria and renders a verdict. So that the
+        truth table stays the same everywhere, it builds its verdict with
+        `verdict_from_criteria`: the socle decides, and the adapter only says
+        what it asked for and what it received.
+
+        Four verdicts are possible: `CONFORME` (the only one that opens the
+        gate), `NON_CONFORME` (blocking), `INDETERMINATE` (conformity could
+        not be established) and `NON_APPLICABLE` (this source declares no
+        semantic criterion). A source that returns the records of another
+        station renders a `NON_CONFORME` verdict.
         """
         ...
 
@@ -618,4 +755,6 @@ __all__ = [
     "PaginationStrategy",
     "SourceAdapter",
     "VerdictConformite",
+    "verdict_from_criteria",
+    "worst_verdict",
 ]

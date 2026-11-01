@@ -62,7 +62,48 @@ autre voie, ou passer par un **filtrage vérifié côté acquisition**. C'est un
 limite de l'architecture : le reste du socle tient, et le blocage observé est exactement celui qu'il devait
 produire.
 
-### I.2 USGS NWIS — valeurs instantanées
+### I.2 USGS — « Water Data for the Nation », API OGC Features
+
+> **Cible de migration.** L'adaptateur `usgs.nwis.iv` (WaterServices,
+> `waterservices.usgs.gov/nwis/iv/`) reste dans le dépôt, mais il **ne doit plus être utilisé** : les API
+> WaterServices sont déclassées — dégradation des paquets à partir du **1er février 2027**, **mise hors service le
+> 22 février 2027** — et la bascule des paquets était demandée avant le **16 novembre 2026**. L'adaptateur qui
+> remplace est `usgs_ogc.py`, et c'est lui que vise `experiments/mission_002_real_world.py`.
+
+| | |
+|---|---|
+| Identifiant de source | `usgs.ogc.<collection>` |
+| Point d'accès | `https://api.waterdata.usgs.gov/ogcapi/v1/collections/<collection>/items` |
+| Pagination | **curseur** : la réponse porte un lien `next` **absolu** qui reprend déjà tous les filtres de la requête |
+| Exhaustivité | **déclarée** : la fin du parcours est l'absence du lien `next` |
+| Clé d'API | facultative (`api_key` en paramètre, ou en-tête `X-Api-Key`), portée par `credential_ref` — elle n'entre jamais dans la demande consignée |
+
+**Ce qui a été vérifié sur le réseau** (1er novembre 2026) :
+
+- les collections sont `continuous`, `daily`, `time-series-metadata`, `monitoring-locations` et `peaks` ; la jointure
+  se fait par `monitoring_location_id`, de la forme `<code_agence>-<numéro>` — `USGS-05587450`, jamais `05587450` ;
+- le lien `next` est **absolu** et **reporte tous les filtres** : l'adaptateur le suit **tel quel**. Reconstruire la
+  requête à la main est la façon dont un parcours change silencieusement de question ;
+- la fin du parcours est l'**absence** du lien `next`, ce qui est une déclaration du fournisseur ;
+- `limit` est borné à 50 000 (10 par défaut) : une année de valeurs à 15 minutes tient dans une réponse unique
+  d'environ 23 Mo ;
+- **sans fenêtre `datetime` explicite**, le serveur rend environ **une année** de valeurs continues. La fenêtre
+  n'est donc jamais laissée implicite ;
+- `value` est toujours une **chaîne** ; `daily.time` est une date nue (`2024-01-03`) et `continuous.time` un instant
+  ISO 8601 avec décalage explicite ;
+- les enregistrements **ne sont pas triés** par temps : la chronologie est établie par la couche sémantique, pas
+  supposée par le consommateur ;
+- tout paramètre de requête non déclaré est refusé (400) — les paramètres sont donc construits, jamais concaténés ;
+- le quota anonyme est de 1 000 requêtes par heure, et les en-têtes de quota n'apparaissent **que** sur le 429 ;
+- les **statistiques de site** ne sont **pas** dans l'API OGC : elles sont dans un service distinct
+  (`https://api.waterdata.usgs.gov/statistics/v0/observationNormals`, bêta), paginé par `next_token`. C'est de là que
+  vient la **référence indépendante** du jalon « données réelles ».
+
+**Ce que le dépôt en fait.** L'adaptateur vérifie la station, les paramètres et les champs utiles sur les
+enregistrements réellement reçus, et rend `conforme`, `non_conforme` ou `indéterminé` — jamais « conforme » par
+défaut. Un critique demandé mais invérifiable est une **abstention**, et l'issue n'est alors pas exploitable.
+
+### I.2b USGS NWIS (WaterServices, déclassé) — valeurs instantanées
 
 | | |
 |---|---|
@@ -115,7 +156,7 @@ sont interrogeables par filtre ? » :
 | Source | Pagination | Filtres | Statut de qualité | Ce qui manque |
 |---|---|---|---|---|
 | Hub'EAU v2 | curseur | **ne filtre pas** (mesuré) | non documenté par la source | une instance conforme à l'API publique |
-| USGS NWIS | aucune | appliqués | `P` pour provisoire | l'exhaustivité |
+| USGS OGC | curseur (`next` absolu) | appliqués | `Approved` / `Provisional` | la classe de publication |
 | Copernicus | `$top` / `$skip` | appliqués | aucun | une licence par produit |
 
 **Ce qui leur est commun** est ce que le socle garantit, et ce n'est pas négociable :
@@ -132,6 +173,13 @@ premier chantier de l'observatoire (`docs/PROGRAMME.md` §4.3).
 ---
 
 ## Partie II — Les sources qualifiées : le bassin du Mississippi
+
+> **Hors périmètre du slice courant.** Cette partie documente ce que TORNE pourrait ingérer pour relier les
+> états hydrologiques du Mississippi à leur conséquence **économique** (taux de fret, volumes transités, écluses).
+> Le slice courant est un **observatoire physique** : il n'ingère aucune source économique, et aucun code de ce dépôt
+> ne les lit. La qualification ci-dessous est donc **préparatoire** — elle est conservée parce qu'elle est vérifiée,
+> parce qu'elle a été obtenue par requêtes réelles, et parce qu'elle fixe les questions que l'extension posera. Elle
+> n'engage rien du slice courant, et elle ne doit pas être lue comme une capacité du dépôt.
 
 **Statut** : document de travail, rédigé le 31 octobre 2026 par requêtes réelles sur les API et pages publiques.
 **Portée** : documenter ce que TORNE peut réellement ingérer pour reconstruire les états hydrologiques et

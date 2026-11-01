@@ -1,5 +1,13 @@
 """Adaptateur USGS NWIS — valeurs instantanées (instantaneous values).
 
+**Déprécié — ne plus l'utiliser.** Les API WaterServices sont déclassées :
+dégradation des paquets à partir du **1er février 2027**, **mise hors service
+le 22 février 2027**. L'adaptateur qui les remplace est `usgs_ogc.py`
+(« Water Data for the Nation », API OGC Features), et c'est la cible du
+jalon « données réelles ». Cet adaptateur reste dans le dépôt, testé, pour
+que le chemin historique reste rejouable ; il ne doit plus recevoir de
+nouveau code, et il disparaîtra avec la bascule des paquets.
+
 Cet adaptateur **pose des questions** au National Water Information System
 de l'USGS et ne sait rien du domaine : il ne connaît ni le débit, ni la
 surface d'eau, ni ce que signifie une valeur provisoire. Il construit une

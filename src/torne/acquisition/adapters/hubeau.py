@@ -53,11 +53,11 @@ from urllib.parse import parse_qsl, urlsplit, urlunsplit
 from ...contracts.observation import Source
 from ..contracts import (
     AcquisitionRequest,
-    Conformite,
     CritereConformite,
     HttpResponse,
     PaginationStrategy,
     VerdictConformite,
+    verdict_from_criteria,
 )
 
 URL_OBSERVATIONS_TR = "https://hubeau.eaufrance.fr/api/v2/hydrometrie/observations_tr"
@@ -239,6 +239,12 @@ class HubeauObservationsAdapter:
         les lignes de ce point d'accès : le critère est donc consigné comme
         **non vérifiable** — jamais comme satisfait. Le référentiel de la
         station porte son cours d'eau, et c'est la station qui est vérifiée.
+
+        Consequence: asking for a water course renders the verdict
+        **indeterminate**, and not a favourable one. It is an abstention, not
+        a finding: conformity is established neither way, and the outcome is
+        therefore not exploitable. That is the intended behaviour — nothing is
+        certified that could not be verified.
         """
         lignes, _ = self._lire_page(response)
         criteres: dict[str, CritereConformite] = {}
@@ -268,31 +274,9 @@ class HubeauObservationsAdapter:
                 recu="ce point d'accès n'expose pas ce champ dans ses lignes",
             )
 
-        echecs = [nom for nom, critere in criteres.items() if critere.conforme is False]
-        unverifiables = [nom for nom, critere in criteres.items() if not critere.verifie]
-        if not echecs and not unverifiables:
-            return VerdictConformite(conformite=Conformite.CONFORME, criteres=criteres)
-
-        motifs: list[str] = []
-        if echecs:
-            details = " ; ".join(
-                f"{nom} demandé « {criteres[nom].demande} », reçu « {criteres[nom].recu} »"
-                for nom in echecs
-            )
-            motifs.append(
-                f"la source a renvoyé des lignes qui ne sont pas celles demandées : {details}"
-            )
-        if unverifiables:
-            details = " ; ".join(
-                f"{nom} demandé « {criteres[nom].demande} », non vérifiable ({criteres[nom].recu})"
-                for nom in unverifiables
-            )
-            motifs.append(f"la conformité ne peut pas être établie : {details}")
-        return VerdictConformite(
-            conformite=Conformite.NON_CONFORME,
-            motif=" ; ".join(motifs),
-            criteres=criteres,
-        )
+        # The truth table is the socle's: the adapter collects the criteria,
+        # it does not decide the verdict.
+        return verdict_from_criteria(criteres)
 
     def _criteres_identite(
         self,

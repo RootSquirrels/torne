@@ -30,11 +30,11 @@ from urllib.parse import parse_qsl, urlsplit, urlunsplit
 from ...contracts.observation import Source
 from ..contracts import (
     AcquisitionRequest,
-    Conformite,
     CritereConformite,
     HttpResponse,
     PaginationStrategy,
     VerdictConformite,
+    verdict_from_criteria,
 )
 
 URL_PRODUCTS = "https://catalogue.dataspace.copernicus.eu/odata/v1/Products"
@@ -200,19 +200,27 @@ class CopernicusProductsAdapter:
         **même chaîne qu'il envoie**, pour qu'il ne puisse pas y avoir de
         divergence entre ce qui est demandé et ce qui est vérifié.
 
-        Un filtre d'une autre forme ne donne aucun critère vérifiable : le
-        verdict est alors `non_applicable`, et le motif le dit. Jamais
-        `conforme` par défaut : une absence de critère n'est pas un critère
-        satisfait.
+        A filter of another form gives no verifiable criterion: the verdict
+        is then **indeterminate**, and the motif says so. Never `conforme`
+        by default: the absence of a criterion is not a satisfied criterion.
         """
         prefixe = _PREFIXE_DE_NOM.match(self._filtre.strip())
         if prefixe is None:
-            return VerdictConformite(
-                conformite=Conformite.NON_APPLICABLE,
-                motif=(
-                    "le filtre demandé n'est pas de la forme startswith(Name,'…') : "
-                    "aucun critère sémantique n'est vérifiable sur ce catalogue"
-                ),
+            # A filter **was requested**, and the predicate cannot verify it:
+            # that is an abstention, not an inapplicability. The source did
+            # not violate the filter — nobody can say so, and the outcome is
+            # therefore not exploitable.
+            return verdict_from_criteria(
+                {
+                    "filtre": CritereConformite(
+                        demande=self._filtre,
+                        verifie=False,
+                        recu=(
+                            "the predicate only knows how to verify a filter of the "
+                            "form startswith(Name,'…')"
+                        ),
+                    )
+                }
             )
 
         attendu = prefixe.group(1)
@@ -220,22 +228,7 @@ class CopernicusProductsAdapter:
         criteres: dict[str, CritereConformite] = {
             "prefixe_nom": self._criteres_prefixe(produits, attendu),
         }
-
-        echecs = [nom for nom, critere in criteres.items() if critere.conforme is False]
-        if not echecs:
-            return VerdictConformite(conformite=Conformite.CONFORME, criteres=criteres)
-
-        details = " ; ".join(
-            f"{nom} demandé « {criteres[nom].demande} », reçu « {criteres[nom].recu} »"
-            for nom in echecs
-        )
-        return VerdictConformite(
-            conformite=Conformite.NON_CONFORME,
-            motif=(
-                f"le catalogue a renvoyé des produits qui ne sont pas ceux demandés : {details}"
-            ),
-            criteres=criteres,
-        )
+        return verdict_from_criteria(criteres)
 
     def _lire_produits(self, response: HttpResponse) -> list[object]:
         """Les produits de la page."""

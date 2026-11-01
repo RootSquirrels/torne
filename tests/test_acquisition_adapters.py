@@ -512,13 +512,14 @@ def test_hubeau_le_predicat_accepte_les_lignes_de_la_station_demandee():
     assert verdict.criteres["code_station"].conforme is True
 
 
-def test_hubeau_le_critere_non_verifiable_empeche_la_conformite():
-    """Le cours d'eau n'est pas dans les lignes : la conformité n'est pas établie.
+def test_hubeau_the_unverifiable_criterion_renders_the_indeterminate_verdict():
+    """The water course is not in the records: conformity is not established.
 
-    Une absence de vérification n'est jamais une vérification réussie. Le
-    critère est consigné comme **non vérifiable**, et surtout : il empêche le
-    verdict d'être favorable. Le socle ne peut pas certifier ce qu'il n'a pas
-    pu vérifier.
+    The absence of a verification is never a successful verification. The
+    criterion is recorded as **not verifiable**, and above all: it prevents
+    the verdict from being favourable. It is not a finding of violation — the
+    source violated nothing — it is an **abstention**, and the verdict must
+    name it as such.
     """
     adaptateur = _adaptateur_hubeau(code_cours_eau=["O919"])
     reponse = _page_hubeau(
@@ -536,8 +537,8 @@ def test_hubeau_le_critere_non_verifiable_empeche_la_conformite():
 
     assert verdict.criteres["code_cours_eau"].verifie is False
     assert verdict.criteres["code_cours_eau"].conforme is None
-    assert verdict.conformite is Conformite.NON_CONFORME
-    assert "conformité ne peut pas être établie" in (verdict.motif or "")
+    assert verdict.conformite is Conformite.INDETERMINATE
+    assert "conformity cannot be established" in (verdict.motif or "")
 
 
 def test_hubeau_les_interactions_entre_filtres_sont_verifiees():
@@ -668,8 +669,14 @@ def test_copernicus_le_predicat_accepte_les_produits_demandes():
     assert verdict.conformite is Conformite.CONFORME
 
 
-def test_copernicus_un_filtre_inconnu_ne_donne_aucun_critere_verifiable():
-    """Un filtre que le prédicat ne sait pas vérifier ne vaut pas « conforme »."""
+def test_copernicus_an_unknown_filter_renders_the_indeterminate_verdict():
+    """A filter the predicate cannot verify is never worth "conformant".
+
+    A filter **was** requested: the criterion is therefore recorded, and it
+    is recorded as **not verifiable**. The verdict is an abstention, not a
+    finding: nobody can say that the catalogue returned the products that
+    were asked for, and nobody can say the opposite either.
+    """
     adaptateur = CopernicusProductsAdapter(
         filter_expression="ContentDate/gt 2026-01-01T00:00:00.000Z",
         page_size=10,
@@ -679,6 +686,7 @@ def test_copernicus_un_filtre_inconnu_ne_donne_aucun_critere_verifiable():
 
     verdict = adaptateur.verdict_conformite(adaptateur.initial_request(), reponse)
 
-    assert verdict.conformite is Conformite.NON_APPLICABLE
+    assert verdict.conformite is Conformite.INDETERMINATE
     assert verdict.conforme is False
     assert verdict.motif is not None
+    assert verdict.criteres["filtre"].verifie is False

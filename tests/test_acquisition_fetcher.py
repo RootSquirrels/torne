@@ -692,6 +692,63 @@ def test_une_absence_de_verdict_n_est_pas_une_conformite():
     assert issue.exploitable is False
 
 
+def test_an_indeterminacy_does_not_stop_the_traversal():
+    """A criterion that cannot be verified does not stop the traversal: it closes the gate.
+
+    The source did not answer beside the question: it left one criterion in
+    the dark. The traversal therefore goes on, and the raw evidence
+    accumulates page after page. What is closed is the **use**: the issue
+    carries the indeterminate verdict, and it is therefore not exploitable.
+    """
+    transport = RecordingTransport([_reponse(b"{}"), _reponse(b"{}"), _reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdapteurFixe(
+            SOURCE,
+            nb_pages=3,
+            verdict=VerdictConformite(
+                conformite=Conformite.INDETERMINATE,
+                motif="conformity cannot be established: code_cours_eau not verifiable",
+            ),
+        )
+    )
+
+    assert len(transport.requests) == 3
+    assert issue.page_count == 3
+    assert issue.conformite is Conformite.INDETERMINATE
+    assert issue.exploitable is False
+    # The **acquisition** succeeded: it is the use that is refused.
+    assert issue.succeeded is True
+
+
+def test_an_indeterminate_page_is_not_covered_by_a_conformant_page():
+    """The issue carries the most unfavourable verdict, not the last one rendered.
+
+    A page that could not be certified cannot be covered by a conformant
+    page that came later.
+    """
+    transport = RecordingTransport([_reponse(b"{}"), _reponse(b"{}"), _reponse(b"{}")])
+    magasin = MagasinMemoire()
+
+    issue = _fetcher(transport, magasin).acquire(
+        AdaptateurQuiChangeDeVerdict(
+            SOURCE,
+            [
+                VerdictConformite(conformite=Conformite.CONFORME),
+                VerdictConformite(
+                    conformite=Conformite.INDETERMINATE,
+                    motif="conformity cannot be established",
+                ),
+                VerdictConformite(conformite=Conformite.CONFORME),
+            ],
+        )
+    )
+
+    assert issue.conformite is Conformite.INDETERMINATE
+    assert issue.exploitable is False
+
+
 def test_la_conformite_est_verifiee_page_par_page():
     """Une page conforme n'autorise pas la suivante : chacune est vérifiée.
 
