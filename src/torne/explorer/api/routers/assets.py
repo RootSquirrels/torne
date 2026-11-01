@@ -4,15 +4,16 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import Query
 
 from ...services import catalogue_service as service
+from ..caching import CatalogueRouter
 from ..errors import not_found
 from ..schemas.asset import Asset, AssetKind
 
 __all__ = ["router"]
 
-router = APIRouter(tags=["assets"])
+router = CatalogueRouter(tags=["assets"])
 
 
 @router.get(

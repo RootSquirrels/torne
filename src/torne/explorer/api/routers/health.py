@@ -7,9 +7,10 @@ cannot be built.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from ...services import catalogue_service as service
+from ..caching import NO_STORE
 from ..schemas.common import Health
 
 __all__ = ["router"]
@@ -22,8 +23,13 @@ router = APIRouter(tags=["health"])
     response_model=Health,
     summary="Is the explorer up, and which version is it serving?",
 )
-def health() -> Health:
-    """The health of the application and the version it serves."""
+def health(response: Response) -> Health:
+    """The health of the application and the version it serves.
+
+    The answer is never cached: it says whether the application is up right
+    now, and a cached answer would say it was up when it was cached.
+    """
+    response.headers["Cache-Control"] = NO_STORE
     manifest = service.manifest()
     return Health(
         status="ok",

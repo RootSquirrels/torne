@@ -16,6 +16,7 @@ machine-readable code that a new consumer can branch on.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, status
@@ -23,6 +24,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from .caching import NO_STORE
 from .schemas.common import ErrorBody, ErrorResponse
 
 __all__ = ["ErrorResponse", "install_error_handlers"]
@@ -69,7 +71,7 @@ def install_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content=body.model_dump(),
-            headers=getattr(exc, "headers", None),
+            headers=_headers(getattr(exc, "headers", None)),
         )
 
     @app.exception_handler(RequestValidationError)
@@ -83,7 +85,22 @@ def install_error_handlers(app: FastAPI) -> None:
                 details={"errors": _safe_errors(exc)},
             ),
         )
-        return JSONResponse(status_code=422, content=body.model_dump())
+        return JSONResponse(
+            status_code=422,
+            content=body.model_dump(),
+            headers=_headers(None),
+        )
+
+
+def _headers(extra: Mapping[str, str] | None) -> dict[str, str]:
+    """The headers of a failure.
+
+    A failure is never reused: it says what went wrong at the moment it was
+    asked for, and a client that keeps it would keep a mistake.
+    """
+    headers = dict(extra or {})
+    headers["Cache-Control"] = NO_STORE
+    return headers
 
 
 def _safe_errors(exc: RequestValidationError) -> list[dict[str, Any]]:

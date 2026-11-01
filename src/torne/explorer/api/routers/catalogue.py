@@ -7,9 +7,8 @@ surface products it knows.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
-
 from ...services import catalogue_service as service
+from ..caching import CatalogueRouter
 from ..errors import not_found
 from ..schemas.catalogue import (
     CountryDetail,
@@ -24,7 +23,7 @@ from ..schemas.catalogue import (
 
 __all__ = ["router"]
 
-router = APIRouter(tags=["catalogue"])
+router = CatalogueRouter(tags=["catalogue"])
 
 
 @router.get(

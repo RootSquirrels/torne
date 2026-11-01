@@ -6,14 +6,13 @@ product in memory is listed separately, and never as a published result.
 
 from __future__ import annotations
 
-from fastapi import APIRouter
-
 from ...services import catalogue_service as service
+from ..caching import CatalogueRouter
 from ..schemas.result import Results
 
 __all__ = ["router"]
 
-router = APIRouter(tags=["results"])
+router = CatalogueRouter(tags=["results"])
 
 
 @router.get(

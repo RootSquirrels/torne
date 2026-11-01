@@ -4,16 +4,17 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import Query
 
 from ...services import catalogue_service as service
 from ...services.catalogue_service import UnknownStatus
+from ..caching import CatalogueRouter
 from ..errors import not_found, unprocessable
 from ..schemas.mission import Mission
 
 __all__ = ["router"]
 
-router = APIRouter(tags=["missions"])
+router = CatalogueRouter(tags=["missions"])
 
 
 @router.get(
