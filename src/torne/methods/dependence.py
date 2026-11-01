@@ -30,6 +30,17 @@ until the first pair whose sum is non-positive. The retained lag `L` gives
 `n_eff = n / (1 + 2 * sum_{lag=1..L} rho_lag)`, clipped to `(1, n]`. The default
 `max_lag` is `ceil(10 * log10(n))`, capped at `n - 1`.
 
+**Observations with gaps.** `sample_autocorrelation` takes the integer
+positions of the observations on a regular grid. Lag `k` pairs two observations
+whose positions differ by exactly `k`; a missing position is absent from the
+pairs and is never closed up, and a lag without enough pairs is reported as
+unobservable (`NaN`). `effective_sample_size_diagnostics` builds on it and
+reports what ended the sum (the positivity rule, the lag cap, or an
+unobservable lag) together with the figure at several caps: a figure whose sum
+was ended by the cap is a function of the cap, and says so. Nothing here knows
+what a position means (a day, an orbit, a sample): that, and the choice of the
+cap, belong to the caller.
+
 **Circular block bootstrap.** Blocks of `block_length` consecutive observations
 are drawn with replacement from the series, wrapping around its end, until a
 series of length `n` is rebuilt; the statistic is recomputed on each resample.
@@ -105,7 +116,7 @@ References
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 
 import numpy as np
@@ -145,6 +156,90 @@ class EffectiveSampleSize:
     n_eff: float
     ratio: float
     truncation_lag: int
+
+
+_GEYER_ESTIMATOR = "geyer_initial_positive_sequence"
+_STOP_POSITIVITY = "positivity_rule"
+_STOP_LAG_CAP = "lag_cap"
+_STOP_UNOBSERVABLE = "unobservable_lag"
+
+
+@dataclass(frozen=True, slots=True)
+class Autocorrelation:
+    """Sample autocorrelation at explicit lags, with the pairs that support each lag.
+
+    Attributes
+    ----------
+    lags:
+        The lags `0..L`, where `L` is the requested maximum capped at the span
+        of the observation positions.
+    rho:
+        Autocorrelation per lag; `rho[0] == 1`. `NaN` marks an **unobservable**
+        lag: fewer than `min_pairs` pairs of observations are separated by it.
+    pair_counts:
+        Number of observation pairs separated by exactly each lag
+        (`pair_counts[0]` is the number of observations).
+    normalization, min_pairs:
+        The estimator variant and the observability threshold that were used.
+    """
+
+    lags: IntArray
+    rho: FloatArray
+    pair_counts: IntArray
+    normalization: str
+    min_pairs: int
+
+
+@dataclass(frozen=True, slots=True)
+class CapSensitivity:
+    """The effective sample size recomputed at one lag cap."""
+
+    max_lag: int
+    n_eff: float
+    truncation_lag: int
+    stopped_by: str
+
+
+@dataclass(frozen=True, slots=True)
+class EffectiveSampleSizeDiagnostics:
+    """An effective sample size, with what produced it.
+
+    Attributes
+    ----------
+    n, n_eff, ratio:
+        As in `EffectiveSampleSize`.
+    estimator:
+        The estimator's name (`geyer_initial_positive_sequence`).
+    normalization, min_pairs:
+        The autocorrelation variant and observability threshold used.
+    max_lag:
+        The cap that was applied to the headline figure.
+    truncation_lag:
+        The largest lag retained in the sum.
+    stopped_by:
+        What ended the sum: `positivity_rule` (the data), `lag_cap` (the cap),
+        or `unobservable_lag` (gaps left a lag without enough pairs). Only the
+        first is a statement about the series; with `lag_cap`, `n_eff` is a
+        function of the cap, and `cap_bound` is true.
+    sensitivity:
+        The figure at several caps, ascending.
+    """
+
+    n: int
+    n_eff: float
+    ratio: float
+    estimator: str
+    normalization: str
+    min_pairs: int
+    max_lag: int
+    truncation_lag: int
+    stopped_by: str
+    sensitivity: tuple[CapSensitivity, ...]
+
+    @property
+    def cap_bound(self) -> bool:
+        """True when the cap, not the data, ended the sum."""
+        return self.stopped_by == _STOP_LAG_CAP
 
 
 @dataclass(frozen=True, slots=True)
@@ -373,27 +468,253 @@ def effective_sample_size(x: ArrayLike, *, max_lag: int | None = None) -> Effect
         lag_limit = min(int(max_lag), n - 1)
     centered = series - series.mean()
     rhos = _autocorrelations(centered, lag_limit)
-    retained = 0.0
-    truncation_lag = 0
-    pair_index = 0
-    while 2 * pair_index + 1 <= lag_limit:
-        pair = float(rhos[2 * pair_index] + rhos[2 * pair_index + 1])
-        if pair <= 0.0:
-            break
-        retained += pair
-        truncation_lag = 2 * pair_index + 1
-        pair_index += 1
-    # `retained` sums rho_0 (= 1) and the retained lags: the integrated
-    # autocorrelation time is 1 + 2 * sum_{lag=1..L} rho_lag.
-    integrated_time = 2.0 * retained - 1.0
-    if not math.isfinite(integrated_time) or integrated_time <= 0.0:
-        integrated_time = 1.0
-    n_eff = min(float(n), max(1.0, n / integrated_time))
+    retained, truncation_lag, _ = _geyer_sum(rhos, lag_limit)
+    n_eff = _n_eff_from_sum(n, retained)
     return EffectiveSampleSize(
         n=n,
         n_eff=n_eff,
         ratio=n_eff / n,
         truncation_lag=truncation_lag,
+    )
+
+
+def _geyer_sum(rhos: FloatArray, lag_limit: int) -> tuple[float, int, str]:
+    """Geyer's initial positive sequence: `(retained sum, truncation lag, stop reason)`.
+
+    The stop reason says what ended the sum: `"positivity_rule"` (a lag pair
+    summed to a non-positive value: the data decided), `"lag_cap"` (the cap was
+    reached while the pairs were still positive: **the cap decided**), or
+    `"unobservable_lag"` (a lag of the pair had too few observed pairs to be
+    estimated).
+    """
+    retained = 0.0
+    truncation_lag = 0
+    pair_index = 0
+    stopped_by = _STOP_LAG_CAP
+    while 2 * pair_index + 1 <= lag_limit:
+        first, second = rhos[2 * pair_index], rhos[2 * pair_index + 1]
+        if not (math.isfinite(first) and math.isfinite(second)):
+            stopped_by = _STOP_UNOBSERVABLE
+            break
+        pair = float(first + second)
+        if pair <= 0.0:
+            stopped_by = _STOP_POSITIVITY
+            break
+        retained += pair
+        truncation_lag = 2 * pair_index + 1
+        pair_index += 1
+    return retained, truncation_lag, stopped_by
+
+
+def _n_eff_from_sum(n: int, retained: float) -> float:
+    """Effective sample size from the retained sum (which includes `rho_0 = 1`)."""
+    # `retained` sums rho_0 (= 1) and the retained lags: the integrated
+    # autocorrelation time is 1 + 2 * sum_{lag=1..L} rho_lag.
+    integrated_time = 2.0 * retained - 1.0
+    if not math.isfinite(integrated_time) or integrated_time <= 0.0:
+        integrated_time = 1.0
+    return min(float(n), max(1.0, n / integrated_time))
+
+
+def _as_positions(positions: ArrayLike | None, n: int) -> IntArray:
+    """Validate observation positions: strictly increasing integers, one per value."""
+    if positions is None:
+        return np.arange(n, dtype=np.int64)
+    raw = np.asarray(positions)
+    if raw.ndim != 1 or raw.size != n:
+        raise ValueError(f"positions must be a 1-D array with one entry per value ({n})")
+    if not np.issubdtype(raw.dtype, np.integer):
+        raise ValueError(f"positions must be integers on a regular grid (got dtype {raw.dtype})")
+    grid = raw.astype(np.int64, copy=False)
+    if n > 1 and not bool((np.diff(grid) > 0).all()):
+        raise ValueError("positions must be strictly increasing")
+    return grid
+
+
+def _check_normalization(normalization: str, min_pairs: int) -> None:
+    if normalization not in ("biased", "pairs"):
+        raise ValueError(f"normalization must be 'biased' or 'pairs' (got {normalization!r})")
+    if isinstance(min_pairs, bool) or not isinstance(min_pairs, (int, np.integer)) or min_pairs < 1:
+        raise ValueError(f"min_pairs must be an integer >= 1 (got {min_pairs!r})")
+
+
+def sample_autocorrelation(
+    x: ArrayLike,
+    *,
+    max_lag: int,
+    positions: ArrayLike | None = None,
+    normalization: str = "biased",
+    min_pairs: int = 1,
+) -> Autocorrelation:
+    """Sample autocorrelation of a series observed at explicit grid positions.
+
+    `positions` are the integer coordinates of the observations on a regular
+    grid (for example the day number of each observation). Lag `k` pairs two
+    observations whose positions differ by exactly `k`: a missing position is
+    **absent from the pairs**, never closed up. Two observations separated by a
+    ten-position gap are therefore never treated as consecutive, and a lag
+    with no pair is reported as unobservable (`NaN`, `pair_counts[k] == 0`)
+    rather than estimated from something else.
+
+    With `positions=None` (or consecutive positions) and
+    `normalization="biased"` the result is, bit for bit, the estimator that
+    `effective_sample_size` has always used.
+
+    Parameters
+    ----------
+    x:
+        1-D series of finite observations. Missing values are expressed by
+        absent positions, not by `NaN`.
+    max_lag:
+        Largest lag requested, capped at the span of the positions.
+    positions:
+        Strictly increasing integer coordinates, one per value. `None` means
+        `0..n-1`.
+    normalization:
+        `"biased"` (default): every lag-`k` sum of products is divided by the
+        same total sum of squares, the historical estimator (bounded in
+        `[-1, 1]`, conservative with gaps because missing pairs shrink the
+        lag). `"pairs"`: the lag-`k` mean product over the pairs that exist is
+        divided by the variance, which removes that shrinkage but is not
+        guaranteed positive semi-definite.
+    min_pairs:
+        A lag with fewer pairs is reported as unobservable (`NaN`).
+
+    Returns
+    -------
+    Autocorrelation
+    """
+    if isinstance(max_lag, bool) or not isinstance(max_lag, (int, np.integer)) or max_lag < 0:
+        raise ValueError(f"max_lag must be a non-negative integer (got {max_lag!r})")
+    _check_normalization(normalization, min_pairs)
+    series = _as_series(x)
+    n = int(series.size)
+    grid = _as_positions(positions, n)
+    span = int(grid[-1] - grid[0])
+    lag_limit = min(int(max_lag), span)
+    centered = series - series.mean()
+    denominator = float(centered @ centered)
+    rho = np.full(lag_limit + 1, np.nan, dtype=np.float64)
+    counts = np.zeros(lag_limit + 1, dtype=np.int64)
+    rho[0] = 1.0
+    counts[0] = n
+    regular = span == n - 1
+    if regular:
+        biased = _autocorrelations(centered, lag_limit)
+        for lag in range(1, lag_limit + 1):
+            counts[lag] = n - lag
+            if counts[lag] < min_pairs:
+                continue
+            if normalization == "biased" or denominator <= 0.0:
+                rho[lag] = biased[lag]
+            else:
+                rho[lag] = biased[lag] * n / counts[lag]
+    else:
+        for lag in range(1, lag_limit + 1):
+            target = grid + lag
+            found = np.searchsorted(grid, target)
+            clipped = np.minimum(found, n - 1)
+            hit = (found < n) & (grid[clipped] == target)
+            count = int(hit.sum())
+            counts[lag] = count
+            if count < min_pairs:
+                continue
+            if denominator <= 0.0:
+                rho[lag] = 0.0
+                continue
+            product = float(centered[hit] @ centered[clipped[hit]])
+            if normalization == "biased":
+                rho[lag] = product / denominator
+            else:
+                rho[lag] = (product / count) / (denominator / n)
+    return Autocorrelation(
+        lags=np.arange(lag_limit + 1, dtype=np.int64),
+        rho=rho,
+        pair_counts=counts,
+        normalization=normalization,
+        min_pairs=int(min_pairs),
+    )
+
+
+def effective_sample_size_diagnostics(
+    x: ArrayLike,
+    *,
+    positions: ArrayLike | None = None,
+    max_lag: int | None = None,
+    sensitivity_caps: Sequence[int] | None = None,
+    normalization: str = "biased",
+    min_pairs: int = 10,
+) -> EffectiveSampleSizeDiagnostics:
+    """Effective sample size with its estimator, its stopping reason and its cap sensitivity.
+
+    Same estimator as `effective_sample_size` (Geyer's initial positive
+    sequence), but it says **what ended the sum** and how the answer moves when
+    the cap moves. When `stopped_by == "lag_cap"`, the figure is a function of
+    the cap and not an estimate of the series: read the `sensitivity` table.
+
+    The default cap is `ceil(10 * log10(n))`, in position units; when gaps
+    stretch the span, pass `max_lag` explicitly. `n_eff` counts observed
+    values, and with gaps it is the information carried by those values on the
+    positions where they exist.
+
+    Parameters
+    ----------
+    x, positions, normalization, min_pairs:
+        See `sample_autocorrelation`. `min_pairs` defaults to 10 here: a lag
+        estimated from fewer pairs is not allowed to extend the sum.
+    max_lag:
+        The cap of the headline figure. `None` means the default above.
+    sensitivity_caps:
+        Caps at which the figure is recomputed. `None` means half the headline
+        cap, the cap, and twice, four and eight times the cap (those beyond the
+        span of the series are dropped).
+    """
+    if max_lag is not None and (
+        isinstance(max_lag, bool) or not isinstance(max_lag, (int, np.integer)) or max_lag < 0
+    ):
+        raise ValueError(f"max_lag must be a non-negative integer (got {max_lag!r})")
+    series = _as_series(x)
+    n = int(series.size)
+    default_cap = 0 if n <= 1 else math.ceil(10.0 * math.log10(n))
+    cap = default_cap if max_lag is None else int(max_lag)
+    if sensitivity_caps is None:
+        caps = {max(1, cap // 2), cap, 2 * cap, 4 * cap, 8 * cap}
+    else:
+        for value in sensitivity_caps:
+            if isinstance(value, bool) or not isinstance(value, (int, np.integer)) or value < 0:
+                raise ValueError(f"sensitivity caps must be non-negative integers (got {value!r})")
+        caps = {int(value) for value in sensitivity_caps}
+    acf = sample_autocorrelation(
+        series,
+        max_lag=max(caps | {cap}),
+        positions=positions,
+        normalization=normalization,
+        min_pairs=min_pairs,
+    )
+    available = int(acf.lags[-1])
+
+    def evaluate(limit: int) -> tuple[float, int, str]:
+        limit = min(limit, available)
+        retained, truncation_lag, stopped_by = _geyer_sum(acf.rho, limit)
+        return _n_eff_from_sum(n, retained), truncation_lag, stopped_by
+
+    n_eff, truncation_lag, stopped_by = evaluate(cap)
+    table = tuple(
+        CapSensitivity(max_lag=limit, n_eff=value, truncation_lag=lag, stopped_by=reason)
+        for limit in sorted(c for c in caps if c <= available)
+        for value, lag, reason in (evaluate(limit),)
+    )
+    return EffectiveSampleSizeDiagnostics(
+        n=n,
+        n_eff=n_eff,
+        ratio=n_eff / n,
+        estimator=_GEYER_ESTIMATOR,
+        normalization=normalization,
+        min_pairs=int(min_pairs),
+        max_lag=min(cap, available),
+        truncation_lag=truncation_lag,
+        stopped_by=stopped_by,
+        sensitivity=table,
     )
 
 
@@ -629,11 +950,16 @@ def independent_unit_sensitivity(
 
 
 __all__ = [
+    "Autocorrelation",
     "BootstrapReport",
+    "CapSensitivity",
     "EffectiveSampleSize",
+    "EffectiveSampleSizeDiagnostics",
     "SensitivityReport",
     "block_bootstrap",
     "cluster_bootstrap",
     "effective_sample_size",
+    "effective_sample_size_diagnostics",
     "independent_unit_sensitivity",
+    "sample_autocorrelation",
 ]

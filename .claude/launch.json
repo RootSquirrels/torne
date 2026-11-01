@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "torne-explorer",
+      "runtimeExecutable": ".venv\\Scripts\\torne-explorer.exe",
+      "runtimeArgs": ["--port", "8765"],
+      "port": 8765
+    }
+  ]
+}

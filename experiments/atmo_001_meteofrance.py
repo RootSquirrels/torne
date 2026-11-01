@@ -3,31 +3,31 @@
 Ce script interroge l'API publique de Météo-France — le **point d'entrée
 institutionnel** du périmètre atmosphère, celui que la sonde d'inventaire a
 trouvé fermé à `401`. Il ne demande **aucun** identifiant à l'utilisateur :
-il lit le jeton dans l'environnement, ou dans un fichier `.env` local **ignoré
+il lit la clé d'API dans l'environnement, ou dans un fichier `.env` local **ignoré
 par Git**, et rend compte de ce que la source a répondu.
 
 Le secret ne quitte jamais ce script
 ------------------------------------
 
-- la demande d'acquisition porte la **référence** ``meteofrance.oauth2``, un
+- la demande d'acquisition porte la **référence** ``meteofrance.apikey``, un
   nom — c'est ce qui est consigné dans le journal (INV-41) ;
 - la valeur n'est lue qu'au moment de l'envoi, et n'est écrite nulle part ;
 - si une redirection changeait d'origine, le transport retirerait l'en-tête
   d'authentification (INV-42).
 
-Où poser le jeton
+Où poser la clé
 -----------------
 
 1. **Variable d'environnement** (recommandé) — rien n'entre dans le dépôt :
 
-       setx METEOFRANCE_TOKEN "votre-jeton"
+       setx METEOFRANCE_API_KEY "votre-cle"
 
 2. **Fichier `.env` à la racine du dépôt** — committable *non*, il est ignoré
    par `.gitignore` (`.env` et `.env.*` y sont listés) :
 
-       METEOFRANCE_TOKEN=votre-jeton
+       METEOFRANCE_API_KEY=votre-cle
 
-Dans les deux cas, le jeton n'est **pas** écrit dans le chat : un message de
+Dans les deux cas, la clé n'est **pas** écrit dans le chat : un message de
 conversation est conservé, et un secret collé dans un message est un secret
 copié. La variable d'environnement gagne sur le fichier, dans tous les cas.
 
@@ -47,6 +47,8 @@ from torne.acquisition.adapters.meteofrance import (
     CHEMIN_PAQUET_6M,
     CHEMIN_STATIONS,
     CREDENTIAL_REF,
+    KEY_HEADER,
+    DailyClimatologyAdapter,
     MeteoFranceAdapter,
 )
 from torne.acquisition.contracts import AcquisitionOutcome
@@ -55,8 +57,11 @@ from torne.acquisition.fetcher import Fetcher
 from torne.acquisition.store import FileRawStore
 from torne.acquisition.transport import HttpTransport
 
-VARIABLE = "METEOFRANCE_TOKEN"
+VARIABLE = "METEOFRANCE_API_KEY"
 """Le nom de la variable d'environnement. Un nom, pas un secret."""
+
+STATION_CLIMATO = "59343001"
+"""Lille-Lesquin, in the climatological API's station register."""
 
 RACINE = Path(__file__).resolve().parent.parent
 """La racine du dépôt — pour trouver le `.env` local, s'il existe."""
@@ -76,6 +81,8 @@ def _fournisseur() -> FichierEnvToken:
         CREDENTIAL_REF,
         variable=VARIABLE,
         chemin=_racine() / ".env",
+        header=KEY_HEADER,
+        scheme="",
     )
 
 
@@ -144,12 +151,30 @@ def main(argv: list[str]) -> int:
         "paquet 6 min",
     )
 
+    print(f"\n3. the daily series of station {STATION_CLIMATO} (climatological API)")
+    issue_climatology = _acquer(
+        fetcher,
+        DailyClimatologyAdapter(
+            station=STATION_CLIMATO,
+            start=f"{jour[:7]}-01T00:00:00Z",
+            end=f"{jour}T00:00:00Z",
+        ),
+        "daily series",
+    )
+    if issue_climatology.evidence:
+        piece = issue_climatology.evidence[-1]
+        texte = magasin.content_path(piece.evidence_id).read_text(encoding="utf-8")
+        lignes = [ligne for ligne in texte.splitlines() if ligne.strip()]
+        print(f"  file: {max(len(lignes) - 1, 0)} data row(s) ({piece.media_type})")
+
     exploitable = issue_stations.exploitable and issue_paquet.exploitable
+    if issue_climatology.exploitable:
+        print("\nThe climatological route delivered: raw evidence kept, conformity established.")
     if not exploitable:
         print()
-        print("La source n'a pas livré : rien n'est exploitable, et rien n'est interprété.")
-        print("Pour lever le refus : poser le jeton (voir l'en-tête de ce fichier),")
-        print(f"puis relancer. Le point d'entrée est {VARIABLE}.")
+        print("The observation API (DPPaquetObs) did not deliver: nothing is interpreted.")
+        print("It refuses the key (401/403): the key opens the climatological API; observation")
+        print(f"belongs to another subscription. ({VARIABLE})")
     else:
         _decrire(issue_stations, issue_paquet, magasin)
 

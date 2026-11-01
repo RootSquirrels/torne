@@ -47,13 +47,18 @@ from .compare import (
     ols_trend_forecast,
 )
 from .dependence import (
+    Autocorrelation,
     BootstrapReport,
+    CapSensitivity,
     EffectiveSampleSize,
+    EffectiveSampleSizeDiagnostics,
     SensitivityReport,
     block_bootstrap,
     cluster_bootstrap,
     effective_sample_size,
+    effective_sample_size_diagnostics,
     independent_unit_sensitivity,
+    sample_autocorrelation,
 )
 from .kalman import LocalLinearTrendModel
 from .multiplicity import (
@@ -74,10 +79,13 @@ from .scores import (
 )
 
 __all__ = [
+    "Autocorrelation",
     "BootstrapReport",
     "CalibrationReport",
+    "CapSensitivity",
     "ComparisonReport",
     "EffectiveSampleSize",
+    "EffectiveSampleSizeDiagnostics",
     "LocalLinearTrendModel",
     "MultiplicityDecision",
     "RegimeChangeReport",
@@ -96,6 +104,7 @@ __all__ = [
     "dependence",
     "detect_regime_change",
     "effective_sample_size",
+    "effective_sample_size_diagnostics",
     "independent_unit_sensitivity",
     "interval_score",
     "multiplicity",
@@ -105,5 +114,6 @@ __all__ = [
     "power",
     "regression",
     "romano_wolf_max_t",
+    "sample_autocorrelation",
     "scores",
 ]

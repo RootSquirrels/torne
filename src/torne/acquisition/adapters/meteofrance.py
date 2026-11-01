@@ -1,8 +1,9 @@
 """L'adaptateur Météo-France : la voie officielle, derrière un jeton.
 
 L'API publique de Météo-France sert l'observation des stations sur 24 heures
-et l'archive climatologique qualifiée. **Les deux exigent un jeton OAuth2** :
-sans identifiants, elles répondent `401` et disent pourquoi —
+et l'archive climatologique qualifiée. **Les deux exigent une clé d'API**
+(en-tête ``apikey``) : sans identifiants, elles répondent `401` et disent
+pourquoi —
 
     {"code":"900902","message":"Missing Credentials","description":"Invalid
      Credentials. Make sure your API invocation call has a header:
@@ -53,9 +54,13 @@ from ..contracts import (
 SOURCE_ID = "meteofrance.observation"
 """Identifiant de la source, tel qu'il est consigné dans le journal."""
 
-CREDENTIAL_REF = "meteofrance.oauth2"
-"""La **référence** du secret. C'est un nom : il est consigné, et il ne vaut
-rien pour quiconque ne possède pas le jeton."""
+CREDENTIAL_REF = "meteofrance.apikey"
+"""The **reference** of the secret. It is a name: it is logged, and it is worth
+nothing to anyone who does not hold the key. The Météo-France portal issues an
+**API key** (``apikey`` header), not an OAuth2 token."""
+
+KEY_HEADER = "apikey"
+"""The header in which the portal expects the key, with no scheme (no ``Bearer``)."""
 
 PRODUCTEUR = "Météo-France"
 """Le producteur, tel qu'il se présente."""
@@ -68,9 +73,16 @@ BASE_OBSERVATION = "https://public-api.meteofrance.fr/public/DPPaquetObs"
 """La base de l'API d'observation. Elle a changé : la base `DPPaquetV1`
 documentée auparavant répond désormais `404` (constaté le 1ᵉʳ novembre 2026)."""
 
-BASE_CLIMATOLOGIE = "https://webservice.meteofrance.com/climatologie"
-"""Le webservice climatologique : autre hôte, donc autre origine — et donc
-autre référence de secret (INV-42)."""
+BASE_CLIMATOLOGIE = "https://public-api.meteofrance.fr/public/DPClim/v1"
+"""The climatological data API (DPClim), same host as the observation API.
+Observed on 2026-11-01: the API key opens the station list (200) and the data
+order (202), then the CSV file (201)."""
+
+DAILY_ORDER_PATH = "/commande-station/quotidienne"
+"""Order of a daily series for one station and one period."""
+
+ORDER_FILE_PATH = "/commande/fichier"
+"""The file of an order, by its identifier."""
 
 LICENCE = "conditions d'utilisation Météo-France (compte personnel)"
 """L'accès est conditionné à un compte ; l'usage est encadré par les CGU du
@@ -221,6 +233,175 @@ class MeteoFranceAdapter:
         return verdict_from_criteria(criteres)
 
 
+class DailyClimatologyAdapter:
+    """The daily series of one station, from the climatological API (DPClim).
+
+    The API works in **two steps**: an order (JSON reply carrying an
+    identifier), then the file of that order (CSV, ``;`` separator). The
+    adapter chains the two as two pages, and each page has its own verdict.
+
+    The conformity of the second page is checked **on the content**: the
+    header must carry ``POSTE`` and ``DATE``, and every row must belong to the
+    requested station. An empty file (order not ready) is a violation, not an
+    abstention: the source delivered nothing.
+    """
+
+    def __init__(
+        self,
+        *,
+        station: str,
+        start: str,
+        end: str,
+        credential_ref: str = CREDENTIAL_REF,
+    ) -> None:
+        if not station.strip():
+            raise ValueError("station is required and must not be empty")
+        self.station = station.strip()
+        self.start = start
+        self.end = end
+        self.credential_ref = credential_ref
+
+    @property
+    def source(self) -> Source:
+        """The source, as the foundation records it."""
+        return Source(
+            source_id="meteofrance.climatology",
+            producer=PRODUCTEUR,
+            dataset="Météo-France public API - climatological data (DPClim)",
+            access_point=BASE_CLIMATOLOGIE,
+            license=LICENCE,
+            revision_policy=(
+                "The file carries one quality indicator per measure (Q* columns). "
+                "No per-value publication date was observed: publication is "
+                "UNKNOWN until it is established."
+            ),
+            unit=None,
+            timezone=None,
+            quality_status=None,
+        )
+
+    @property
+    def declares_exhaustion(self) -> bool:
+        """The source does not declare the exhaustion of its traversal."""
+        return False
+
+    def initial_request(self) -> AcquisitionRequest:
+        """The order, carrying a key **reference**, never the key."""
+        return AcquisitionRequest(
+            source_id="meteofrance.climatology",
+            url=f"{BASE_CLIMATOLOGIE}{DAILY_ORDER_PATH}",
+            method="GET",
+            params={
+                "id-station": self.station,
+                "date-deb-periode": self.start,
+                "date-fin-periode": self.end,
+            },
+            credential_ref=self.credential_ref,
+            pagination=PaginationStrategy.NONE,
+            max_pages=2,
+            label=f"meteofrance:climatology:{self.station}:order",
+        )
+
+    def next_request(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> AcquisitionRequest | None:
+        """After the order comes the file; after the file, nothing."""
+        order_id = _order_id(response)
+        if order_id is None:
+            return None
+        return AcquisitionRequest(
+            source_id=request.source_id,
+            url=f"{BASE_CLIMATOLOGIE}{ORDER_FILE_PATH}",
+            method="GET",
+            params={"id-cmde": order_id},
+            credential_ref=self.credential_ref,
+            pagination=PaginationStrategy.NONE,
+            max_pages=2,
+            label=f"meteofrance:climatology:{self.station}:file",
+        )
+
+    def verdict_conformite(
+        self,
+        request: AcquisitionRequest,
+        response: HttpResponse,
+    ) -> VerdictConformite:
+        """Is the page the expected order acknowledgement, or the right station's file?"""
+        if _order_id(response) is not None:
+            return verdict_from_criteria(
+                {
+                    "order": CritereConformite(
+                        demande="an order acknowledgement carrying an identifier",
+                        verifie=True,
+                        recu="the order identifier is present",
+                        conforme=True,
+                    )
+                }
+            )
+        return verdict_from_criteria(self._file_criteria(response))
+
+    def _file_criteria(self, response: HttpResponse) -> dict[str, CritereConformite]:
+        lines = [line for line in response.text().splitlines() if line.strip()]
+        if not lines:
+            return {
+                "file": CritereConformite(
+                    demande="a CSV file with a header and rows",
+                    verifie=True,
+                    recu="the body is empty (order not ready, or no data)",
+                    conforme=False,
+                )
+            }
+        header = lines[0].split(";")
+        if "POSTE" not in header or "DATE" not in header:
+            return {
+                "file": CritereConformite(
+                    demande="a CSV header carrying POSTE and DATE",
+                    verifie=True,
+                    recu=f"the first line is not a climatology header ({lines[0][:60]!r})",
+                    conforme=False,
+                )
+            }
+        column = header.index("POSTE")
+        others = {
+            cells[column]
+            for cells in (line.split(";") for line in lines[1:])
+            if len(cells) > column and cells[column].strip() != self.station
+        }
+        return {
+            "file": CritereConformite(
+                demande="a CSV header carrying POSTE and DATE",
+                verifie=True,
+                recu="the header carries POSTE and DATE",
+                conforme=True,
+            ),
+            "station": CritereConformite(
+                demande=f"only rows of station {self.station}",
+                verifie=True,
+                recu=(
+                    f"every row is station {self.station}"
+                    if not others
+                    else f"rows of other stations: {', '.join(sorted(others))}"
+                ),
+                conforme=not others,
+            ),
+        }
+
+
+def _order_id(response: HttpResponse) -> str | None:
+    """The identifier of an accepted order, if the reply is an acknowledgement."""
+    try:
+        payload = json.loads(response.text())
+    except json.JSONDecodeError:
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    ack = payload.get("elaboreProduitAvecDemandeResponse")
+    if isinstance(ack, Mapping) and ack.get("return"):
+        return str(ack["return"])
+    return None
+
+
 def _raison_refus(charge: Any) -> str | None:
     """Le motif du refus de la source, si elle en a formulé un.
 
@@ -244,9 +425,11 @@ __all__ = [
     "BASE_OBSERVATION",
     "CREDENTIAL_REF",
     "DATASET",
+    "KEY_HEADER",
     "LICENCE",
     "PRODUCTEUR",
     "REVISION",
     "SOURCE_ID",
+    "DailyClimatologyAdapter",
     "MeteoFranceAdapter",
 ]
