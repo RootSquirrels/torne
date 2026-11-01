@@ -1,0 +1,945 @@
+{
+  "format": 1,
+  "payload_digest": "ca77745d826ed7e53db05bbc990b82fabb979421b0b61542dbea1c9160a33eda",
+  "product": {
+    "domain_of_validity": "European gas supply at the reference date 2026-10-31: 25 LNG terminal installations in 12 countries, over the gas days 2026-06-01 to 2026-10-31, and the underground storage of the 30 countries the platform answered for — 19 of them published usable states — over 2026-09-01 to 2026-09-30. The validation is the confrontation with the operator's daily series: it covers the seven Spanish terminals over June 2026 only, so the other 18 European installations are produced but are not validated that way.",
+    "input_statuses": {
+      "agsi-storage-states": "approved",
+      "alsi-terminal-states": "approved",
+      "enagas-daily-series": "approved"
+    },
+    "lineage": [
+      {
+        "identifier": "gie-alsi",
+        "kind": "source",
+        "label": "GIE ALSI Transparency Platform",
+        "revision": null
+      },
+      {
+        "identifier": "gie-agsi",
+        "kind": "source",
+        "label": "GIE AGSI+ Transparency Platform",
+        "revision": null
+      },
+      {
+        "identifier": "enagas",
+        "kind": "source",
+        "label": "Enagas — Seguimiento Diario del Sistema",
+        "revision": null
+      },
+      {
+        "identifier": "alsi-terminal-states",
+        "kind": "observation",
+        "label": "The daily terminal states published by GIE",
+        "revision": "2026-10-31"
+      },
+      {
+        "identifier": "agsi-storage-states",
+        "kind": "observation",
+        "label": "The daily storage states published by GIE",
+        "revision": "2026-09-30"
+      },
+      {
+        "identifier": "enagas-daily-series",
+        "kind": "observation",
+        "label": "The operator's daily system tracking series",
+        "revision": "2026-06-30"
+      },
+      {
+        "identifier": "confrontation-alsi-enagas-2026-06",
+        "kind": "evaluation",
+        "label": "The confrontation of the platform and the operator, over the Spanish terminals",
+        "revision": "2026-11-01"
+      },
+      {
+        "identifier": "torne.supply.terminals",
+        "kind": "model",
+        "label": "The terminal layer of the supply models",
+        "revision": "0.1.0"
+      }
+    ],
+    "nature": "reconstructed",
+    "produced_at": "2026-11-01T16:20:25+00:00",
+    "product_id": "gas-supply-europe",
+    "provisional_inputs": [],
+    "status": "usable",
+    "summary": {
+      "bounds": [
+        {
+          "direction": "lower",
+          "quantity": "derived entry",
+          "statement": "The derived entry is a lower bound on the real entry into the tanks: the platform publishes only the network send-out, and the LNG that leaves the tanks by truck or by ship is not published."
+        },
+        {
+          "direction": "upper",
+          "quantity": "computed coverage",
+          "statement": "The computed coverage is an upper bound on the real coverage, for the same reason: the real outflow of the tanks is at least the published network send-out."
+        }
+      ],
+      "generated_at": "2026-11-01T16:20:25+00:00",
+      "indicators": {
+        "storage": {
+          "concentration": {
+            "herfindahl": 0.1111962535143793,
+            "top_country_share": 0.19141627707989733,
+            "top_three_countries_share": 0.47211910221523956
+          },
+          "countries_without_published_state": [
+            "CH",
+            "CY",
+            "EE",
+            "FI",
+            "GR",
+            "IE",
+            "LT",
+            "LU",
+            "MT",
+            "NO",
+            "SI"
+          ],
+          "coverage": [
+            "AT",
+            "BE",
+            "BG",
+            "HR",
+            "CY",
+            "CZ",
+            "DK",
+            "EE",
+            "FI",
+            "FR",
+            "DE",
+            "GR",
+            "HU",
+            "IE",
+            "IT",
+            "LV",
+            "LT",
+            "LU",
+            "MT",
+            "NL",
+            "PL",
+            "PT",
+            "RO",
+            "SK",
+            "SI",
+            "ES",
+            "SE",
+            "NO",
+            "CH",
+            "UA"
+          ],
+          "indicators": [
+            {
+              "capacity_gwh": 100278.9,
+              "computed_coverage_days": 1330.74,
+              "country": "AT",
+              "days": 30,
+              "degradation_days_per_day": 42.92627,
+              "difference_with_published_days": 1243.182,
+              "published_at": "2026-10-01T16:10:07+00:00",
+              "published_autonomy_days": 87.56,
+              "published_autonomy_on_consumption_days": 875.59,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 68.28,
+              "reconstitution_rate_per_day": 0.00045164,
+              "stock_gwh": 68471.1
+            },
+            {
+              "capacity_gwh": 7610.0,
+              "computed_coverage_days": 47249.0,
+              "country": "BE",
+              "days": 30,
+              "degradation_days_per_day": 1629.18034,
+              "difference_with_published_days": 47245.91,
+              "published_at": "2026-10-01T12:00:03+00:00",
+              "published_autonomy_days": 3.09,
+              "published_autonomy_on_consumption_days": 30.892,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 62.09,
+              "reconstitution_rate_per_day": 0.00219811,
+              "stock_gwh": 4724.9
+            },
+            {
+              "capacity_gwh": 7020.0,
+              "computed_coverage_days": 0.0,
+              "country": "BG",
+              "days": 30,
+              "degradation_days_per_day": 0.12586,
+              "difference_with_published_days": 17.68,
+              "published_at": "2026-10-01T07:40:03+00:00",
+              "published_autonomy_days": 17.68,
+              "published_autonomy_on_consumption_days": 176.763,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 78.18,
+              "reconstitution_rate_per_day": 0.00555556,
+              "stock_gwh": 5488.5
+            },
+            {
+              "capacity_gwh": 45305.9,
+              "computed_coverage_days": 2582.79,
+              "country": "CZ",
+              "days": 30,
+              "degradation_days_per_day": -602.07203,
+              "difference_with_published_days": 2537.666,
+              "published_at": "2026-10-01T09:20:09+00:00",
+              "published_autonomy_days": 45.12,
+              "published_autonomy_on_consumption_days": 451.191,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 76.73,
+              "reconstitution_rate_per_day": 0.00205172,
+              "stock_gwh": 34764.3
+            },
+            {
+              "capacity_gwh": 247526.3,
+              "computed_coverage_days": 4239.49,
+              "country": "DE",
+              "days": 30,
+              "degradation_days_per_day": -41.94618,
+              "difference_with_published_days": 4223.596,
+              "published_at": "2026-10-16T13:38:28+00:00",
+              "published_autonomy_days": 15.89,
+              "published_autonomy_on_consumption_days": 158.905,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 58.03,
+              "reconstitution_rate_per_day": 0.00161605,
+              "stock_gwh": 143633.8
+            },
+            {
+              "capacity_gwh": 8590.0,
+              "computed_coverage_days": 452.75,
+              "country": "DK",
+              "days": 30,
+              "degradation_days_per_day": -741.10063,
+              "difference_with_published_days": 416.848,
+              "published_at": "2026-10-01T06:11:48+00:00",
+              "published_autonomy_days": 35.9,
+              "published_autonomy_on_consumption_days": 359.0,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 76.9,
+              "reconstitution_rate_per_day": 8.912e-05,
+              "stock_gwh": 6605.6
+            },
+            {
+              "capacity_gwh": 35831.8,
+              "computed_coverage_days": 334831.25,
+              "country": "ES",
+              "days": 30,
+              "degradation_days_per_day": 11545.62724,
+              "difference_with_published_days": 334823.05,
+              "published_at": "2026-10-02T10:49:09+00:00",
+              "published_autonomy_days": 8.2,
+              "published_autonomy_on_consumption_days": 82.016,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 74.76,
+              "reconstitution_rate_per_day": 0.00045125,
+              "stock_gwh": 26786.5
+            },
+            {
+              "capacity_gwh": 123877.9,
+              "computed_coverage_days": 2423.76,
+              "country": "FR",
+              "days": 30,
+              "degradation_days_per_day": -20.27568,
+              "difference_with_published_days": 2395.561,
+              "published_at": "2026-10-01T11:50:02+00:00",
+              "published_autonomy_days": 28.2,
+              "published_autonomy_on_consumption_days": 281.982,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 83.77,
+              "reconstitution_rate_per_day": 0.00415384,
+              "stock_gwh": 103769.3
+            },
+            {
+              "capacity_gwh": 4772.5,
+              "computed_coverage_days": 1187.77,
+              "country": "HR",
+              "days": 30,
+              "degradation_days_per_day": -132.35756,
+              "difference_with_published_days": 1172.564,
+              "published_at": "2026-10-01T11:10:03+00:00",
+              "published_autonomy_days": 15.21,
+              "published_autonomy_on_consumption_days": 152.058,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 87.94,
+              "reconstitution_rate_per_day": 0.00490237,
+              "stock_gwh": 4196.8
+            },
+            {
+              "capacity_gwh": 67707.2,
+              "computed_coverage_days": 1421.64,
+              "country": "HU",
+              "days": 30,
+              "degradation_days_per_day": 47.30139,
+              "difference_with_published_days": 1368.33,
+              "published_at": "2026-10-07T09:31:42+00:00",
+              "published_autonomy_days": 53.31,
+              "published_autonomy_on_consumption_days": 533.077,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 74.24,
+              "reconstitution_rate_per_day": 0.001636,
+              "stock_gwh": 50269.2
+            },
+            {
+              "capacity_gwh": 203424.9,
+              "computed_coverage_days": 25274.89,
+              "country": "IT",
+              "days": 30,
+              "degradation_days_per_day": 701.9466,
+              "difference_with_published_days": 25248.683,
+              "published_at": "2026-10-27T18:33:23+00:00",
+              "published_autonomy_days": 26.21,
+              "published_autonomy_on_consumption_days": 262.071,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 87.26,
+              "reconstitution_rate_per_day": 0.00141026,
+              "stock_gwh": 177514.0
+            },
+            {
+              "capacity_gwh": 24405.3,
+              "computed_coverage_days": 0.0,
+              "country": "LV",
+              "days": 30,
+              "degradation_days_per_day": 0.34034,
+              "difference_with_published_days": 129.89,
+              "published_at": "2026-10-13T08:20:50+00:00",
+              "published_autonomy_days": 129.89,
+              "published_autonomy_on_consumption_days": 1298.87,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 48.96,
+              "reconstitution_rate_per_day": 0.00128307,
+              "stock_gwh": 11949.6
+            },
+            {
+              "capacity_gwh": 144042.8,
+              "computed_coverage_days": 1743.5,
+              "country": "NL",
+              "days": 30,
+              "degradation_days_per_day": -31.95616,
+              "difference_with_published_days": 1715.241,
+              "published_at": "2026-10-04T09:20:11+00:00",
+              "published_autonomy_days": 28.26,
+              "published_autonomy_on_consumption_days": 282.558,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 58.88,
+              "reconstitution_rate_per_day": 0.00387452,
+              "stock_gwh": 84809.7
+            },
+            {
+              "capacity_gwh": 36849.1,
+              "computed_coverage_days": 7690.84,
+              "country": "PL",
+              "days": 30,
+              "degradation_days_per_day": 264.70731,
+              "difference_with_published_days": 7675.712,
+              "published_at": "2026-10-07T19:10:22+00:00",
+              "published_autonomy_days": 15.13,
+              "published_autonomy_on_consumption_days": 151.269,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 99.14,
+              "reconstitution_rate_per_day": 0.00180307,
+              "stock_gwh": 36531.5
+            },
+            {
+              "capacity_gwh": 3570.0,
+              "computed_coverage_days": 0.0,
+              "country": "PT",
+              "days": 30,
+              "degradation_days_per_day": 0.00276,
+              "difference_with_published_days": 7.89,
+              "published_at": "2026-10-01T14:20:21+00:00",
+              "published_autonomy_days": 7.89,
+              "published_autonomy_on_consumption_days": 78.949,
+              "published_autonomy_over_consumption_ratio": 0.0999,
+              "published_fill_pct": 94.1,
+              "reconstitution_rate_per_day": 0.00036608,
+              "stock_gwh": 3359.3
+            },
+            {
+              "capacity_gwh": 33863.6,
+              "computed_coverage_days": 6234.29,
+              "country": "RO",
+              "days": 30,
+              "degradation_days_per_day": 214.20938,
+              "difference_with_published_days": 6208.902,
+              "published_at": "2026-10-01T09:11:33+00:00",
+              "published_autonomy_days": 25.39,
+              "published_autonomy_on_consumption_days": 253.937,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 81.92,
+              "reconstitution_rate_per_day": 0.00353365,
+              "stock_gwh": 27742.6
+            },
+            {
+              "capacity_gwh": 83.0,
+              "computed_coverage_days": 0.0,
+              "country": "SE",
+              "days": 30,
+              "degradation_days_per_day": 0.00724,
+              "difference_with_published_days": 0.61,
+              "published_at": "2026-10-01T07:10:03+00:00",
+              "published_autonomy_days": 0.61,
+              "published_autonomy_on_consumption_days": 6.113,
+              "published_autonomy_over_consumption_ratio": 0.0998,
+              "published_fill_pct": 84.66,
+              "reconstitution_rate_per_day": 0.00997092,
+              "stock_gwh": 70.3
+            },
+            {
+              "capacity_gwh": 36839.0,
+              "computed_coverage_days": 587.68,
+              "country": "SK",
+              "days": 30,
+              "degradation_days_per_day": -3.70858,
+              "difference_with_published_days": 547.225,
+              "published_at": "2026-10-02T09:30:06+00:00",
+              "published_autonomy_days": 40.45,
+              "published_autonomy_on_consumption_days": 404.499,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 54.3,
+              "reconstitution_rate_per_day": 0.00128284,
+              "stock_gwh": 20002.5
+            },
+            {
+              "capacity_gwh": 321016.4,
+              "computed_coverage_days": 648233.33,
+              "country": "UA",
+              "days": 30,
+              "degradation_days_per_day": 19702.75534,
+              "difference_with_published_days": 648182.343,
+              "published_at": "2026-10-01T08:06:24+00:00",
+              "published_autonomy_days": 50.99,
+              "published_autonomy_on_consumption_days": 509.862,
+              "published_autonomy_over_consumption_ratio": 0.1,
+              "published_fill_pct": 36.35,
+              "reconstitution_rate_per_day": 0.00097612,
+              "stock_gwh": 116682.0
+            }
+          ],
+          "period": {
+            "end": "2026-09-30",
+            "start": "2026-09-01"
+          },
+          "provenance": {
+            "api": "https://agsi.gie.eu/api",
+            "attribution": "GIE / AGSI+",
+            "credential": "portee par credential_ref, jamais consignee",
+            "source": "GIE AGSI+ Transparency Platform"
+          },
+          "refusals": [],
+          "units": {
+            "flow": "GWh/jour",
+            "stock": "GWh"
+          }
+        },
+        "terminals": {
+          "aggregate_sum_control": [
+            {
+              "country": "BE",
+              "published_aggregate_gwh": 1720.41,
+              "relative_difference": 0.0,
+              "terminals_counted": 1,
+              "terminals_sum_gwh": 1720.41
+            },
+            {
+              "country": "DE",
+              "published_aggregate_gwh": 1130.24,
+              "relative_difference": -0.208964,
+              "terminals_counted": 2,
+              "terminals_sum_gwh": 894.06
+            },
+            {
+              "country": "ES",
+              "published_aggregate_gwh": 13260.37,
+              "relative_difference": -0.0,
+              "terminals_counted": 7,
+              "terminals_sum_gwh": 13260.37
+            },
+            {
+              "country": "FI",
+              "published_aggregate_gwh": 127.0,
+              "relative_difference": 0.0,
+              "terminals_counted": 1,
+              "terminals_sum_gwh": 127.0
+            },
+            {
+              "country": "FR",
+              "published_aggregate_gwh": 6089.54,
+              "relative_difference": 0.0,
+              "terminals_counted": 4,
+              "terminals_sum_gwh": 6089.54
+            },
+            {
+              "country": "GR",
+              "published_aggregate_gwh": 686.11,
+              "relative_difference": -0.16974,
+              "terminals_counted": 1,
+              "terminals_sum_gwh": 569.65
+            },
+            {
+              "country": "HR",
+              "published_aggregate_gwh": 277.2,
+              "relative_difference": 0.0,
+              "terminals_counted": 1,
+              "terminals_sum_gwh": 277.2
+            },
+            {
+              "country": "IT",
+              "published_aggregate_gwh": 1530.73,
+              "relative_difference": -0.300961,
+              "terminals_counted": 3,
+              "terminals_sum_gwh": 1070.04
+            },
+            {
+              "country": "LT",
+              "published_aggregate_gwh": 785.25,
+              "relative_difference": 0.0,
+              "terminals_counted": 1,
+              "terminals_sum_gwh": 785.25
+            },
+            {
+              "country": "NL",
+              "published_aggregate_gwh": 3431.88,
+              "relative_difference": 0.0,
+              "terminals_counted": 2,
+              "terminals_sum_gwh": 3431.88
+            },
+            {
+              "country": "PL",
+              "published_aggregate_gwh": 1468.97,
+              "relative_difference": 0.0,
+              "terminals_counted": 1,
+              "terminals_sum_gwh": 1468.97
+            },
+            {
+              "country": "PT",
+              "published_aggregate_gwh": 1519.04,
+              "relative_difference": 0.0,
+              "terminals_counted": 1,
+              "terminals_sum_gwh": 1519.04
+            }
+          ],
+          "concentration": {
+            "herfindahl": 0.06489737691186534,
+            "top_share": 0.11038909238048646,
+            "top_three_share": 0.29751475407525163,
+            "total_gwh": 31213.41
+          },
+          "concentration_by_country": 0.24130847938757266,
+          "dependency_by_country": {
+            "BE": {
+              "capacity_gwh": 3820.88,
+              "capacity_share": 0.06999154982571172,
+              "send_out_gwh_per_day": 237.2,
+              "send_out_share": 0.06327189308863933,
+              "stock_gwh": 1720.41,
+              "stock_share": 0.05511765616124608,
+              "terminals": 1.0
+            },
+            "DE": {
+              "capacity_gwh": 2224.98,
+              "capacity_share": 0.040757573786984164,
+              "send_out_gwh_per_day": 120.7,
+              "send_out_share": 0.03219611085918536,
+              "stock_gwh": 894.0600000000001,
+              "stock_share": 0.02864345805216412,
+              "terminals": 2.0
+            },
+            "ES": {
+              "capacity_gwh": 20278.04,
+              "capacity_share": 0.3714566924446136,
+              "send_out_gwh_per_day": 595.1,
+              "send_out_share": 0.15873989703646404,
+              "stock_gwh": 13260.369999999999,
+              "stock_share": 0.42482926408873617,
+              "terminals": 7.0
+            },
+            "FI": {
+              "capacity_gwh": 497.34,
+              "capacity_share": 0.009110361327840566,
+              "send_out_gwh_per_day": 27.0,
+              "send_out_share": 0.007202112619701779,
+              "stock_gwh": 127.0,
+              "stock_share": 0.004068764034432636,
+              "terminals": 1.0
+            },
+            "FR": {
+              "capacity_gwh": 8953.130000000001,
+              "capacity_share": 0.16400500525823225,
+              "send_out_gwh_per_day": 964.2,
+              "send_out_share": 0.25719544399690575,
+              "stock_gwh": 6089.54,
+              "stock_share": 0.1950937113247159,
+              "terminals": 4.0
+            },
+            "GR": {
+              "capacity_gwh": 1388.31,
+              "capacity_share": 0.0254313060181251,
+              "send_out_gwh_per_day": 48.2,
+              "send_out_share": 0.012857104750726881,
+              "stock_gwh": 569.65,
+              "stock_share": 0.018250168757594894,
+              "terminals": 1.0
+            },
+            "HR": {
+              "capacity_gwh": 900.42,
+              "capacity_share": 0.01649405144732819,
+              "send_out_gwh_per_day": 86.6,
+              "send_out_share": 0.023100109365413853,
+              "stock_gwh": 277.2,
+              "stock_share": 0.008880798349171076,
+              "terminals": 1.0
+            },
+            "IT": {
+              "capacity_gwh": 3562.0200000000004,
+              "capacity_share": 0.06524970695498987,
+              "send_out_gwh_per_day": 429.4,
+              "send_out_share": 0.11454026514444236,
+              "stock_gwh": 1070.04,
+              "stock_share": 0.034281419428380304,
+              "terminals": 3.0
+            },
+            "LT": {
+              "capacity_gwh": 1135.32,
+              "capacity_share": 0.020796990836699142,
+              "send_out_gwh_per_day": 81.4,
+              "send_out_share": 0.02171303582384166,
+              "stock_gwh": 785.25,
+              "stock_share": 0.025157456362505732,
+              "terminals": 1.0
+            },
+            "NL": {
+              "capacity_gwh": 5887.1900000000005,
+              "capacity_share": 0.10784257873014379,
+              "send_out_gwh_per_day": 754.3,
+              "send_out_share": 0.20120568700152042,
+              "stock_gwh": 3431.88,
+              "stock_share": 0.10994889696447777,
+              "terminals": 2.0
+            },
+            "PL": {
+              "capacity_gwh": 3276.9,
+              "capacity_share": 0.06002682879961546,
+              "send_out_gwh_per_day": 232.0,
+              "send_out_share": 0.061884819547067135,
+              "stock_gwh": 1468.97,
+              "stock_share": 0.047062144123311105,
+              "terminals": 1.0
+            },
+            "PT": {
+              "capacity_gwh": 2666.06,
+              "capacity_share": 0.048837354569716135,
+              "send_out_gwh_per_day": 172.8,
+              "send_out_share": 0.04609352076609139,
+              "stock_gwh": 1519.04,
+              "stock_share": 0.04866626235326419,
+              "terminals": 1.0
+            }
+          },
+          "generated_at": "2026-11-01T23:01:02.939274+00:00",
+          "installations": 25,
+          "installations_without_data": [
+            "21W0000000000419",
+            "21W000000000099F",
+            "37W000000000106C",
+            "37W000000000110L",
+            "59W0000000000011",
+            "63W835858561887S"
+          ],
+          "loss_scenarios": [
+            {
+              "coverage_after_days": 6.58349341295923,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.6506586107438528,
+              "flow_lost_gwh_per_day": 101.23333333333333,
+              "installation": "21W000000000039X",
+              "reserve_lost_gwh": 2985.477,
+              "reserve_share_lost": 0.11579159338410878
+            },
+            {
+              "coverage_after_days": 6.660266074240483,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.5738859494625999,
+              "flow_lost_gwh_per_day": 86.11666666666666,
+              "installation": "21W000000000038Z",
+              "reserve_lost_gwh": 2618.943,
+              "reserve_share_lost": 0.10157558840753356
+            },
+            {
+              "coverage_after_days": 6.755135918636625,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.4790161050664583,
+              "flow_lost_gwh_per_day": 103.07666666666667,
+              "installation": "21W0000000000354",
+              "reserve_lost_gwh": 2403.555,
+              "reserve_share_lost": 0.09322177435510023
+            },
+            {
+              "coverage_after_days": 6.906091662467581,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.32806036123550175,
+              "flow_lost_gwh_per_day": 51.42333333333333,
+              "installation": "21W0000000000370",
+              "reserve_lost_gwh": 1524.372,
+              "reserve_share_lost": 0.059122700590264365
+            },
+            {
+              "coverage_after_days": 7.128244565896197,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.10590745780688593,
+              "flow_lost_gwh_per_day": 41.28,
+              "installation": "21W0000000001253",
+              "reserve_lost_gwh": 671.718,
+              "reserve_share_lost": 0.026052552916933133
+            },
+            {
+              "coverage_after_days": 7.162520583748264,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.07163143995481924,
+              "flow_lost_gwh_per_day": 151.20666666666665,
+              "installation": "21W0000000001245",
+              "reserve_lost_gwh": 1338.3220000000001,
+              "reserve_share_lost": 0.05190675957008118
+            },
+            {
+              "coverage_after_days": 7.175065618298784,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.059086405404299214,
+              "flow_lost_gwh_per_day": 66.59333333333333,
+              "installation": "37W000000000107A",
+              "reserve_lost_gwh": 688.4010000000001,
+              "reserve_share_lost": 0.026699602333970042
+            },
+            {
+              "coverage_after_days": 7.193922857532441,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.04022916617064176,
+              "flow_lost_gwh_per_day": 43.85333333333333,
+              "installation": "63W179356656691A",
+              "reserve_lost_gwh": 458.85800000000006,
+              "reserve_share_lost": 0.01779678723267518
+            },
+            {
+              "coverage_after_days": 7.2016293541821845,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.03252266952089844,
+              "flow_lost_gwh_per_day": 154.15333333333334,
+              "installation": "63W631527814486R",
+              "reserve_lost_gwh": 1226.069,
+              "reserve_share_lost": 0.047553031930529316
+            },
+            {
+              "coverage_after_days": 7.209718416001138,
+              "coverage_before_days": 7.234152023703083,
+              "days_lost": 0.024433607701944915,
+              "flow_lost_gwh_per_day": 47.67666666666666,
+              "installation": "21W000000000040B",
+              "reserve_lost_gwh": 430.81899999999996,
+              "reserve_share_lost": 0.016709295857964525
+            }
+          ],
+          "product": "TORNE · LNG-002 — European Gas Supply Intelligence, couche terminaux",
+          "reference_date": "2026-10-31",
+          "sources": [
+            {
+              "access": "https://alsi.gie.eu/api (en-tete x-key)",
+              "dataset": "ALSI Transparency Platform",
+              "identifier_reference": "https://raw.githubusercontent.com/ec-jrc/eurogastp/main/src/eurogastp/topo/Dataproviders.csv",
+              "publisher": "Gas Infrastructure Europe (GIE)",
+              "source_id": "gie.alsi",
+              "units": "stock et capacite en GWh ; volume en milliers de m3 ; debit en GWh/jour"
+            },
+            {
+              "access": "https://www.enagas.es/.../dailysystemtracking.dailysystemtrackingdto.json",
+              "dataset": "Seguimiento Diario del Sistema",
+              "publisher": "Enagas",
+              "source_id": "enagas.seguimiento_diario",
+              "units": "stock en GWh et en m3 liquides ; flux en GWh"
+            }
+          ],
+          "states": 3765,
+          "system_coverage_days": 7.234152023703083,
+          "system_flow_gwh_per_day": 3564.0933333333332,
+          "system_reserve_gwh": 25783.193,
+          "window": {
+            "end": "2026-10-31",
+            "start": "2026-06-01"
+          }
+        }
+      },
+      "layers": {
+        "storage": {
+          "country_column": "country",
+          "day_column": "gas_day",
+          "entity_column": "country",
+          "file": "stocks.csv",
+          "flags": {},
+          "label_column": "country",
+          "measures": {
+            "capacity_gwh": {
+              "label": "Capacity",
+              "unit": "GWh"
+            },
+            "computed_coverage_days": {
+              "label": "Computed coverage (upper bound)",
+              "unit": "days"
+            },
+            "injection_gwh_per_day": {
+              "label": "Injection",
+              "unit": "GWh/day"
+            },
+            "published_autonomy_days": {
+              "label": "Published autonomy",
+              "unit": "days"
+            },
+            "published_fill_pct": {
+              "label": "Published fill",
+              "unit": "%"
+            },
+            "stock_gwh": {
+              "label": "Stock",
+              "unit": "GWh"
+            },
+            "withdrawal_gwh_per_day": {
+              "label": "Withdrawal",
+              "unit": "GWh/day"
+            }
+          },
+          "published_column": "published_at",
+          "title": "Underground storage"
+        },
+        "terminals": {
+          "country_column": "country",
+          "day_column": "gas_day",
+          "entity_column": "terminal_eic",
+          "file": "terminals.csv",
+          "flags": {
+            "tension": {
+              "label": "In tension"
+            }
+          },
+          "label_column": "name",
+          "measures": {
+            "capacity_gwh": {
+              "label": "Capacity",
+              "unit": "GWh"
+            },
+            "derived_entry_gwh": {
+              "label": "Derived entry (lower bound)",
+              "unit": "GWh"
+            },
+            "margin_days": {
+              "label": "Margin",
+              "unit": "days"
+            },
+            "send_out_gwh_per_day": {
+              "label": "Send-out",
+              "unit": "GWh/day"
+            },
+            "stock_gwh": {
+              "label": "Stock",
+              "unit": "GWh"
+            }
+          },
+          "position_columns": [
+            "latitude",
+            "longitude"
+          ],
+          "published_column": "published_at",
+          "title": "LNG terminals"
+        }
+      },
+      "provenance": {
+        "identifier_reference": "The list of installations comes from the European Commission's eurogastp project (Dataproviders.csv); the data come from GIE.",
+        "production_digests": {
+          "confrontation_alsi_enagas.csv": "a9353e89c63e182ce74b8b19532bb3570ed7451ea7677f11e017e37fb590f8fd",
+          "confrontation_perimetre_alsi_enagas.csv": "48785c029c81993ba3511d524992f8bdd8aad914e65fe2525cfb15d187d6ef3f",
+          "europe_indicateurs.json": "38f6e761f2a9158ff902dc7ca4c5590c0a6bd4c5bfe2258728393abceba53641",
+          "europe_lng_terminals.csv": "a66789b0c342ed36490827bd1cdac4c84ed30e34077bc344eef24ebd925bb9a4",
+          "europe_stocks.csv": "5ddf81ad4fba0437eaedbf798a823b13e90c42bdfb2b6c3c843347335b923055",
+          "terminaux_indicateurs.json": "2065093b5b4f29226790c58bc4fefed1648fc45b740facbc549f1edac619cfd0"
+        },
+        "sources": [
+          {
+            "access": "https://alsi.gie.eu/api (en-tete x-key)",
+            "dataset": "ALSI Transparency Platform",
+            "identifier_reference": "https://raw.githubusercontent.com/ec-jrc/eurogastp/main/src/eurogastp/topo/Dataproviders.csv",
+            "publisher": "Gas Infrastructure Europe (GIE)",
+            "source_id": "gie.alsi",
+            "units": "stock et capacite en GWh ; volume en milliers de m3 ; debit en GWh/jour"
+          },
+          {
+            "access": "https://www.enagas.es/.../dailysystemtracking.dailysystemtrackingdto.json",
+            "dataset": "Seguimiento Diario del Sistema",
+            "publisher": "Enagas",
+            "source_id": "enagas.seguimiento_diario",
+            "units": "stock en GWh et en m3 liquides ; flux en GWh"
+          }
+        ]
+      },
+      "reference_date": "2026-10-31",
+      "title": "European gas supply — LNG terminals and underground storage",
+      "units": {
+        "measures": {
+          "storage": {
+            "capacity_gwh": "GWh",
+            "computed_coverage_days": "days",
+            "injection_gwh_per_day": "GWh/day",
+            "published_autonomy_days": "days",
+            "published_fill_pct": "%",
+            "stock_gwh": "GWh",
+            "withdrawal_gwh_per_day": "GWh/day"
+          },
+          "terminals": {
+            "capacity_gwh": "GWh",
+            "derived_entry_gwh": "GWh",
+            "latitude": "degrees",
+            "longitude": "degrees",
+            "margin_days": "days",
+            "send_out_gwh_per_day": "GWh/day",
+            "stock_gwh": "GWh"
+          }
+        },
+        "published": {
+          "storage": {
+            "flow": "GWh/day",
+            "stock": "GWh"
+          },
+          "terminals": {
+            "sources": [
+              "stock et capacite en GWh ; volume en milliers de m3 ; debit en GWh/jour",
+              "stock en GWh et en m3 liquides ; flux en GWh"
+            ]
+          }
+        }
+      },
+      "validation": {
+        "aligned_days": "ALSI day D = operator day D, measured on the offsets -2 to +2",
+        "comparisons": 210,
+        "file": "confrontation.csv",
+        "max_relative_difference": 0.0282,
+        "median_relative_difference": 0.0116,
+        "median_relative_difference_network_flow": 0.003,
+        "median_relative_difference_volume": 0.0,
+        "method": "The seven Spanish terminals, over the same gas days, against an independent source (the operator's daily series). No conversion is applied: each source's own published GWh is compared.",
+        "residual": "Six terminals out of seven are systematically below in ALSI (median bias -0.29% to -2.80%): a difference of perimeter or of instant of measurement between two definitions of the tank stock."
+      },
+      "windows": {
+        "storage": {
+          "countries": 30,
+          "end": "2026-09-30",
+          "start": "2026-09-01",
+          "states": 570
+        },
+        "terminals": {
+          "end": "2026-10-31",
+          "installations": 25,
+          "start": "2026-06-01",
+          "states": 3765
+        }
+      }
+    },
+    "uncertainty": "The derived entry is a lower bound on the real entry into the tanks: the platform publishes only the network send-out, and the LNG that leaves the tanks by truck or by ship is not published. The computed coverage is therefore an upper bound on the real coverage.",
+    "version": "2026-10-31"
+  }
+}
