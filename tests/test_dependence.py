@@ -11,7 +11,7 @@ Every public function is checked on three fronts:
 
 The global NumPy random state is captured before and after every stochastic
 call: the module builds its own generator and never touches the global one
-(`docs/CONTRATS_FONDAMENTAUX.md`, INV-35 and INV-36). Two calls with the same
+(`docs/CORE_CONTRACTS.md`, INV-35 and INV-36). Two calls with the same
 seed must give the same result (INV-36).
 """
 

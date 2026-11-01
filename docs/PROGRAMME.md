@@ -1,273 +1,196 @@
 # TORNE — Programme
 
-**Situation, objectif prioritaire, critères de sortie**
-Ce document dit ce que le dépôt sait faire aujourd'hui, ce qu'il ne sait pas encore faire, et ce qui doit être
-vrai pour que le prochain jalon soit atteint. Il ne raconte pas les sprints passés : ce qui a été fait se lit
-dans l'historique du dépôt et dans les tests.
+**Situation, next mission, open decisions.**
+This document says what the repository can do today, what it cannot yet do, and what must be true for the next
+mission to succeed. It does not narrate past work: that is in the Git history and the tests.
 
-## 1. Principes non négociables
+## 1. Purpose, and the test every mission must pass
 
-1. La complexité scientifique est acceptable. La complexité organisationnelle injustifiée ne l'est pas.
-2. Une fonction n'a pas besoin de devenir un service.
-3. Une abstraction doit résoudre un problème concret.
-4. Ne jamais confondre documentation, implémentation et validation.
-5. Les données brutes et leurs preuves ne doivent jamais être écrasées silencieusement.
-6. Toute reconstruction historique doit respecter les informations effectivement disponibles à la date considérée.
-7. **Les dépôts historiques restent intacts.** Aucun protocole, module temporel ou règle d'un dépôt scellé n'est
-   modifié. Ils restent consultables comme références de recherche, et leurs briques ne sont reprises qu'après
-   classement explicite (`docs/CONTRATS_FONDAMENTAUX.md` §5).
-8. **Une information inconnue reste inconnue.** Ne jamais combler une métadonnée manquante par une supposition,
-   et ne jamais remplacer une observation absente par zéro.
-9. **Une capacité n'est pas une preuve.** Un code qui existe ne démontre rien : la preuve vient d'une exécution,
-   sur des données réelles, dont le résultat est consigné.
+TORNE creates information about the physical world that does not exist in the available sources: in particular,
+**states of the world that no single source observes directly** (`README.md`).
 
-**Chaque mission se termine par** les modifications apportées, les tests exécutés et leurs résultats, les décisions
-prises, les limitations constatées, les tâches non réalisées, et le commit associé. **Ne jamais déclarer une
-mission validée sans preuves** : une commande exécutée et son résultat valent mieux qu'un raisonnement juste.
+Every mission is therefore judged by one question before any other:
 
-## 2. Ce que le dépôt sait faire aujourd'hui
+> **What does this produce that is not already in one of its inputs?**
 
-Chaque ligne a un emplacement dans le code et une suite de tests qui la contrôle. La suite complète est verte.
+A mission that qualifies a source, profiles a series or reproduces a published statistic is useful — it builds
+the evidence base — but it is **source qualification**, not new knowledge, and it is reported as such. New
+knowledge is a reconstructed state, a derived variable, a relationship or a dynamic that is absent from every
+input, comes with quantified uncertainty, and is validated against a reference that does not depend on it.
 
-| Capacité | Où | Ce qu'elle garantit |
+## 2. Non-negotiable principles
+
+1. Scientific complexity is acceptable. Unjustified organisational complexity is not.
+2. A function does not need to become a service. An abstraction must solve a concrete problem.
+3. Never confuse documentation, implementation and validation. **A capability is not evidence**: evidence comes
+   from an execution on real data whose result is recorded.
+4. Raw data and its evidence are never silently overwritten.
+5. Every historical reconstruction respects the information actually available at the date considered.
+6. **Unknown stays unknown.** A missing metadata field is never filled by an assumption, and an absent observation
+   is never replaced by zero. An unreachable source is *unknown*, not *unavailable*.
+7. **No dependent judge.** A public product that already provides the target quantity is a reference or a judge,
+   never the discovery; a witness derived from the mechanism it must confirm is ruled out.
+8. **No confirmatory result without a frozen pre-registration.** Exploration comes first and is allowed; it is
+   never presented as confirmation.
+9. **A refutation is knowledge.** TORNE must be able to publish that a method does not transfer, without degrading
+   what was correctly established elsewhere.
+10. **The historical repositories stay intact.** Their building blocks are taken only after explicit
+    classification (`docs/CORE_CONTRACTS.md` §5).
+11. **One responsibility, one implementation; one owner per shared contract.** Shared contracts
+    (`src/torne/contracts/`, `src/torne/acquisition/contracts.py`) and the reference documents are changed by one
+    workstream at a time, and the change is recorded in the commit that makes it.
+12. **English only** for repository-authored content; source-native names and raw evidence are kept as published.
+
+**Every mission ends with** the changes made, the tests run and their results, the decisions taken, the
+limitations found, the work not done, and the associated commit. A mission is never declared validated without
+evidence.
+
+## 3. What the repository can do today
+
+Each line has a place in the code and a test suite that checks it. The full suite is green (784 tests).
+
+| Capability | Where | What it guarantees |
 |---|---|---|
-| Transport HTTP durci | `src/torne/acquisition/transport.py` | plafond de redirections appliqué, durée mesurée, URL finale consignée, identifiants retirés dès qu'une redirection change de serveur, de port ou de schéma |
-| Magasin brut | `src/torne/acquisition/store.py` | contenu dédupliqué par empreinte et jamais réécrit, **événement d'acquisition** journalisé à chaque récupération, instant de première conservation |
-| Fetcher | `src/torne/acquisition/fetcher.py` | pagination par curseur, par décalage et par lien d'en-tête ; épuisement qualifié par source |
-| Contrat de connecteur | `src/torne/acquisition/contracts.py` | quatre contrôles — transport, structure de la réponse, conformité à la question posée, exhaustivité du parcours — et un verdict de conformité **motivé**, à quatre états ; la porte n'ouvre que sur un verdict **positif** |
-| Trois adaptateurs réels | `src/torne/acquisition/adapters/` | Hub'EAU v2 (curseur), USGS NWIS (sans pagination), catalogue Copernicus Data Space (OData) |
-| Objets et temporalité | `src/torne/contracts/` | les cinq objets, les trois dimensions temporelles, `usable_at` dérivé, observation absente qualifiée |
-| Méthodes | `src/torne/methods/` | filtre de Kalman en espace d'état, régression et erreur-type CR1, rupture de moyenne par CUSUM, puissance et effet minimal détectable, comparaison appariée à une référence |
-| Exécution | `src/torne/execution/` | configuration conservée, rejeu depuis la configuration, graine transmise et jamais d'aléa global |
-| Évaluation | `src/torne/evaluation/` | découpage temporel **cumulatif**, références simples, métriques, incertitude, rapport |
-| Enregistrement | `src/torne/knowledge/` | produit figé, lignée vérifiable jusqu'aux preuves brutes |
+| Hardened HTTP transport | `acquisition/transport.py` | redirect cap, measured duration, final URL recorded, credentials dropped when a redirect changes host, port or scheme |
+| Raw store | `acquisition/store.py` | content deduplicated by digest and never rewritten; an acquisition event journaled for every retrieval |
+| Fetcher | `acquisition/fetcher.py` | cursor, offset and header-link pagination; exhaustion qualified per source; widened retry policy for throttling sources |
+| Connector contract | `acquisition/contracts.py` | four checks — transport, response structure, conformity to the question asked, exhaustiveness — and a **reasoned** four-state conformity verdict; the gate only opens on a positive verdict |
+| Adapters | `acquisition/adapters/` | Hub'EAU v2 (station query and network feed), USGS Water Services and OGC API, Copernicus Data Space OData and STAC, GHCN-Daily, Météo-France (behind a token held by reference) |
+| Contracts | `contracts/` | source, raw evidence, observation, surface observation over a footprint and a window, derived variable, knowledge product; three time dimensions, derived `usable_at`, qualified absence, publication classes P/B/C/N; spatial reference, footprint and raster grid |
+| Semantic layers | `hydrology/`, `atmosphere/`, `eo/` | reading each source into canonical observations without inventing units, zones or publication instants |
+| Methods | `methods/` | Kalman filter with irregular time steps, ML-estimated variances and RTS smoothing; CRPS, Winkler, pinball, PIT and calibration; effective sample size, block and cluster bootstrap; Benjamini–Hochberg, Bonferroni, Romano–Wolf; CR1 regression; CUSUM breaks; power |
+| Execution, evaluation, knowledge | `execution/`, `evaluation/`, `knowledge/` | replay from configuration with explicit seed; cumulative temporal splits, baselines, metrics, uncertainty; frozen products with lineage verifiable down to raw evidence |
 
-Les primitives statistiques reprises d'un dépôt d'origine sont vérifiées contre les définitions publiées
-(`scipy`, `statsmodels`), pas contre une réimplémentation interne.
+**What has been shown on real data.** Mission 002 acquired 33 481 daily discharge values of the Mississippi at
+Grafton (USGS-05587450, 1933–2026), reproduced the agency's published day-of-year statistics to a median 0.11 %,
+and published a standardised anomaly index with a verified lineage. That demonstrates the pipeline end to end. It
+does not demonstrate new knowledge: an anomaly against the station's own climatology is a re-expression of one
+source.
 
-**Ce qui a été vérifié sur le réseau, et non simulé :** le 31 octobre 2026, les trois adaptateurs ont été
-interrogés pour de vrai, et leurs réponses sont conservées comme preuves brutes, avec leurs empreintes et leur
-manifeste. C'est la seule performance démontrée à ce jour : **le socle acquiert et conserve**.
+## 4. The next mission: BASIN-001 — integrated catchment intelligence
 
-**Ce qui n'est pas démontré :** aucune performance sur le monde réel. Aucune observation issue de données
-réelles n'a encore été produite : le dépôt a la capacité d'en obtenir, et le moyen de les tracer.
+### 4.1 Definition
 
-## 3. Ce qui n'est pas fait, et pourquoi
+One real catchment, three observation modalities, a first reconstruction of its physical state.
 
-| Ce qui manque | Pourquoi |
-|---|---|
-| Une couche sémantique et des objets de domaine | L'observatoire doit dire ce qu'il cherche avant que le code le fige. Le socle ne doit pas être modelé par une seule expérience. |
-| Un moteur, un service, un registre, un bus | Une abstraction doit résoudre un problème concret ; aucun problème concret ne l'exige encore. |
-| Un stockage distribué ou une base de données | Le magasin local fait le travail. La règle est « local d'abord, copie après » (`docs/CONTRATS_FONDAMENTAUX.md` §5.7) : une panne de la copie retarde la copie, elle ne perd rien. |
-| Un framework supplémentaire | La bibliothèque standard suffit au transport ; une dépendance runtime ne s'ajoute qu'au premier import réel. |
-| Une application « world-to-market » | Reportée tant que le socle d'intelligence physique n'est pas mature (`docs/ARCHITECTURE.md` §5). |
+| # | Input | Role in the reconstruction | Building blocks in place | Gap |
+|---|---|---|---|---|
+| 1 | Observed discharge (Hub'EAU) | integrated response of the catchment; the outlet constraint | `hubeau_feed` adapter, `hydrology.hubeau` station selection, HYDRO-001 qualification | station selection depends on the basin |
+| 2 | Historical precipitation and temperature | forcing | `ghcnd` adapter and `atmosphere/` (point stations, publication class N) | Météo-France needs an OAuth2 token; ERA5 is reachable only through Open-Meteo's re-serving; a gridded or catchment-averaged forcing is not built |
+| 3 | Soil moisture and evapotranspiration (EO) | the storage state the outlet does not show | `copernicus_stac` adapter and `eo/` registry: SSM (Sentinel-1, independent, from 2014-10), SWI (index, not audited) | **CLMS evapotranspiration starts on 2025-11-01**: it covers no historical year; pixel values are not read (assets require OIDC authentication) |
+| 4 | Land cover and catchment geometry | the spatial support of the state | `contracts/spatial.py` (footprint, grid; no projection) | no land-cover or catchment-boundary source is integrated |
+| 5 | Spatio-temporal reconstruction of the water state | the knowledge product | Kalman filter and smoother, evaluation, knowledge records | the state-space formulation linking 1–4 is not written |
 
-## 4. L'objectif prioritaire : l'observatoire des sources
+### 4.2 What "new information" must mean here
 
-### 4.1 La séquence
+The expected result is a knowledge product that carries **demonstrable additional information with respect to
+each source taken separately**. Before the pre-registration is frozen, that is made operational:
 
-La séquence du programme n'est pas « trouver une question, puis chercher les données ». Elle est l'inverse :
+- the reconstructed quantity (for example the catchment water storage, or soil moisture where no pixel is valid)
+  is **not published by any input**;
+- the reconstruction, evaluated on withheld data, **outperforms every single-source baseline** on the same target
+  — the ablation "one data family at a time" — with the gain sized by the effective sample size, not the number of
+  days;
+- the ablation reads the **dependence ledger** first (`eo.coverage.dependence_ledger`): a product derived from the
+  same meteorological inputs as the forcing is not independent evidence, and the published discharge is a function
+  of the published stage at the same station (HYDRO-001);
+- the reference used to validate the reconstruction does not depend on it.
 
-> construire une capacité d'observation du monde → acquérir et comprendre des sources hétérogènes → reconstruire
-> des états physiques → découvrir les connaissances que ces reconstructions rendent possibles → formuler et tester
-> des hypothèses.
+### 4.3 Decisions required before BASIN-001 starts
 
-C'est la séquence **exploratoire** avant la séquence **confirmatoire**. Un pré-enregistrement n'est pas inutile :
-il est indispensable avant l'analyse confirmatoire. Mais il ne doit pas empêcher l'exploration préalable des
-données, et il n'a pas à la précéder. Le risque n'était pas théorique : pré-enregistrer une expérience précise
-avant d'avoir un système d'acquisition opérationnel revenait à laisser les contraintes d'une seule expérience
-déterminer prématurément toute l'architecture de la plateforme.
+1. **The catchment.** A French catchment is required by Hub'EAU; its size must be large enough for 1 km surface
+   products and small enough for one outlet gauge to integrate it.
+2. **The forcing source.** Météo-France (token to provide, through `METEOFRANCE_TOKEN` or a git-ignored `.env`),
+   ERA5 through a stable path, or GHCN-Daily stations alone.
+3. **Evapotranspiration.** Either accept that EO evapotranspiration is unavailable before 2025-11 and reconstruct it,
+   or restrict the period. Reading pixel values requires a Copernicus account.
+4. **Land cover and geometry sources**, and whether reading rasters justifies its first geospatial dependency
+   (`docs/ARCHITECTURE.md` §8).
 
-Cela ne signifie pas que l'acquisition est le but. L'acquisition n'est que la première étape. Le cœur de la
-plateforme reste la transformation de données disparates en connaissances physiques nouvelles.
+BASIN-001 starts when these four are decided and its pre-registration is written.
 
-**Les trois niveaux, et ce qui les sépare** — socle transversal, couche sémantique, couche scientifique — sont
-posés dans `docs/ARCHITECTURE.md` §1.1. Un adaptateur de source ne doit pas savoir reconstruire un état
-physique ; un modèle physique ne doit pas savoir interroger l'API d'un fournisseur particulier.
+## 5. Mission records
 
-### 4.2 Le prochain jalon
+| Record | Nature | Status | What it contributes to BASIN-001 |
+|---|---|---|---|
+| Mission 002 (`experiments/mission_002_real_world.py`) | end-to-end pipeline on real data | done | the pipeline and the anomaly product |
+| HYDRO-001 (`docs/PRE-REGISTRATION-HYDRO-001.md`, `experiments/mission_003_hydro001.py`) | **source qualification**: is Hub'EAU's published discharge a deterministic function of its published stage? | protocol and code written; no run is recorded in the repository | the Hub'EAU access pattern that works (`hubeau_feed`), and the dependence of Q on H |
+| ATMO-001 (`docs/ATMO-001.md`) | source inventory and exploratory profile of four French stations | exploration done; no product | the forcing sources and their limits; effective sample size ≈ 7 % of the number of days |
+| Surface observation (no mission document) | registry of 13 Copernicus surface products, their coverage and declared dependence | code integrated | the EO modality and its dependence ledger |
 
-Constituer une première collection de sources physiques et en explorer les couvertures temporelles et
-spatiales, les qualités, les révisions, les recouvrements et les relations entre observations.
+## 6. Open decisions and known limits
 
-Ce que ce jalon produit :
+None of these is an oversight; each is recorded so that it is not smoothed over.
 
-- un **inventaire** des sources, avec ce que chacune donne et ce qu'elle ne donne pas ;
-- des **fiches de sources** portant leur statut de publication — établie, bornée, inconnue
-  (`docs/CONTRATS_FONDAMENTAUX.md` §3.11) ;
-- la **carte de ce qui est reconstituable** et de ce qui ne l'est pas ;
-- les **questions scientifiques que ces données rendent possibles**, découvertes à partir de ce qu'on observe, pas
-  imposées d'avance.
+**Owner decisions**
 
-Le détail de la qualification par source est dans `docs/SOURCES.md`.
+1. **The repository licence** is not chosen.
+2. **Commit history** before 2026-11-01 is in French and is not rewritten (it is pushed); every later commit is in
+   English.
 
-### 4.3 Critères de sortie
+**Recorded duplication and translation debt**
 
-Le jalon est atteint quand **tout** ce qui suit est vrai, et vérifiable :
+3. **Two day-of-year climatologies.** `hydrology.anomaly` and `atmosphere.anomaly` both implement a day-of-year
+   climatology and anomaly. Both now honour the reference bounds and key on the civil day of a given zone. One owner
+   must be chosen — the natural candidate is a single domain-neutral implementation used by both — when BASIN-001
+   first needs a climatology across modalities.
+4. **French identifiers and docstrings** remain in modules written before the English rule (`acquisition/`,
+   `contracts/` core modules, `atmosphere/`, `methods/`, tests, experiments `atmo_001_*`). Shared contract
+   identifiers such as `CritereConformite`, `verdict_conformite`, `Conformite` are part of the API; translating them
+   is one dedicated change, not a side effect of feature work.
 
-1. **Chaque source retenue a une fiche** qui porte son identité, sa couverture, son comportement observé et ses
-   limites — et la fiche dit ce qui n'a pas pu être vérifié.
-2. **Chaque source retenue est classée** dans une des quatre classes de publication (P, B, C, N), et la classe
-   est établie **par exécution**, pas par supposition.
-3. **La couverture temporelle de chaque source est mesurée** : ce qui est couvert, ce qui ne l'est pas, et ce qui
-   ne le sera pas.
-4. **La conformité sémantique de chaque source est établie**, avec son verdict motivé. Une source dont les
-   filtres ne sont pas appliqués par le fournisseur est notée comme telle, et n'est pas traitée comme une source
-   interrogeable par filtre.
-5. **La carte de reconstitution est écrite**, et elle distingue ce qui est reconstituable de ce qui ne l'est pas.
-6. **La liste des questions scientifiques possibles** est établie à partir de l'observation, et aucune n'est
-   retenue au titre d'une intuition antérieure.
-7. **Aucun point ouvert du §5 n'a été contourné** : les limites sont inscrites, pas lissées.
+**Contract extensions identified, deferred (ATMO-001 §7)**
 
-## 5. Les limites encore ouvertes
+5. **A1** — a quality state "measured, failed a producer check" (GHCN-Daily publishes 14 quality flags; today such
+   values are kept as `UNKNOWN` with their flag).
+6. **A2** — an **upper** bound on publication (an archive version bounds publication from above; `TemporalStamp`
+   only carries a lower bound).
+7. **A6** — `tzdata` is not a declared runtime dependency, while civil-day computations need it on Windows. Adding
+   it requires `uv lock` to update `uv.lock`.
+8. **A9** — the body of a `4xx` refusal is not kept as evidence, so a source's explanation of its refusal is lost
+   from the audit trail.
 
-Ces points ne sont pas tranchables aujourd'hui, et aucun n'est une négligence.
+**Inherited limits**
 
-1. **La licence du dépôt TORNE n'est pas choisie.** Le dépôt est hébergé publiquement sur GitHub ; la politique de
-   propriété intellectuelle est gérée par le propriétaire, séparément. C'est une décision qui lui appartient, et
-   elle n'est pas prise ici.
-2. **Le registre d'unités et le référentiel spatial n'existent pas.** Aucun dépôt historique n'en apporte un :
-   conservation dans les unités de la source ou conversion, et référence verticale pour les grandeurs
-   hydrologiques, restent à trancher.
-3. **Le statut de qualité des sources n'est pas apparié** au vocabulaire fermé des statuts
-   (`docs/CONTRATS_FONDAMENTAUX.md` §3.7), et les valeurs de `missing_reason` rencontrées en vrai ne sont pas
-   inventoriées.
-4. **La borne conservatrice par source n'est pas choisie.** Quand la publication est inconnue, chaque source
-   devrait pouvoir avoir sa propre borne, dérivée de son cycle de publication.
-5. **La granularité commune entre sources n'est pas choisie.** Aligner un flux hebdomadaire sur un flux horaire
-   suppose une règle d'agrégation et une convention de rattachement ; la règle d'agrégation est contractuelle, le
-   choix ne l'est pas.
-6. **La reconstitution de l'historique des révisions dépend de la source.** Une source qui date ses révisions le
-   permet ; une source qui ne les date pas ne le permet pas, et le contrat ne peut que constater l'absence.
-7. **Le déterminisme n'est vérifié que dans une exécution simple.** La CI lance `pytest -q` sans distribution ; le
-   jour où la suite sera distribuée, le déterminisme sous cette configuration devra être vérifié séparément.
-8. **La graine globale n'est pas journalisée dans le manifeste.** L'aléa global n'est jamais touché et la graine
-   est transmise, mais elle n'est pas encore tracée dans la preuve.
-9. **Une source peut accepter un filtre et ne pas l'appliquer.** C'est le cas mesuré de Hub'EAU `observations_tr`
-    sur l'instance observée : une station inexistante rend exactement la même population qu'une station réelle.
-    Le constat et sa mesure sont dans `docs/SOURCES.md` §I.1. Ce n'est pas une limite d'architecture — USGS `sites=`
-    et Copernicus `$filter` appliquent bien leur filtre — mais c'est une **contrainte de source**, et elle
-    conditionne le choix de la voie d'acquisition du Rhin.
+9. Quality statuses of sources are not systematically mapped to the closed vocabulary (`docs/CORE_CONTRACTS.md`
+   §3.7), and the `missing_reason` values met in practice are not inventoried.
+10. No conservative per-source bound when publication is unknown; no common granularity rule between sources; the
+    revision history can only be reconstructed for sources that date their revisions.
+11. Determinism is verified in a single-process run only; the global seed is passed explicitly but not yet
+    recorded in the manifest.
+12. **A source can accept a filter and not apply it** (Hub'EAU `observations_tr`, `docs/SOURCES.md` §I.1). The
+    `hubeau_feed` adapter asks only what the source can answer and selects stations after acquisition.
 
-## 6. Les règles qui ne changent pas
+## 7. Mathematical capabilities, by priority
 
-- **Aucun juge dépendant.** Un produit public qui fournit déjà la grandeur cible est une référence ou un juge,
-  jamais la découverte ; un témoin qui dérive du mécanisme qu'il doit confirmer est proscrit.
-- **Les inconnues sont nommées, pas comblées.** Une source injoignable est *inconnue*, pas *indisponible* ; un
-  champ non applicable porte `N/A` avec justification.
-- **Une absence reste une absence**, de la donnée au rapport.
-- **Aucun résultat confirmatoire sans pré-enregistrement gelé.**
-- **Chaque jalon est guidé par une vision scientifique générale.** Ce qui est différé, c'est l'*hypothèse précise*,
-  pas la pensée.
+Ranked by importance, not by academic novelty. "Done" means a module executed, tested, and checked against the
+published reference it cites.
 
-**Les trois règles fondatrices** (`docs/RESEARCH_AND_VALIDATION.md` §12.5) :
+| Priority | Item | Status |
+|---|---|---|
+| 1 | Untested guarantees corrected (end-to-end anti-leakage test now recomputes from the modified series) | done |
+| 2 | Kalman filter as a reconstruction tool: irregular time steps, ML-estimated variances on the training history only, RTS smoothing published separately and declared as using the future (INV-44, INV-45) | done; multi-series correlated states and time-varying variances are not justified by data yet — BASIN-001 is the first case that may need them |
+| 3 | Uncertainty and calibration: latent-state and forecast uncertainty, HAC metric uncertainty, CRPS (Gaussian and fair ensemble), Winkler, pinball, PIT with χ² and Kolmogorov–Smirnov | partly done; parameter uncertainty, misspecification, regime-conditional coverage and recalibration for dependent series remain. No generic conformal method: naive split-conformal on time series gives misleading coverage |
+| 4 | Statistical practice: multiplicity (BH, Bonferroni, Romano–Wolf), validation under dependence (effective size, Politis–White block bootstrap, cluster bootstrap) | done; sequential inference (e-values, confidence sequences) not done |
 
-1. **Une plateforme, plusieurs physiques.** TORNE partage son épistémologie, sa provenance, sa temporalité et ses
-   procédures d'évaluation ; chaque domaine conserve sa physique, ses variables, ses juges et ses dénominateurs.
-2. **L'inconnu ne devient jamais une certitude par commodité.** Un référentiel inconnu produit une abstention
-   documentée, pas une comparaison approximative présentée comme valide.
-3. **Une réfutation est une production de connaissance.** TORNE doit savoir publier qu'une méthode ne se transfère
-   pas, sans dégrader ce qui a été correctement établi ailleurs.
+Not taken: financial backtesting metrics (PBO, Deflated Sharpe) as generic TORNE tools.
 
-## 7. La piste de recherche conservée
+## 8. What is not added now
 
-`TORNE-EXP-001` — cohérence inter-agences de l'état hydrologique du Rhin — **n'est pas abandonnée** : elle passe
-en **piste de recherche documentée**, statut `planned`. Son pré-enregistrement
-(`docs/PRE-ENREGISTREMENT-001.md`) est conservé tel quel, avec ses inconnues nommées.
+- generic models (TabPFN, TabICL, pre-trained temporal transformers) because they were state of the art elsewhere;
+- a global Bayesian framework; a validation, simulation or selection engine;
+- a library of hydrological models before BASIN-001 defines its physical problem.
 
-Ce n'est plus l'expérience fondatrice de TORNE pour l'instant : c'est une **hypothèse documentée** que
-l'observatoire des sources pourra confirmer, nuancer ou infirmer. Un pré-enregistrement écrit à l'avance et jamais
-consulté n'a rien prouvé ; un pré-enregistrement consulté après exploration reste pré-enregistré, et c'est ce qui
-lui vaut.
+For BASIN-001, serious candidates include conceptual water-balance models, state-space reconstructions, and
+spatio-temporal models where several gauges matter. **The choice follows from the available data and the quantity
+to reconstruct**, not from algorithmic fashion.
 
-## 8. Les améliorations mathématiques, par priorité
+## 9. Deferred material, kept in history
 
-Classées par importance, et non par nouveauté académique. L'état annoncé est celui du code : chaque « livré » est
-un module exécuté, testé, et vérifié contre la référence publiée qu'il cite. Ce qui reste exige un flux physique
-réel, ou une décision du propriétaire.
+These documents were removed from the reference set because they prepare objective B or a research track that
+BASIN-001 supersedes. They are not lost; they are in the history at commit `0fc3ad9`:
 
-**Priorité 1 — Corriger les garanties non testées.** *(livré)* Une garantie mathématique non testée n'est pas une
-garantie. Le test d'anti-fuite de bout en bout modifiait les données futures, mais recalculait ensuite la prévision
-depuis le bloc d'entraînement d'origine : la série modifiée n'entrait jamais dans le calcul. Le test est corrigé — la
-prévision est recalculée depuis la série modifiée, puis comparée — et vérifie désormais que les résultats antérieurs
-restent inchangés.
-
-**Priorité 2 — Faire évoluer le filtre vers un outil de reconstruction physique.** *(livré)* Le modèle était un
-filtre linéaire gaussien univarié à tendance linéaire locale : il supposait des observations régulièrement espacées,
-une variance de mesure connue, des variances de bruit de processus connues, et un état latent évoluant selon une
-tendance lisse. Les trois évolutions attendues sont faites, dans `src/torne/methods/kalman.py` :
-
-- **Temporalité irrégulière.** *(livré)* Le modèle reçoit une série horodatée. La transition devient
-  `F(Δt) = [[1, Δt], [0, 1]]` et la covariance de processus `Q(Δt) = diag(q_mu·Δt, q_beta·Δt)`. Une série
-  régulièrement espacée donne un résultat **identique** à la même série sans horodatage : les horodatages ne
-  changent pas la sémantique, ils la rendent explicite — et ils entrent dans l'empreinte de rejouabilité.
-- **Estimation des paramètres.** *(livré)* Les trois variances sont estimées par maximum de vraisemblance sur le
-  seul historique d'entraînement, par une optimisation déterministe de Nelder–Mead. Les valeurs estimées sont
-  conservées avec le produit, distinctes des paramètres demandés
-  (`docs/CONTRATS_FONDAMENTAUX.md` §4.11, INV-45).
-- **Filtrage et lissage.** *(livré)* Le lissage de Rauch–Tung–Striebel est publié **séparément** du filtrage, et
-  chaque sortie lissée est déclarée comme utilisant le futur (INV-44). Elle n'est jamais présentée comme une
-  estimation disponible en temps réel.
-
-Ce que le filtre n'est pas encore : un modèle multi-séries corrélées, un niveau stationnaire, ou des variances qui
-changent dans le temps. Rien de tout cela n'est justifié par un flux physique réel aujourd'hui.
-
-**Priorité 3 — Renforcer l'incertitude et la calibration.** *(partiellement livré)* Le socle distingue plusieurs
-incertitudes ; la couverture est la suivante :
-
-| Incertitude | Couverture |
-|---|---|
-| Incertitude conditionnelle de l'état latent, sous le modèle du filtre | oui |
-| Incertitude de prévision | oui |
-| Incertitude des métriques d'évaluation | oui, par HAC |
-| Incertitude sur les paramètres estimés | pas encore — le maximum de vraisemblance donne une valeur, pas une région |
-| Incertitude liée à la mauvaise spécification du modèle | pas encore |
-| Robustesse de la couverture selon les régimes physiques | pas démontrée |
-
-Ce qui est livré, dans `src/torne/methods/scores.py` : le CRPS d'une loi gaussienne, le CRPS d'une loi empirique
-(estimateur **juste**, c'est-à-dire non biaisé par la taille finie de l'ensemble), le score d'intervalle de
-Winkler, le score pinball, le PIT, et un rapport de calibration qui croise un test du chi-deux sur l'histogramme
-des PIT et un test de Kolmogorov–Smirnov sur les valeurs elles-mêmes — deux tests indépendants, parce qu'un
-histogramme peut cacher ce qu'un test de rang voit. La couverture empirique est rapportée pour quelques niveaux
-nomiaux.
-
-Ce qui reste : la couverture conditionnelle par régime, par saison ou par classe de bassin ; la recalibration
-adaptée aux séries dépendantes ; l'incertitude sur les paramètres estimés ; et, éventuellement, le conformal
-adaptatif — **avec ses hypothèses et ses garanties explicitement testées**. Pas d'implémentation générique de
-conformal tout de suite : une application naïve des méthodes split-conformal à des séries temporelles peut donner
-une couverture trompeuse.
-
-**Priorité 4 — Reprendre les meilleures pratiques statistiques.** *(partiellement livré)* Deux des trois familles
-sont faites ; l'inférence séquentielle ne l'est pas.
-
-- **Multiplicité et sélection de modèles.** *(livré)* `src/torne/methods/multiplicity.py` implémente
-  Benjamini–Hochberg, Bonferroni et Romano–Wolf (max-t à descente pas à pas, bootstrap multiplicateur). Les
-  valeurs ajustées de Benjamini–Hochberg reproduisent celles de `scipy` à la précision machine. La règle que le
-  choix de la procédure est déterminé **avant** l'examen confirmatoire des résultats reste une règle du programme
-  (§2.3 de `docs/RESEARCH_AND_VALIDATION.md`), pas une propriété du code : aucun module ne peut la faire
-  respecter.
-- **Validation sous dépendance.** *(livré)* `src/torne/methods/dependence.py` implémente la taille d'échantillon
-  effective, le bootstrap par blocs (longueur de bloc choisie par la règle automatique de Politis–White 2004), le
-  bootstrap par grappes, et la sensibilité à l'unité indépendante. Le point est explicite : 100 000 mesures sur
-  trois bassins ne sont pas 100 000 expériences indépendantes, et le module le montre.
-- **Inférence séquentielle.** *(non fait)* E-values et confidence sequences pour le moment où TORNE surveillera
-  continuellement un phénomène ou accumulera des observations. Les hypothèses mathématiques devront être adaptées
-  aux grandeurs physiques considérées : une procédure pour moyenne bornée ne se transpose pas sans précaution à un
-  débit non borné.
-
-Ce qui n'est **pas** repris : les métriques de backtesting financier de type PBO ou Deflated Sharpe, qui ne
-deviennent pas des outils génériques de TORNE.
-
-## 9. Ce qu'on n'ajoute pas maintenant
-
-- TabPFN, TabICL ou d'autres modèles génériques, au seul motif qu'ils ont été qualifiés d'état de l'art ailleurs ;
-- une collection de transformers et de modèles temporels pré-entraînés ;
-- un framework bayésien global ;
-- une bibliothèque de modèles hydrologiques, avant d'avoir défini le premier problème physique ;
-- un nouveau moteur de validation, de simulation ou de sélection.
-
-Pour la question hydrologique, les candidats sérieux pourront inclure des modèles conceptuels, des modèles de type
-LSTM, des modèles intégrant les processus physiques et, lorsque plusieurs stations sont pertinentes, des modèles
-spatio-temporels. Mais **le choix doit découler des données disponibles et de la grandeur que nous cherchons à
-reconstruire**, pas d'une mode algorithmique.
-
+| Material | Where to read it | Why deferred |
+|---|---|---|
+| Qualification of Mississippi economic sources (USDA/AMS barge freight, grain movements, barge counts, USACE LPMS) | `git show 0fc3ad9:docs/SOURCES.md`, Part II | objective B, which follows the physical engine |
+| `TORNE-EXP-001`, inter-agency coherence of the Rhine's hydrological state, with a financial branch | `git show 0fc3ad9:docs/PRE-ENREGISTREMENT-001.md` | a planned, unfrozen research track; its physical question can be revisited once BASIN-001 has a reconstruction to compare across agencies |

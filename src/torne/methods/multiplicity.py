@@ -16,7 +16,7 @@ Conventions
 - The global random state is never touched. Every stochastic routine builds its
   own generator with `np.random.default_rng(seed)` and never calls
   `np.random.seed` nor the legacy module-level `np.random.*` functions
-  (INV-35/INV-36 of `docs/CONTRATS_FONDAMENTAUX.md`). A fixed seed gives a
+  (INV-35/INV-36 of `docs/CORE_CONTRACTS.md`). A fixed seed gives a
   fixed result, and the global state is left exactly as it was found.
 - Every public procedure validates its inputs and raises `ValueError` with an
   English message when an input is empty, of the wrong shape, not finite, or
@@ -323,7 +323,7 @@ def romano_wolf_max_t(
     ----------
     The bootstrap uses its own generator, `np.random.default_rng(seed)`: the
     global random state is never touched, and a fixed seed gives a fixed
-    result (INV-35/INV-36 of `docs/CONTRATS_FONDAMENTAUX.md`).
+    result (INV-35/INV-36 of `docs/CORE_CONTRACTS.md`).
     """
     t = np.asarray(statistics, dtype=np.float64)
     if t.ndim != 1:

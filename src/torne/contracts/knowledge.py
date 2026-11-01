@@ -1,6 +1,6 @@
 """Provenance et produit de connaissance.
 
-Ce module est la forme exécutable de `docs/CONTRATS_FONDAMENTAUX.md` §1.3,
+Ce module est la forme exécutable de `docs/CORE_CONTRACTS.md` §1.3,
 §2.5 et §4.4 : il fixe **ce que c'est qu'une référence de provenance** et **ce
 qu'est un produit de connaissance**.
 

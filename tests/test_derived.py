@@ -1,6 +1,6 @@
 """Tests de la grandeur dérivée — le cinquième objet du contrat.
 
-Ces tests portent sur `docs/CONTRATS_FONDAMENTAUX.md` §2.4 (la grandeur
+Ces tests portent sur `docs/CORE_CONTRACTS.md` §2.4 (la grandeur
 dérivée), §3.7 (les informations provisoires) et §4.3-§4.4 (INV-17, INV-21,
 INV-22, INV-29).
 

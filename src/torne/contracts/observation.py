@@ -1,6 +1,6 @@
 """Les trois objets de la preuve : Source, Raw Evidence, Observation.
 
-Ce module est la forme exécutable de `docs/CONTRATS_FONDAMENTAUX.md` §2.1 à
+Ce module est la forme exécutable de `docs/CORE_CONTRACTS.md` §2.1 à
 §2.3. Les trois objets répondent à trois questions distinctes, et aucun ne
 répond à la place d'un autre :
 

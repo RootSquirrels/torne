@@ -1,96 +1,89 @@
 # TORNE
 
-**Plateforme d'intelligence du monde physique.** TORNE transforme des sources hétérogènes — hydrologiques,
-satellitaires, économiques — en connaissances propriétaires, traçables et validables : des **états reconstruits**
-du monde physique, des **variables dérivées** qui ne figurent dans aucune source, et des produits de connaissance
-versionnés et auditables.
+**TORNE creates information about the physical world that does not exist in any available source.**
 
-> **Aucune performance n'est démontrée à ce jour.** Le dépôt est un socle exécutable : il acquiert, conserve,
-> exécute et évalue. Il ne produit encore aucun résultat scientifique. Ce qui est fait, ce qui ne l'est pas, et ce
-> qui vient ensuite : [`docs/PROGRAMME.md`](docs/PROGRAMME.md).
+It takes existing evidence — gauges, stations, satellites, reanalyses, maps — as input, and derives from it new
+variables, estimates, relationships and dynamics: in particular, **reconstructed states of the world that are not
+directly observable in any single source**. The objective is not to collect, aggregate or republish public data.
+It is to produce new, scientifically defensible information, with traceable methods, quantified uncertainty and
+validation.
 
-## Ce qui distingue TORNE
+> **No scientific result is established yet.** The repository acquires real data, keeps the raw evidence, reads it
+> into canonical observations, runs and evaluates models, and publishes knowledge products with a verifiable
+> lineage. It has not yet produced a piece of information that is demonstrably new with respect to its sources.
+> That is the next mission: [`docs/PROGRAMME.md`](docs/PROGRAMME.md).
 
-TORNE n'est pas une plateforme d'intégration de données. Il occupe l'espace entre la donnée et le résultat, et il
-distingue trois choses qu'il ne faut pas confondre :
+## What TORNE is, and what it is not
 
-| | Ce que c'est | Exemple |
+Three things must not be confused:
+
+| | What it is | Example |
 |---|---|---|
-| **TORNE, la plateforme** | sa capacité à acquérir, comprendre, rapprocher, reconstruire et documenter des informations sur le monde physique | le socle d'acquisition, les contrats, la lignée |
-| **Les domaines de connaissance** | hydrologie, énergie, météorologie, logistique, agriculture, industrie, infrastructures | ce qu'un domaine définit comme objets, unités, référentiels, relations |
-| **Les expériences scientifiques** | des questions particulières auxquelles TORNE répond à partir de ses données et de ses modèles | la cohérence inter-agences de l'état du Rhin |
+| **TORNE, the capability** | acquiring, qualifying, aligning, reconstructing and documenting information about the physical world | the acquisition socle, the contracts, the lineage |
+| **The domains** | the physics through which the capability is developed and demonstrated: hydrology, atmosphere, Earth observation | what a domain defines as objects, units, references, relations |
+| **The missions** | particular questions TORNE answers from its data and models | BASIN-001: the water state of one real catchment |
 
-Confondre les trois, c'est construire une plateforme sur mesure d'une expérience. TORNE les distingue, et les
-rapports de résultat les distinguent encore : **une affirmation physique n'est jamais une affirmation financière**.
+Hydrology, atmospheric science and Earth observation are **modalities of observation of one physical system**, not
+separate platforms. A mission that only describes one source in its own terms has not yet produced new
+information; the value lies in what the combination of sources makes knowable that none of them says alone.
 
-## Deux objectifs, deux tableaux de bord
+## Two objectives, measured separately
 
-Deux enjeux coexistent, et ils ne sont pas mutuellement conditionnels. Ils sont mesurés et rapportés
-**séparément** : un score agrégé qui masquerait l'échec de l'un par la réussite de l'autre est interdit.
+**A — Physical intelligence (current).** Reconstruct physical states, create variables that are absent from the
+sources, quantify their uncertainty, and validate them against independent references. This is the engine, and
+it is an asset on its own.
 
-**A — Produire une valeur d'intelligence.** Collecter et qualifier des sources diverses, surtout publiques ;
-reconstruire des états physiques, géographiques, industriels ou institutionnels ; coupler des sources et des
-modèles ; créer des variables absentes des sources ; simuler des trajectoires et des contraintes ; rendre les
-résultats interrogeables, cartographiables et auditables. Cette activité est un actif autonome.
+**B — Economic consequence (deferred).** Use that knowledge to anticipate a real economic consequence and test
+whether it is priced late or incompletely. B remains a research objective, but it comes **after** the physical
+engine: a financial application that succeeds does not retroactively validate the physical models it consumes
+([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §5). If B fails, A keeps its qualified data, models and
+variables. The two are never merged into one score.
 
-**B — Chercher un avantage financier.** Utiliser ces connaissances pour anticiper une conséquence économique
-réelle, identifier les entités et actifs exposés, estimer le moment où la conséquence devient observable, puis
-tester si le prix des instruments concernés l'intègre avec retard ou incomplètement — et si l'écart est
-négociable après coûts, risques et contraintes d'exécution. C'est une hypothèse de recherche.
+## The next mission: BASIN-001 — integrated catchment intelligence
 
-**B est reportée** tant que le socle d'intelligence physique n'est pas suffisamment mature
-([`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) §5). Si B échoue, A conserve ses données qualifiées, ses modèles,
-ses variables et sa capacité à produire de l'intelligence : B peut être modifié ou remplacé sans reconstruire le
-socle.
+One real catchment, three observation modalities, a first reconstruction of its physical state.
 
-## Le problème que TORNE attaque
+1. Observed discharge (Hub'EAU).
+2. Historical precipitation and temperature.
+3. Soil moisture and evapotranspiration from Earth observation.
+4. Land cover and catchment geometry.
+5. A first spatio-temporal reconstruction of the catchment's water state.
 
-- Les sources sont hétérogènes, datées, révisées, parfois redondantes, rarement décrites par les conditions dans
-  lesquelles elles étaient disponibles.
-- Les phénomènes qui déterminent une conséquence économique sont rarement observés directement : ils doivent être
-  reconstruits à partir de signaux indirects.
-- Les conséquences ne sont pas visibles au moment où elles se produisent : il y a un décalage entre la réalité
-  physique, la conséquence opérationnelle, sa révélation, et l'intégration financière.
-- Les démonstrations disponibles mélangent des niveaux de preuve incompatibles : une reconstruction cohérente
-  présentée comme une prédiction, une corrélation comme une causalité, une simulation comme un fait.
+**Expected result:** a knowledge product that carries **demonstrable additional information with respect to each
+source taken separately**. The scope, the existing building blocks and the open decisions are in
+[`docs/PROGRAMME.md`](docs/PROGRAMME.md) §4. BASIN-001 is not started: it begins once its pre-registration is
+written.
 
-TORNE attaque les quatre points à la fois : qualifier les sources, reconstruire les états, dater les étapes, et
-**nier l'affirmation plus forte que la preuve**.
+## Current state
 
-## L'état réel
-
-| Ce qui est en place | Ce qui ne l'est pas |
+| In place | Not yet |
 |---|---|
-| Socle d'acquisition exécutable : transport durci, magasin brut adressé par le contenu, fetcher paginé, contrat de connecteur à quatre contrôles | Une seule source a produit des observations ; les deux autres restent à qualifier |
-| **Trois sources réellement intégrées**, interrogées sur le réseau : Hub'EAU v2, USGS « Water Data for the Nation » (API OGC), catalogue Copernicus Data Space | Aucune source n'est qualifiée au sens de la classe de publication — établie, bornée, inconnue |
-| Objets et temporalité : cinq objets, trois dimensions, `usable_at` dérivé, absence qualifiée | Pas de moteur, pas de registre ; la couche sémantique n'existe que pour l'hydrologie |
-| **Première couche sémantique du domaine** (`hydrology/`) : enregistrement → observation, climatologie journalière, anomalie standardisée | Un seul domaine, une seule station : la généralisation n'est pas faite |
-| Méthodes : filtre de Kalman en espace d'état — état filtré et lissé Rauch-Tung-Striebel, variances estimées, observations irrégulières —, scores stricts pour prévisions probabilistes (CRPS gaussien et d'ensemble, intervalle de Winkler, pinball, PIT et son diagnostic de calibration), inférence qui survit à la dépendance (taille d'échantillon effective, bootstrap par blocs et par grappes, sensibilité à l'unité indépendante), contrôle de multiplicité (Benjamini-Hochberg, Bonferroni, Romano-Wolf), régression à erreur-type CR1, rupture CUSUM, puissance, comparaison appariée | Aucune performance démontrée : le modèle tourne sur des données réelles, mais aucune performance n'est *établie* |
-| **Un jalon sur le monde réel** : 33 481 relevés quotidiens acquis, climatologie reproduisant les statistiques publiées de l'agence à 0,11 % près, premier produit de connaissance publié | Une seule grandeur dérivée, une seule station : la généralisation à d'autres domaines n'est pas faite |
-| Exécution rejouable, évaluation — découpage cumulatif, références, métriques, incertitude —, enregistrement avec lignée vérifiable | Aucune preuve prospective : le pré-enregistrement est écrit, mais pas outillé |
-| Plus de 600 tests verts ; la CI construit le paquet, l'installe et le lance | Une source peut accepter un filtre sans l'appliquer — cas mesuré sur Hub'EAU, voir `docs/SOURCES.md` §I.1 |
-| La conformité d'acquisition bloque ce qui n'est pas conforme, et la preuve brute est conservée | La licence du dépôt n'est pas choisie — c'est une décision du propriétaire |
+| Acquisition socle: hardened transport, content-addressed raw store, paginated fetcher, connector contract with a four-state conformity verdict that blocks non-conforming responses while keeping their evidence | No reconstruction combining several sources |
+| Adapters exercised on the network: Hub'EAU v2 (two access patterns), USGS (Water Services and OGC API), Copernicus Data Space (OData and STAC), GHCN-Daily, Météo-France (verified up to the authentication refusal) | Météo-France data itself: an OAuth2 token is required |
+| Contracts: source, raw evidence, observation, surface observation over a footprint, derived variable, knowledge product; three time dimensions, derived `usable_at`, qualified absence, publication classes | Land cover and catchment geometry: no source integrated |
+| Semantic layers: `hydrology/` (USGS daily values, Hub'EAU feed, climatology and anomaly, rating relation), `atmosphere/` (GHCN-Daily), `eo/` (registry of 13 Copernicus surface products with their declared dependence) | One day-of-year climatology per domain: the duplication is recorded, not yet resolved (`docs/PROGRAMME.md` §6) |
+| Methods: state-space Kalman filter with RTS smoothing and estimated variances, strictly proper scores and calibration, inference under dependence, multiplicity control, CR1 regression, CUSUM breaks, power | No performance established on a physical question |
+| Replayable execution, cumulative temporal splits, baselines, metrics, uncertainty, knowledge products with verified lineage | No prospective evidence: pre-registrations are written by hand, not tooled |
+| 784 tests; CI builds, installs and runs the package | The repository licence is not chosen — an owner decision |
 
-Le détail — et surtout **ce qui manque** — sont dans [`docs/PROGRAMME.md`](docs/PROGRAMME.md).
+## Reference documents
 
-## Les documents de référence
+One responsibility each.
 
-Sept documents, une responsabilité chacun.
-
-| Document | Ce qu'il fixe |
+| Document | What it fixes |
 |---|---|
-| [`README.md`](README.md) | ce que TORNE est, et où l'on trouve quoi |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | les frontières, les responsabilités, les couches — **où** passe chaque chose |
-| [`docs/CONTRATS_FONDAMENTAUX.md`](docs/CONTRATS_FONDAMENTAUX.md) | les objets, la temporalité, les invariants — **ce qui** doit rester vrai |
-| [`docs/RESEARCH_AND_VALIDATION.md`](docs/RESEARCH_AND_VALIDATION.md) | la doctrine de preuve — **comment** une affirmation se teste |
-| [`docs/SOURCES.md`](docs/SOURCES.md) | les sources intégrées et qualifiées — **ce que** chaque source donne, et ne donne pas |
-| [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | la situation, l'objectif prioritaire, les critères de sortie — **quoi** ensuite |
-| [`docs/PRE-ENREGISTREMENT-001.md`](docs/PRE-ENREGISTREMENT-001.md) | le protocole d'une expérience confirmatoire, écrit avant de la regarder |
+| [`README.md`](README.md) | what TORNE is, and where to find what |
+| [`docs/PROGRAMME.md`](docs/PROGRAMME.md) | the situation, the next mission, the open decisions — **what** comes next |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | boundaries, responsibilities, layers — **where** each thing goes |
+| [`docs/CORE_CONTRACTS.md`](docs/CORE_CONTRACTS.md) | objects, temporality, invariants — **what** must remain true |
+| [`docs/RESEARCH_AND_VALIDATION.md`](docs/RESEARCH_AND_VALIDATION.md) | the doctrine of evidence — **how** a claim is tested |
+| [`docs/SOURCES.md`](docs/SOURCES.md) | the integrated sources — **what** each one gives, and does not give |
 
-[`experiments/README.md`](experiments/README.md) explique ce qui a sa place dans `experiments/` : des scripts
-d'exploration jetables, qui ne deviennent du code que s'ils survivent à la relecture.
+Mission records: [`docs/PRE-REGISTRATION-HYDRO-001.md`](docs/PRE-REGISTRATION-HYDRO-001.md) and
+[`docs/ATMO-001.md`](docs/ATMO-001.md) (exploration report). [`experiments/README.md`](experiments/README.md)
+explains what belongs in `experiments/`.
 
-## Installer et vérifier
+## Install and verify
 
 ```bash
 uv sync --locked
@@ -100,46 +93,43 @@ uv run ruff format --check .
 uv build
 ```
 
-Python 3.12, `uv` épinglé par la CI. Le point d'entrée console `torne` décrit l'état du paquet :
+Python 3.12, `uv` pinned by CI. The `torne` console entry point reports the package state.
 
-```console
-$ torne
-torne 0.1.0 — exécution, évaluation et preuve implémentées ; premier jalon sur données réelles publié ; aucune performance démontrée
-```
-
-## Structure du dépôt
+## Repository layout
 
 ```text
 src/torne/
-  acquisition/    socle transversal : transport, fetcher, magasin brut, contrat de connecteur, adaptateurs
-  contracts/      objets et temporalité : source, preuve brute, observation, variable dérivée, produit
-  methods/        couche scientifique : Kalman, scores, dépendance, multiplicité, régression, rupture, puissance
-  evaluation/     découpage temporel, références, métriques, incertitude, rapport
-  execution/      exécution rejouable d'un modèle
-  knowledge/      enregistrement d'un produit et vérification de sa lignée
-  hydrology/      couche sémantique du domaine : enregistrement → observation, variable dérivée
-docs/             les documents de référence
-tests/            la suite de tests
-experiments/      explorations jettables
+  acquisition/    cross-cutting socle: transport, fetcher, raw store, connector contract, adapters, credentials
+  contracts/      objects and temporality: source, raw evidence, observation, spatial, derived variable, product
+  methods/        scientific layer: Kalman, scores, dependence, multiplicity, regression, breaks, power
+  evaluation/     temporal splits, baselines, metrics, uncertainty, report
+  execution/      replayable model execution
+  knowledge/      knowledge product records and lineage verification
+  hydrology/      semantic layer: discharge and stage observations, climatology, anomaly, rating relation
+  atmosphere/     semantic layer: station temperature and precipitation, climatology, regimes, profile
+  eo/             semantic layer: surface products, their coverage and their dependence
+docs/             reference documents and mission records
+tests/            the test suite
+experiments/      exploratory scripts
 ```
 
-## Limites et non-objectifs
+## Limits and non-goals
 
-TORNE ne cherche pas à construire : un modèle universel du monde ; un moteur causal universel ; un moteur
-mathématique propriétaire réimplémentant l'écosystème scientifique ; une chaîne causale générique applicable sans
-adaptation à tout domaine ; un graphe de connaissances qui prétend expliquer un système par la seule présence de
-relations ; une architecture microservices, un bus d'événements, un framework de plugins, un système de workflow
-généraliste ; une validation uniforme imposant les mêmes métriques à tous les modèles ; un outil de trading auquel
-on aurait ajouté des données physiques ; une couche de métadonnées dupliquant les contrats de données.
+TORNE does not try to build: a universal model of the world; a universal causal engine; a proprietary mathematical
+engine reimplementing the scientific ecosystem; a knowledge graph that claims to explain a system by the mere
+presence of relations; a microservice architecture, event bus, plugin framework or general workflow system; a
+uniform validation imposing the same metrics on every model; a trading tool with physical data bolted on. Each of
+these may be reconsidered **only in the presence of a demonstrated need**.
 
-Chacun de ces choix pourra être reconsidéré **uniquement en présence d'un besoin démontré**.
+**Existing systems.** TORNE is new and independent. It does not modify, migrate or merge the historical
+repositories, which stay read-only research references. What is taken from them is rewritten, with its origin
+declared at the top of the module ([`docs/CORE_CONTRACTS.md`](docs/CORE_CONTRACTS.md) §5).
 
-**Avec les systèmes existants :** TORNE est un système neuf et indépendant. Il ne modifie, ne migre et ne fusionne
-aucun des dépôts historiques, qui restent en lecture seule et servent de références de recherche. Ce qui en est
-repris est réécrit, avec son origine déclarée en tête de module
-([`docs/CONTRATS_FONDAMENTAUX.md`](docs/CONTRATS_FONDAMENTAUX.md) §5).
+**Language.** All repository-authored content is in English. Source-native names (`débit`, `Calculée`,
+`code_station`) and raw evidence are kept as published. Some modules written before this rule still carry French
+identifiers and docstrings; they are translated when next touched (`docs/PROGRAMME.md` §6).
 
 ## Licence
 
-**Non choisie.** Le dépôt est hébergé publiquement sur GitHub ; la politique de propriété intellectuelle est gérée
-par le propriétaire, séparément.
+**Not chosen.** The repository is hosted publicly on GitHub; intellectual property policy is handled by the owner,
+separately.

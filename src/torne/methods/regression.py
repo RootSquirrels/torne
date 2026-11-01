@@ -7,7 +7,7 @@ Origine
 - Chemin exact    : `athanor/src/athanor/stats/regression.py`.
 - Propriétaire    : le propriétaire de TORNE.
 - Licence        : dépôt privé, réutilisable sans réserve de licence
-                   (`docs/CONTRATS_FONDAMENTAUX.md` §5.2) ; la reprise est une réécriture
+                   (`docs/CORE_CONTRACTS.md` §5.2) ; la reprise est une réécriture
                    interne et la traçabilité de l'origine est l'unique exigence.
 - Code tiers      : aucun. Le fichier d'origine ne porte ni en-tête de licence
                    tierce, ni mention de code emprunté à une autre bibliothèque.

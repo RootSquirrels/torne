@@ -7,7 +7,7 @@ Origine
 - Chemin exact    : `athanor/src/athanor/stats/breaks.py`.
 - Propriétaire    : le propriétaire de TORNE.
 - Licence        : dépôt privé, réutilisable sans réserve de licence
-                   (`docs/CONTRATS_FONDAMENTAUX.md` §5.2) ; la reprise est une réécriture
+                   (`docs/CORE_CONTRACTS.md` §5.2) ; la reprise est une réécriture
                    interne et la traçabilité de l'origine est l'unique exigence.
 - Code tiers      : aucun en-tête de licence tierce dans le fichier d'origine.
 - Dépendances    : `numpy` et la bibliothèque standard uniquement.

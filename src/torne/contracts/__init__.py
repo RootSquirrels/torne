@@ -1,6 +1,6 @@
 """Contrats fondamentaux de TORNE, sous forme exécutable.
 
-Ce package est la forme codée de `docs/CONTRATS_FONDAMENTAUX.md`. Il ne décrit
+Ce package est la forme codée de `docs/CORE_CONTRACTS.md`. Il ne décrit
 aucune architecture de stockage, aucun connecteur, aucun service, aucun moteur :
 il ne fixe que des responsabilités, des invariants et des formes vérifiables.
 

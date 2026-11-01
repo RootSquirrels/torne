@@ -1,28 +1,33 @@
-# Expériences
+# Experiments
 
-Ce répertoire accueille des scripts d'exploration jetables : analyses exploratoires, tests
-rapides d'hypothèses, comparaison d'options, petites simulations de faisabilité.
+This directory holds exploratory scripts: exploratory analyses, quick hypothesis checks, comparisons of options, small
+feasibility simulations, and the scripts that run a mission against the network.
 
-Ce qui n'y entre pas :
+What does not belong here:
 
-- tout ce qui est destiné à devenir un prototype de production — ce code-là appartient dans
-  `src/torne/`, avec ses tests ;
-- les données et les secrets, qui restent hors du dépôt et ne sont référencés que par leur
-  provenance ;
-- les résultats présentés comme acquis sans être passés par le dossier de validation.
+- anything meant to become production code — that belongs in `src/torne/`, with its tests;
+- data and secrets, which stay out of the repository and are referenced only by their provenance;
+- results presented as established without going through the validation record.
 
-Règle de passage : **une expérience ne devient du code que si elle survit à la relecture** —
-c'est-à-dire si une autre personne peut la relire, la comprendre, la reproduire et en
-reconnaître l'intérêt. Ce qui échoue à ce test reste ici, ou disparaît.
+Rule of passage: **an experiment becomes code only if it survives review** — another person can read it, understand
+it, reproduce it and see its value. What fails that test stays here, or disappears.
 
-## Ce qui s'y trouve aujourd'hui
+## What is here today
 
-| Script | Ce qu'il fait |
-|---|---|
-| `mission_001_demo.py` | Démonstration sur données synthétiques : acquisition, exécution, évaluation, enregistrement. Ne touche ni au réseau ni au disque. |
-| `mission_002_real_world.py` | Le même enchaînement, **sur le monde réel** : 33 481 relevés quotidiens du Mississippi à Grafton (USGS-05587450, 1933→2026) acquis par l'API OGC, lus en observations, climatologie journalière comparée aux statistiques publiées par l'agence, indice d'anomalie standardisée, et publication d'un produit de connaissance dont la lignée est vérifiée. |
+| Script | What it does | Network |
+|---|---|---|
+| `acquisition_demo.py` | Acquisition socle demonstration. | yes |
+| `mission_001_demo.py` | The whole chain on synthetic data: acquisition, execution, evaluation, record. | no |
+| `mission_002_real_world.py` | The same chain **on the real world**: 33 481 daily values of the Mississippi at Grafton (USGS-05587450, 1933→2026) from the OGC API, read as observations, day-of-year climatology compared with the agency's published statistics, standardised anomaly index, and a knowledge product with verified lineage. | yes; `USGS_API_KEY` beyond the anonymous quota |
+| `mission_003_hydro001.py` | **HYDRO-001**, source qualification: bounded acquisition of the two Hub'EAU feeds (stage `H`, discharge `Q`), station selection by declared criteria, and an out-of-sample, chronological evaluation of whether the published discharge is a function of the published stage. Protocol: [`docs/PRE-REGISTRATION-HYDRO-001.md`](../docs/PRE-REGISTRATION-HYDRO-001.md). | yes; no key |
+| `atmo_001_sources_probe.py` | ATMO-001 accessibility inventory of 17 atmospheric access points. | yes |
+| `atmo_001_premiere_acquisition.py` | ATMO-001 acquisition of four GHCN-Daily French stations and their exploratory profile. | yes |
+| `atmo_001_meteofrance.py` | ATMO-001 Météo-France route, as it answers with or without a token. | yes; `METEOFRANCE_TOKEN` |
 
-`mission_002_real_world.py` **touche le réseau** : il lui faut une clé d'API USGS dans
-`USGS_API_KEY` au-delà du quota anonyme (1 000 requêtes par heure), et il écrit la preuve
-brute dans un répertoire temporaire qu'il indique à la fin. La clé n'est jamais écrite :
-elle est lue au dernier moment et ne figure dans aucune demande consignée.
+Scripts that touch the network write their raw evidence to a temporary directory they print at the end. Keys and
+tokens are read at the last moment and never appear in a recorded request. Hub'EAU throttles (`503` when asked too
+fast); `mission_003_hydro001.py` rides it out with the socle's widened retry policy and says so if it stops on its
+budget.
+
+The `atmo_001_*` scripts predate the English rule and still carry French identifiers and messages; they are translated
+when next touched (`docs/PROGRAMME.md` §6).

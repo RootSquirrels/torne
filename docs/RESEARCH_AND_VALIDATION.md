@@ -1,326 +1,318 @@
-# TORNE — Recherche et validation
+# TORNE — Research and validation
 
-**Doctrine de preuve**
-**Statut : principes applicables.** Le dépôt contient un modèle, son exécution, son évaluation et une preuve
-rejouable ; il ne contient **aucun résultat scientifique**. La distinction est nette : ce document dit comment
-une affirmation doit être testée, et le dépôt ne prétend encore rien avoir démontré sur le monde réel.
+**Doctrine of evidence**
+**Status: applicable principles.** The repository contains models, their execution, their evaluation and a
+replayable record; it contains **no established scientific result**. The distinction is sharp: this document says
+how a claim must be tested, and the repository does not yet claim to have demonstrated anything about the real
+world.
 
-## 1. Principe
+## 1. Principle
 
-La preuve est proportionnée à l'affirmation. Aucun mode de validation n'est universellement
-supérieur, et il n'existe pas de méthode unique qui prouve tout.
+Evidence is proportionate to the claim. No validation mode is universally superior, and no single method proves
+everything.
 
-Une connaissance construite sur le passé peut être testée sur des événements historiques
-ultérieurs. Cette approche est légitime à condition que les périodes, les données, les choix et
-les informations disponibles soient séparés proprement.
+Knowledge built on the past can be tested on later historical events. That approach is legitimate provided that
+periods, data, choices and available information are cleanly separated.
 
-Chaque affirmation doit donc être formulée avant d'être testée : ce que l'on avance, sur quel
-domaine, sur quelle période, avec quelles données, comparé à quoi, et avec quels critères de
-réussite ou d'échec.
+Every claim must therefore be stated before it is tested: what is claimed, on which domain, over which period, with
+which data, compared with what, and with which success and failure criteria.
 
-## 2. Les cinq modes de validation
+### 1.1 Novelty is itself a claim to test
 
-| Mode | Ce qu'il teste | Ce qu'il ne prouve pas |
+TORNE's purpose is to produce information that is absent from its inputs. "This is new" is therefore a claim with
+its own evidence requirement, not a description:
+
+- the quantity produced is **published by none of the inputs**, nor a re-expression of one of them (an anomaly
+  against a source's own climatology re-expresses that source);
+- on withheld data, the multi-source result **does better than every single-source baseline** on the same target —
+  the ablation "one data family at a time";
+- the families compared in the ablation are **independent**, which is read from a dependence ledger before the
+  ablation is interpreted (`src/torne/eo/coverage.py`); a product computed from the same meteorological inputs as
+  the forcing is not independent evidence;
+- the gain is sized by the **effective** sample size (§12.4), not the number of records.
+
+## 2. The five validation modes
+
+| Mode | What it tests | What it does not prove |
 |---|---|---|
-| **Rétrospective descriptive** | comparer une reconstruction ou une description à des observations indépendantes de la période étudiée | que l'information était disponible à l'époque, ni aucune capacité prédictive |
-| **Temporel hors échantillon** | construire sur une période ancienne, figer, puis tester sur une période postérieure | ce qui était disponible au moment de la construction, si les archives ont été consolidées après coup |
-| **Replay point-in-time** | avancer chronologiquement en ne fournissant que l'information disponible à chaque date | que le système réel avait effectivement reçu cette information |
-| **Indépendant / mécanistique** | comparer à des mesures, expériences, documents opérationnels, invariants ou références indépendantes | la généralisation à d'autres périodes, régimes ou domaines |
-| **Prospectif** | enregistrer avant le résultat et évaluer lorsque l'observation arrive | la validité d'autres périodes ou d'autres domaines que ceux observés |
+| **Descriptive retrospective** | compares a reconstruction or description with observations of the studied period that are independent of it | that the information was available at the time, nor any predictive ability |
+| **Temporal out-of-sample** | builds on an earlier period, freezes, then tests on a later period | what was available at build time, if archives were consolidated afterwards |
+| **Point-in-time replay** | steps forward chronologically, providing only the information available at each date | that the real system actually received that information |
+| **Independent / mechanistic** | compares with measurements, experiments, operational documents, invariants or independent references | generalisation to other periods, regimes or domains |
+| **Prospective** | records before the outcome and evaluates when the observation arrives | validity for periods or domains other than those observed |
 
-Ces cinq modes ne sont ni cinq étapes successives, ni une check-list obligatoire. On en choisit
-un ou plusieurs selon la nature de l'affirmation.
+These five modes are neither five successive stages nor a mandatory checklist. One or several are chosen according
+to the nature of the claim.
 
-### 2.1 Ce qui rend une expérience temporelle valable
+### 2.1 What makes a temporal experiment valid
 
-Construire sur 2000-2015 puis tester sur 2015-2020 est une expérience temporelle légitime si :
+Building on 2000–2015 then testing on 2015–2020 is a legitimate temporal experiment if:
 
-- les variables cibles, les métriques et les critères sont définis avant de lire la période test ;
-- le code, les paramètres, les règles, les variables et les références sont figés ;
-- les résultats de la période test ne servent ni à choisir ni à régler le modèle ;
-- les versions et révisions des données sont conservées ;
-- le fait que les données de construction soient des archives révisées a posteriori est signalé.
+- target variables, metrics and criteria are defined before the test period is read;
+- code, parameters, rules, variables and references are frozen;
+- test-period results are used neither to choose nor to tune the model;
+- data versions and revisions are kept;
+- the fact that the build data are archives revised after the fact is stated.
 
-Cette expérience ne démontre pas ce que le système aurait su en 2015 si les archives de
-construction ont été consolidées après cette date.
+This experiment does not show what the system would have known in 2015 if the build archives were consolidated after
+that date.
 
-### 2.2 Exploration et confirmation : deux régimes, pas deux niveaux de rigueur
+### 2.2 Exploration and confirmation: two regimes, not two levels of rigour
 
-Une exploration et une confirmation ne diffèrent pas par le soin apporté, mais par ce qui est **consommé**.
+Exploration and confirmation do not differ by the care taken, but by what is **consumed**.
 
-- **En exploration**, la fenêtre regardée est **consommée** pour toutes les hypothèses du même ensemble. Une règle
-  trouvée en la regardant ne pourra plus être confirmée sur ces données : elle devra l'être sur des données
-  **neuves**.
-- **En confirmation**, la fenêtre est intacte au moment où la règle est formulée, et le test se fait sur des
-  données qui n'ont pas servi à la trouver.
+- **In exploration**, the window looked at is **consumed** for every hypothesis of the same family. A rule found by
+  looking at it can no longer be confirmed on those data: it must be confirmed on **new** data.
+- **In confirmation**, the window is untouched when the rule is formulated, and the test is done on data that were
+  not used to find it.
 
-Trois conséquences pratiques :
+Three practical consequences:
 
-1. **Un regard brûle.** Chercher dans une période, c'est renoncer à y établir quoi que ce soit de neuf. Une
-   exploration mal bornée réduit d'autant la confirmation possible.
-2. **Le meilleur des variantes se lit rétréci.** Quand K variantes sont essayées sur les mêmes données, la
-   meilleure est un estimateur biaisé vers le haut. Elle se lit ensuite **rétréci** — l'estimation est ramenée
-   vers zéro par le rétrécissement empirique — pour contrer la malédiction du gagnant.
-3. **La correction de multiplicité vient après**, et s'applique à la famille entière des variantes essayées,
-   jamais à la seule variante retenue.
+1. **A look burns.** Searching a period means giving up establishing anything new in it. Poorly bounded
+   exploration reduces the possible confirmation accordingly.
+2. **The best of several variants is read shrunk.** When K variants are tried on the same data, the best one is an
+   upward-biased estimator. It is then read **shrunk** — pulled towards zero by empirical shrinkage — to counter the
+   winner's curse.
+3. **The multiplicity correction comes afterwards**, and applies to the whole family of variants tried, never to the
+   retained variant alone.
 
-Un dépôt qui ne distingue pas ces deux régimes produit des résultats qui ne sont pas confirmables, même quand
-les chiffres sont bons.
+A repository that does not distinguish these two regimes produces results that cannot be confirmed, even when the
+numbers are good.
 
-### 2.3 La multiplicité est fixée avant l'observation
+### 2.3 Multiplicity is fixed before observation
 
-Le nombre d'hypothèses que l'on a regardées fait partie de la **méthode**, et il se déclare avant qu'on regarde
-les résultats. Deux règles, non négociables :
+The number of hypotheses looked at is part of the **method**, and is declared before the results are looked at. Two
+non-negotiable rules:
 
-1. **La correction est fixée à l'avance.** La méthode de correction — et son niveau — est choisie dans le
-   pré-enregistrement, pas après avoir vu les p-valeurs.
-2. **Choisir la correction après coup, en fonction du résultat, n'est pas une correction.** C'est de
-   l'**α-shopping**, et le résultat n'est plus interprétable.
+1. **The correction is fixed in advance.** The correction method — and its level — is chosen in the
+   pre-registration, not after seeing the p-values.
+2. **Choosing the correction after the fact, according to the result, is not a correction.** It is
+   **α-shopping**, and the result is no longer interpretable.
 
-Le choix de la méthode doit correspondre à ce que la structure des données permet réellement :
+The method must match what the data structure actually allows:
 
-| Structure des données | Ce qui est garanti | Ce qui ne l'est pas |
+| Data structure | What is guaranteed | What is not |
 |---|---|---|
-| hypothèses indépendantes | le contrôle du taux de faux positifs, par famille | rien au-delà |
-| dépendance arbitraire (e-values, LOND) | le contrôle du FDR sous dépendance arbitraire | que l'hypothèse porte sur l'**espérance conditionnelle** de chaque unité, et que les unités corrélées soient **agrégées par grappe** avant le test |
-| rétrécissement par bootstrap | le FDR sous indépendance, ou sous PRDS | **rien** sous dépendance arbitraire |
+| independent hypotheses | control of the false-positive rate, per family | nothing beyond |
+| arbitrary dependence (e-values, LOND) | FDR control under arbitrary dependence | that the hypothesis is about the **conditional expectation** of each unit, and that correlated units are **aggregated by cluster** before the test |
+| bootstrap shrinkage | FDR under independence, or under PRDS | **nothing** under arbitrary dependence |
 
-La troisième ligne est la nuance qu'on perd le plus souvent : un rétrécissement bootstrap « corrige » la
-multiplicité sous des conditions plus étroites que l'e-value qu'il remplace souvent. Et l'agrégation par grappe
-n'est pas une option : sans elle, aucune de ces garanties ne tient.
+The third line is the nuance most often lost: a bootstrap shrinkage "corrects" multiplicity under narrower conditions
+than the e-value it often replaces. And cluster aggregation is not optional: without it, none of these guarantees
+holds.
 
-## 3. Choisir le mode selon l'affirmation
+## 3. Choosing the mode according to the claim
 
-Le mode se choisit en fonction de ce que l'on prétend, jamais par défaut ni par commodité.
+The mode is chosen according to what is claimed, never by default or convenience.
 
-| Si l'affirmation est… | Mode minimal crédible |
+| If the claim is… | Minimal credible mode |
 |---|---|
-| « mon état reconstruit correspond à ce qui a été observé » | rétrospective descriptive, avec référence indépendante |
-| « mon modèle généralise dans le temps » | temporel hors échantillon, avec gel explicite |
-| « mon système n'aurait su que ce qui était disponible à la date t » | replay point-in-time |
-| « mon mécanisme produit effectivement cet effet » | indépendant ou mécanistique |
-| « mon signal prédit la révélation à venir » | prospectif |
+| "my reconstructed state matches what was observed" | descriptive retrospective, with an independent reference |
+| "my model generalises in time" | temporal out-of-sample, with an explicit freeze |
+| "my system would only have known what was available at date t" | point-in-time replay |
+| "my mechanism actually produces this effect" | independent or mechanistic |
+| "my signal predicts the coming revelation" | prospective |
 
-Une étude qui ne peut rien changer n'est pas ouverte. Une étude dont la preuve possible est
-hors de portée doit être ajournée, non simulée par une méthode plus faible présentée comme
-équivalente.
+A study that cannot change anything is not opened. A study whose possible evidence is out of reach is postponed,
+not simulated by a weaker method presented as equivalent.
 
-**Aucune validation prospective n'est imposée par défaut.** Elle est exigeante : elle suppose un
-protocole scellé, une période d'attente, une définition de l'échec à l'avance et l'acceptation
-d'un résultat négatif. Elle se justifie pour une affirmation sur l'avenir ; elle n'a pas de sens
-pour qualifier un procédé de calcul, une convention de nommage ou une propriété de format.
+**No prospective validation is imposed by default.** It is demanding: it requires a sealed protocol, a waiting period,
+a definition of failure in advance and the acceptance of a negative result. It is justified for a claim about the
+future; it makes no sense for qualifying a computation, a naming convention or a format property.
 
-## 4. Trois lectures temporelles à ne pas confondre
+## 4. Three temporal readings not to be confused
 
-- **Replay opérationnel** : ce que le système avait effectivement reçu et rendu utilisable.
-- **Replay public** : ce qui était publiquement accessible, sur preuve ou borne conservatrice.
-- **Descriptif rétrospectif** : ce que les archives consolidées permettent de reconstituer
-  aujourd'hui.
+- **Operational replay**: what the system actually received and made usable.
+- **Public replay**: what was publicly accessible, on evidence or a conservative bound.
+- **Descriptive retrospective**: what consolidated archives allow to reconstruct today.
 
-Un replay public ne prouve pas que le système avait reçu l'information. Une archive révisée ne
-prouve pas qu'elle était disponible à l'époque. Ces trois lectures ne sont jamais interchangeables
-dans un rapport de résultat.
+A public replay does not prove the system had received the information. A revised archive does not prove it was
+available at the time. These three readings are never interchangeable in a result report.
 
-## 5. Six affirmations distinctes
+## 5. Six distinct claims
 
-| Affirmation | Ce qu'elle exige | Ce qu'elle ne prouve pas |
+| Claim | What it requires | What it does not prove |
 |---|---|---|
-| **Reconstruction** | un état restitué, daté, localisé, avec sa provenance | que l'état était connu à l'époque, ni qu'il est prédictif |
-| **Estimation** | une grandeur non directement observée, avec sa méthode et son incertitude | une observation directe, ni un mécanisme causal |
-| **Prédiction** | une valeur future, émise à une date donnée, avec un intervalle | un mécanisme causal, ni une réalité future |
-| **Explication** | un mécanisme testable reliant un changement à un effet | que l'effet est causal identifié |
-| **Causalité** | une stratégie d'identification explicite et ses hypothèses | la généralisation hors du cadre d'identification |
-| **Simulation** | un résultat conditionnel à un scénario imposé | que le scénario se réalisera |
+| **Reconstruction** | a restored state, dated, located, with its provenance | that the state was known at the time, nor that it is predictive |
+| **Estimation** | a quantity not directly observed, with its method and uncertainty | a direct observation, nor a causal mechanism |
+| **Prediction** | a future value, issued at a given date, with an interval | a causal mechanism, nor a future reality |
+| **Explanation** | a testable mechanism linking a change to an effect | that the effect is causally identified |
+| **Causality** | an explicit identification strategy and its assumptions | generalisation outside the identification frame |
+| **Simulation** | a result conditional on an imposed scenario | that the scenario will happen |
 
-Les implications sont asymétriques et doivent être respectées : une reconstruction validée
-n'est pas automatiquement prédictive ; une prédiction exacte ne démontre pas le mécanisme causal ;
-un mécanisme plausible n'est pas un effet causal identifié ; une simulation cohérente ne prouve
-pas que le scénario se réalisera ; une relation documentée ne quantifie pas sa propagation ; une
-bonne performance financière ne valide pas rétroactivement les modèles physiques.
+The implications are asymmetric and must be respected: a validated reconstruction is not automatically predictive; an
+accurate prediction does not demonstrate the causal mechanism; a plausible mechanism is not an identified causal
+effect; a consistent simulation does not prove the scenario will happen; a documented relation does not quantify its
+propagation; a good financial performance does not retroactively validate the physical models.
 
-**Ces six affirmations sont la nature d'une affirmation scientifique, et rien d'autre.** Elles ne disent rien
-du **statut opérationnel** d'un produit de connaissance : un produit utilisable peut porter une estimation, et un
-produit inconclusif peut porter une reconstruction. Les deux notions sont distinctes, et l'une ne se déduit pas
-de l'autre (`docs/CONTRATS_FONDAMENTAUX.md` §4.10).
+**These six claims are the nature of a scientific claim, and nothing else.** They say nothing about the
+**operational status** of a knowledge product: a usable product can carry an estimate, and an inconclusive product
+can carry a reconstruction. The two notions are distinct, and one does not follow from the other
+(`docs/CORE_CONTRACTS.md` §4.10).
 
-Le vocabulaire de nature du dépôt est plus étroit que ces six affirmations : une grandeur dérivée y est
-`estimated`, `reconstructed`, `predicted`, `simulated` ou `derived`. L'explication et la causalité ne sont pas
-des natures de grandeur, mais des **niveaux d'affirmation** : ils se portent dans le rapport, pas dans le type
-du produit.
+The repository's nature vocabulary is narrower than these six claims: a derived quantity is `estimated`,
+`reconstructed`, `predicted`, `simulated` or `derived`. Explanation and causality are not natures of a quantity but
+**claim levels**: they belong in the report, not in the product type.
 
-## 6. Référence, calibration, incertitude, abstention
+## 6. Reference, calibration, uncertainty, abstention
 
-Ces quatre notions accompagnent chaque affirmation. Elles ne se substituent pas l'une à l'autre.
+These four notions accompany every claim. They do not substitute for one another.
 
-**Référence.** Chaque évaluation se compare à une référence : une référence simple (la
-persistance, la moyenne, une baseline naïve) ou une méthode concurrente, si une comparaison est
-pertinente. Une performance sans référence n'est pas interprétable. La référence est choisie
-avant le test.
+**Reference.** Every evaluation is compared with a reference: a simple one (persistence, the mean, a naive baseline)
+or a competing method where a comparison is relevant. A performance without a reference cannot be interpreted. The
+reference is chosen before the test.
 
-**Calibration.** Les probabilités annoncées doivent correspondre aux fréquences observées.
-L'évaluation d'une incertitude ne se limite pas à une erreur moyenne : elle vérifie que
-l'intervalle annoncé contient l'observation attendue à la fréquence promise. Une incertitude
-surdimensionnée n'est pas une certitude : c'est une imprécision qui se présente comme une
-précision.
+**Calibration.** Announced probabilities must match observed frequencies. Evaluating an uncertainty is not limited to
+a mean error: it checks that the announced interval contains the expected observation at the promised frequency. An
+oversized uncertainty is not a certainty: it is imprecision presenting itself as precision.
 
-**Incertitude.** Elle est décrite selon ce qui est connu : données, paramètres, structure du
-modèle, conditions initiales, approximation numérique, scénario. La forme est adaptée au
-contexte : intervalle, distribution, scénarios, borne, sensibilité, ou conclusion qualitative. Une
-distribution sophistiquée n'est pas requise si les données ne la justifient pas. Les modèles
-couplés signalent les données, hypothèses et erreurs partagées ; des sorties dépendantes ne sont
-pas des confirmations indépendantes.
+**Uncertainty.** It is described according to what is known: data, parameters, model structure, initial conditions,
+numerical approximation, scenario. Its form fits the context: interval, distribution, scenarios, bound, sensitivity,
+or qualitative conclusion. A sophisticated distribution is not required if the data do not justify it. Coupled models
+flag shared data, assumptions and errors; dependent outputs are not independent confirmations.
 
-**Abstention.** Un système déclare ce qu'il ne sait pas faire. Chaque étude déclare ses
-conditions d'abstention, d'arrêt et d'invalidation ; chaque sortie peut porter une politique
-d'abstention explicite. Une valeur absente porte la raison de son absence et n'est jamais zéro.
-L'abstention est une qualité, pas un échec : un système qui ne s'abstient jamais sur des
-données hors domaine est un système dont les performances hors domaine ne veulent rien dire.
+**Abstention.** A system declares what it cannot do. Every study declares its abstention, stopping and invalidation
+conditions; every output may carry an explicit abstention policy. An absent value carries the reason for its absence
+and is never zero. Abstention is a quality, not a failure: a system that never abstains on out-of-domain data is a
+system whose out-of-domain performance means nothing.
 
-## 7. Identifiabilité
+## 7. Identifiability
 
-Avant d'interpréter fortement une estimation, vérifier que les données permettent réellement de
-distinguer les états ou paramètres possibles. Si plusieurs explications restent compatibles,
-préserver l'ambiguïté plutôt que de choisir arbitrairement une valeur précise. La précision
-numérique n'est ni l'identifiabilité ni la validité.
+Before interpreting an estimate strongly, check that the data actually allow the possible states or parameters to be
+distinguished. If several explanations remain compatible, preserve the ambiguity rather than arbitrarily choosing a
+precise value. Numerical precision is neither identifiability nor validity.
 
-## 8. Résultats inconclusifs
+## 8. Inconclusive results
 
-Une conclusion inconclusive est un résultat valide. Elle peut refléter des observations
-insuffisantes, un état non identifiable, une référence inadéquate, une faible puissance
-statistique ou un domaine trop étroit. Elle se rapporte comme telle, avec sa cause. L'absence de
-preuve ne se remplace jamais par un proxy non justifié.
+An inconclusive conclusion is a valid result. It may reflect insufficient observations, an unidentifiable state, an
+inadequate reference, low statistical power or too narrow a domain. It is reported as such, with its cause. Absence of
+evidence is never replaced by an unjustified proxy.
 
-Tout essai lancé est enregistré, y compris son erreur, ses variantes négatives et son abandon.
+Every trial launched is recorded, including its error, its negative variants and its abandonment.
 
-## 9. Garde-fou contre la surcomplexité
+## 9. Guard against overcomplexity
 
-Aucune métrique, méthode, couche, registre ou artefact n'est ajouté sans montrer quelle
-affirmation il aide à tester. La baseline simple est privilégiée lorsqu'elle répond à la question.
-Les exigences de preuve sont proportionnées à l'usage et au risque de la décision visée.
+No metric, method, layer, registry or artefact is added without showing which claim it helps to test. The simple
+baseline is preferred when it answers the question. Evidence requirements are proportionate to the use and the risk
+of the intended decision.
 
-La doctrine choisit le mode de preuve. Elle ne crée pas un second système d'évaluation, ni une
-validation qui duplique la logique scientifique.
+The doctrine chooses the mode of evidence. It does not create a second evaluation system, nor a validation that
+duplicates the scientific logic.
 
-## 10. Le pré-enregistrement, et ce qu'il reste à outiller
+## 10. Pre-registration, and what remains to be tooled
 
-Un pré-enregistrement n'est pas un document que l'on écrit pour s'en acquitter : c'est un **verrou** qui rend le
-résultat interprétable. Un pré-enregistrement existe dès qu'il contient, figés avant l'observation :
+A pre-registration is not a document written to tick a box: it is a **lock** that makes the result interpretable. A
+pre-registration exists as soon as it contains, frozen before observation:
 
-- l'affirmation testée, le domaine, la période, les données ;
-- la méthode, ses paramètres, et la règle de calcul ;
-- la référence ;
-- **la règle de correction de multiplicité** ;
-- les critères de réussite, d'échec et d'abandon.
+- the claim tested, the domain, the period, the data;
+- the method, its parameters, and the computation rule;
+- the reference;
+- **the multiplicity correction rule**;
+- the success, failure and abandonment criteria.
 
-Le dépôt en tient un : `docs/PRE-ENREGISTREMENT-001.md`. Il est **écrit**, pas encore **outillé**.
+The repository holds one: `docs/PRE-REGISTRATION-HYDRO-001.md`. It is **written**, not yet **tooled**.
 
-Trois contrôles manquent aujourd'hui, et tant qu'ils manquent, le lien entre une expérience et son résultat
-reste humain :
+Three checks are missing today, and as long as they are, the link between an experiment and its result remains
+human:
 
-| # | Contrôle manquant | Ce qu'il détecterait |
+| # | Missing check | What it would detect |
 |---|---|---|
-| 1 | **Un rapport produit par un pré-enregistrement** — aucun rapport ne peut être publié sans le pré-enregistrement qui l'autorise. | Un résultat sans protocole, ou un protocole écrit après coup. |
-| 2 | **Un amendement daté et commité avant le calcul** — tout changement du protocole porte une date et un commit, et précède le calcul. | Un protocole réécrit après avoir vu les données. |
-| 3 | **Un pré-enregistrement sans rapport** — une expérience ouverte et jamais close est signalée. | Une expérience abandonnée en silence, ou une conclusion tirée ailleurs. |
+| 1 | **A report produced from a pre-registration** — no report can be published without the pre-registration that authorises it. | A result without a protocol, or a protocol written after the fact. |
+| 2 | **An amendment dated and committed before the computation** — every protocol change carries a date and a commit, and precedes the computation. | A protocol rewritten after seeing the data. |
+| 3 | **A pre-registration without a report** — an experiment opened and never closed is flagged. | An experiment silently abandoned, or a conclusion drawn elsewhere. |
 
-Ces trois contrôles sont peu coûteux, et ils rendent le dispositif vérifiable **par l'exécution** et non par la
-mémoire.
+These three checks are cheap, and they make the arrangement verifiable **by execution** rather than by memory.
 
-## 11. Nommer une méthode pour ce qu'elle est
+## 11. Name a method for what it is
 
-Une méthode mal nommée continue de faire du mal tant qu'elle porte le nom d'une autre.
+A misnamed method keeps doing harm as long as it carries another's name.
 
-Le découpage temporel de l'évaluation en est l'exemple : ce que le dépôt implémente n'est pas une fenêtre
-glissante, mais un découpage **cumulatif** — le bloc d'entraînement de chaque pli contient **toutes** les valeurs
-antérieures, pas une fenêtre mobile. L'appeler « walk-forward » sans préciser lequel des deux est écrit induit en
-erreur sur ce que l'évaluation mesure, et donc sur ce qu'elle prouve.
+The temporal split of the evaluation is the example: what the repository implements is not a sliding window but a
+**cumulative** split — each fold's training block contains **all** earlier values, not a moving window. Calling it
+"walk-forward" without saying which of the two is written misleads about what the evaluation measures, and therefore
+about what it proves.
 
-La règle : **le nom dit ce que la méthode fait, et le document de référence dit comment**. Si les deux ne peuvent
-pas être confondus, le nom est trop général.
+The rule: **the name says what the method does, and the reference document says how**. If the two cannot be told
+apart, the name is too general.
 
-## 12. Quatre axes, et trois verdicts qui ne se confondent pas
+## 12. Four axes, and three verdicts that must not be confused
 
-Une affirmation scientifique traverse quatre questions distinctes. Les confondre est la source d'erreur la plus
-fréquente en évaluation : un « non » mal situé devient soit un faux négatif, soit un refus de répondre.
+A scientific claim crosses four distinct questions. Confusing them is the most frequent source of error in
+evaluation: a misplaced "no" becomes either a false negative or a refusal to answer.
 
-| Axe | Question | Vocabulaire | Propriétaire |
+| Axis | Question | Vocabulary | Owner |
 |---|---|---|---|
-| **1 — validité intrinsèque** | la valeur est-elle exploitable **en soi** ? | `VALID` · `MISSING` · `INVALID` | socle et adaptateur |
-| **2 — applicabilité** | ce produit s'applique-t-il **à ce contexte** ? | `COMPATIBLE` · `INCOMPATIBLE` · `INDETERMINATE` | dossier d'évaluation |
-| **3 — verdict d'affirmation** | que permettent les preuves **sur cette affirmation** ? | `NOT_EVALUATED` · `SUPPORTED` · `REFUTED` · `INCONCLUSIVE` | protocole d'évaluation |
-| **4 — statut de produit** | cet objet publié **peut-il être utilisé** ? | `USABLE` · `DEGRADED` · `WITHDRAWN` · `INCONCLUSIVE` | contrat de publication |
+| **1 — intrinsic validity** | is the value usable **in itself**? | `VALID` · `MISSING` · `INVALID` | socle and adapter |
+| **2 — applicability** | does this product apply **to this context**? | `COMPATIBLE` · `INCOMPATIBLE` · `INDETERMINATE` | evaluation record |
+| **3 — claim verdict** | what does the evidence allow **about this claim**? | `NOT_EVALUATED` · `SUPPORTED` · `REFUTED` · `INCONCLUSIVE` | evaluation protocol |
+| **4 — product status** | **can** this published object be used? | `USABLE` · `DEGRADED` · `WITHDRAWN` · `INCONCLUSIVE` | publication contract |
 
-Les axes 1 et 4 existent dans le dépôt (`src/torne/contracts/`). Les axes 2 et 3 sont ceux qui manquent, et ils
-ne sont pas redondants : l'axe 2 porte sur la **relation entre une capacité et un contexte**, l'axe 3 sur **ce que
-les preuves établissent sur une proposition**. Une affirmation peut être `SUPPORTED` dans son domaine et
-`REFUTED` pour un transfert ; un produit peut être `USABLE` alors que son applicabilité ailleurs est
-`INDETERMINATE`.
+Axes 1 and 4 exist in the repository (`src/torne/contracts/`). Axes 2 and 3 are missing, and they are not redundant:
+axis 2 is about the **relation between a capability and a context**, axis 3 about **what the evidence establishes
+about a proposition**. A claim can be `SUPPORTED` in its domain and `REFUTED` for a transfer; a product can be
+`USABLE` while its applicability elsewhere is `INDETERMINATE`.
 
-### 12.1 Les trois verdicts d'applicabilité, et la règle de non-contamination
+### 12.1 The three applicability verdicts, and the non-contamination rule
 
-| État des prédicats | Verdict | Ce que l'évaluation déclare |
+| State of the predicates | Verdict | What the evaluation declares |
 |---|---|---|
-| tous satisfaits | `COMPATIBLE` | l'applicabilité est **établie** pour ce contexte |
-| au moins un violé | `INCOMPATIBLE` | la non-transportabilité est **établie** — et **dite** |
-| aucun violé, au moins un inconnu | **`INDETERMINATE`** | la comparabilité n'est établie **ni dans un sens ni dans l'autre** |
+| all satisfied | `COMPATIBLE` | applicability is **established** for this context |
+| at least one violated | `INCOMPATIBLE` | non-transportability is **established** — and **stated** |
+| none violated, at least one unknown | **`INDETERMINATE`** | comparability is established **neither way** |
 
-> **Non-contamination : un constat « hors domaine » ne peut être produit que par un verdict `INCOMPATIBLE`.** Un
-> verdict `INDETERMINATE` produit une **abstention**, jamais un constat d'hors-domaine.
+> **Non-contamination: an "out of domain" finding can only be produced by an `INCOMPATIBLE` verdict.** An
+> `INDETERMINATE` verdict produces an **abstention**, never an out-of-domain finding.
 
-La règle jumelle ferme l'autre sens du raccourci : **un prédicat n'est jamais « violé » par la seule absence de
-preuve**. « Satisfait » exige une preuve positive, « violé » exige une preuve de la violation ; ce qui n'a
-l'une ni l'autre est **inconnu**.
+The twin rule closes the other direction of the shortcut: **a predicate is never "violated" by mere absence of
+evidence**. "Satisfied" requires positive evidence, "violated" requires evidence of the violation; what has neither
+is **unknown**.
 
-Conséquence de programme : l'abstention devient une **sortie normale et valorisée**. Un référentiel inconnu ne
-produit pas une comparaison approximative présentée comme valide : il produit une abstention documentée.
+Programme consequence: abstention becomes a **normal and valued output**. An unknown reference does not produce an
+approximate comparison presented as valid: it produces a documented abstention.
 
-### 12.2 Ce qui est porté où
+### 12.2 What is carried where
 
-Les prédicats d'applicabilité vivent dans le **protocole d'évaluation**, pas comme des champs obligatoires de
-chaque produit. Un produit de connaissance porte une **référence** à l'évaluation qui l'a établi, et une
-**synthèse**. Les huit prédicats ne deviennent pas huit colonnes d'un JSON de produit : un produit ne porte pas
-une grille qu'il ne remplit pas lui-même.
+Applicability predicates live in the **evaluation protocol**, not as mandatory fields of each product. A knowledge
+product carries a **reference** to the evaluation that established it, and a **summary**. The eight predicates do not
+become eight columns of a product's JSON: a product does not carry a grid it does not fill itself.
 
-### 12.3 Une réfutation est une production de connaissance
+### 12.3 A refutation is knowledge
 
-**Le statut d'un produit n'est jamais dégradé parce qu'une applicabilité a été réfutée.** L'axe 3 est indépendant
-de l'axe 4 : un produit `USABLE` dont l'applicabilité ailleurs est `REFUTED` **reste `USABLE`** ; c'est le
-verdict `REFUTED` qui est publié, et lui seul.
+**A product's status is never degraded because an applicability was refuted.** Axis 3 is independent of axis 4: a
+`USABLE` product whose applicability elsewhere is `REFUTED` **stays `USABLE`**; it is the `REFUTED` verdict that is
+published, and it alone.
 
-« Réfuté » et « inconclusif » ne sont pas synonymes, et ne doivent pas le devenir : une réfutation est un
-**résultat**, un inconclusif est une **absence de résultat**. Les confondre revient à ne pas pouvoir dire qu'une
-méthode ne se transfère pas.
+"Refuted" and "inconclusive" are not synonyms and must not become so: a refutation is a **result**, an inconclusive
+is an **absence of result**. Confusing them means being unable to say that a method does not transfer.
 
-### 12.4 Le dénominateur, en sept éléments
+### 12.4 The denominator, in seven elements
 
-« Combien de données ? » n'est pas une question à une seule réponse. Un dénominateur comporte sept éléments :
+"How much data?" is not a question with a single answer. A denominator has seven elements:
 
-1. **population visée** ;
-2. **unité d'observation indépendante** ;
-3. **observations disponibles** ;
-4. **observations effectivement utilisées** ;
-5. **exclusions et leurs motifs** ;
-6. **taille effective sous dépendance** ;
-7. **dénominateur de la généralisation**.
+1. **target population**;
+2. **independent observation unit**;
+3. **available observations**;
+4. **observations actually used**;
+5. **exclusions and their reasons**;
+6. **effective size under dependence**;
+7. **denominator of the generalisation**.
 
-La taille effective est un **diagnostic** : elle ne remplace jamais le nombre d'observations, et les épisodes ou
-groupes restent l'unité de généralisation.
+The effective size is a **diagnostic**: it never replaces the number of observations, and episodes or groups remain
+the unit of generalisation.
 
-La distinction que ces sept éléments rendent visible : **précision de l'observation** et **force de la preuve de
-transférabilité** sont deux choses. Dans un leave-one-basin-out, 500 000 relevés hydrométriques ne sont pas
-500 000 systèmes physiques indépendants. Un produit peut être extrêmement précis sur ses observations et très
-faiblement prouvé pour sa transférabilité — et aucun des deux ne doit masquer l'autre.
+The distinction these seven elements make visible: **precision of the observation** and **strength of the evidence
+for transferability** are two things. In a leave-one-basin-out, 500 000 hydrometric records are not 500 000
+independent physical systems. A product can be extremely precise on its observations and very weakly supported for
+its transferability — and neither must hide the other. ATMO-001 measured it on four French stations: about 29 900
+daily values carry about 2 000 independent days.
 
-### 12.5 Les trois règles fondatrices
+### 12.5 The three founding rules
 
-1. **Une plateforme, plusieurs physiques.** TORNE partage son épistémologie, sa provenance, sa temporalité, ses
-   procédures d'évaluation et ses capacités computationnelles ; chaque domaine conserve sa physique, ses
-   variables, ses juges et ses dénominateurs.
-2. **L'inconnu ne devient jamais une certitude par commodité.**
-3. **Une réfutation est une production de connaissance.**
+1. **One platform, several physics.** TORNE shares its epistemology, provenance, temporality, evaluation procedures
+   and computational capabilities; each domain keeps its physics, variables, judges and denominators.
+2. **The unknown never becomes a certainty for convenience.**
+3. **A refutation is knowledge.**
 
-Il en découle une décision de programme : **TORNE ne cherche pas un modèle universel du monde.** Il cherche une
-plateforme capable de produire, d'évaluer et de réutiliser des connaissances scientifiques issues de plusieurs
-physiques, sans confondre leurs structures. La généralisation devient une **affirmation testable**, jamais une
-promesse implicite.
-
+A programme decision follows: **TORNE does not seek a universal model of the world.** It seeks a capability to
+produce, evaluate and reuse scientific knowledge from several physics, without confusing their structures.
+Generalisation becomes a **testable claim**, never an implicit promise.

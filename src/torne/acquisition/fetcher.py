@@ -12,7 +12,7 @@ Quatre règles :
    été obtenu ne se perd pas : l'issue est alors `PARTIAL`, qui est un
    résultat, pas un échec.
 2. **L'échec est consigné.** Une tentative qui rate reste dans le journal,
-   avec sa cause (`docs/CONTRATS_FONDAMENTAUX.md` §2.2, INV-03).
+   avec sa cause (`docs/CORE_CONTRACTS.md` §2.2, INV-03).
 3. **Le secret ne passe pas par la demande.** Les identifiants sont résolus
    au dernier moment et appliqués par le transport ; la demande consignée n'en
    garde que la **référence**.

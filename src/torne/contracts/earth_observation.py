@@ -36,7 +36,7 @@ Two deliberate choices:
    mean that a product dated 30 June 2023 describes 30 June 2023, while it
    describes the ten days that end on it.
 
-References (cited per module, as `docs/CONTRATS_FONDAMENTAUX.md` §5.2 requires
+References (cited per module, as `docs/CORE_CONTRACTS.md` §5.2 requires
 for modules written against the literature):
 
 - **STAC 1.1.0** (OGC SpatioTemporal Asset Catalog) — item structure: `assets`,
@@ -92,7 +92,7 @@ class Asset:
 
     An asset carries its address, its media type, its roles, and — essentially
     — the **authentication requirement** that protects it. The repository holds
-    no secret: it only knows a **reference** (`docs/CONTRATS_FONDAMENTAUX.md`
+    no secret: it only knows a **reference** (`docs/CORE_CONTRACTS.md`
     §4.9, INV-41). An asset that requires a token is therefore declared as
     such, and never presented as downloadable.
 

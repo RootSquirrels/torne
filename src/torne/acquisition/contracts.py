@@ -17,7 +17,7 @@ Trois règles structurantes :
    question posée.
 3. **L'échec est un résultat.** Une acquisition qui rate est **consignée**
    comme telle, avec sa cause (`AcquisitionErrorKind`), jamais avalée ni
-   transformée en « rien à signaler » (`docs/CONTRATS_FONDAMENTAUX.md` §2.2,
+   transformée en « rien à signaler » (`docs/CORE_CONTRACTS.md` §2.2,
    INV-03).
 
 Le socle est **transversal** : il ne connaît aucun domaine. Un adaptateur de

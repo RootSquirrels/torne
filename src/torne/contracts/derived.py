@@ -1,4 +1,4 @@
-"""La grandeur dérivée — le cinquième objet du contrat (`docs/CONTRATS_FONDAMENTAUX.md` §2.4).
+"""La grandeur dérivée — le cinquième objet du contrat (`docs/CORE_CONTRACTS.md` §2.4).
 
 Ce module est la forme exécutable de §2.4. La grandeur dérivée est le seul
 garant de la **règle de calcul** : une valeur calculée ou estimée à partir

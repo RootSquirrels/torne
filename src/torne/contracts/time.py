@@ -1,4 +1,4 @@
-"""Sémantique temporelle — exécution de `docs/CONTRATS_FONDAMENTAUX.md` §3.
+"""Sémantique temporelle — exécution de `docs/CORE_CONTRACTS.md` §3.
 
 Trois dimensions **indépendantes et non interchangeables** :
 
@@ -21,7 +21,7 @@ d'admission :
   point-in-time.
 
 La publication inconnue n'est jamais remplacée par la date d'ingestion : ce
-serait un comblement par supposition, interdit par `docs/CONTRATS_FONDAMENTAUX.md` §3.9.
+serait un comblement par supposition, interdit par `docs/CORE_CONTRACTS.md` §3.9.
 
 Aucun instant n'est stocké sans fuseau : le refus est à l'entrée (INV-15). Une
 date civile n'est jamais dégradée en instant par défaut (§3.3) : la conversion

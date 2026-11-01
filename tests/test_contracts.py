@@ -1,4 +1,4 @@
-"""Tests des contrats fondamentaux — la forme exécutable de `docs/CONTRATS_FONDAMENTAUX.md`.
+"""Tests des contrats fondamentaux — la forme exécutable de `docs/CORE_CONTRACTS.md`.
 
 Ces tests ne portent sur aucun modèle : ils portent sur les invariants que le
 contrat déclare vérifiables (INV-07 à INV-19) et que le reste du dépôtreuse.

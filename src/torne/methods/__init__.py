@@ -35,7 +35,7 @@ written against the international statistical literature, which they cite.
 
 Every stochastic routine in this package takes an explicit `seed` and builds its
 own generator: the global random state is never touched (INV-35/INV-36 of
-`docs/CONTRATS_FONDAMENTAUX.md`).
+`docs/CORE_CONTRACTS.md`).
 """
 
 from . import breaks, calibration, dependence, multiplicity, power, regression, scores

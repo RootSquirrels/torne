@@ -7,7 +7,7 @@ Origine
 - Chemin exact    : `athanor/src/athanor/stats/calibration.py`.
 - Propriétaire    : le propriétaire de TORNE.
 - Licence        : dépôt privé, réutilisable sans réserve de licence
-                   (`docs/CONTRATS_FONDAMENTAUX.md` §5.2) ; la reprise est une réécriture
+                   (`docs/CORE_CONTRACTS.md` §5.2) ; la reprise est une réécriture
                    interne et la traçabilité de l'origine est l'unique exigence.
 - Code tiers      : aucun en-tête de licence tierce dans le fichier d'origine.
                    Le fichier d'origine appelait `scipy.special.stdtr` pour la
@@ -22,7 +22,7 @@ Origine
                    sur une grille de (t, ddl), là où SciPy est exact à la
                    précision machine. Reproduire une primitive mathématique
                    disponible et éprouvée n'est pas justifié
-                   (`docs/CONTRATS_FONDAMENTAUX.md` §5.1, règle de réutilisation des
+                   (`docs/CORE_CONTRACTS.md` §5.1, règle de réutilisation des
                    bibliothèques scientifiques).
 - Dépendances    : `numpy`, `scipy` et la bibliothèque standard.
 - Référence       : Diebold & Mariano (1995), « Comparing predictive

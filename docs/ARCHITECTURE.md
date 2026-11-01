@@ -1,243 +1,229 @@
 # TORNE — Architecture
 
-**Frontières, responsabilités et couches**
-**Statut : vue de responsabilité.** Ce document ne décrit pas d'implémentation : il fixe **où passe chaque
-responsabilité**, pas comment elle est rendue. Le code en est une application, pas la source : quand les deux
-divergent, c'est le document qui a tort, et il est corrigé.
+**Boundaries, responsibilities and layers**
+**Status: responsibility view.** This document does not describe an implementation: it fixes **where each
+responsibility goes**, not how it is delivered. The code applies it; it is not its source. When the two diverge,
+the document is wrong, and it is corrected.
 
-## 1. Le modèle mental
+## 1. The mental model
 
 ```text
 SOURCES
    ↓
-MODÈLES
+MODELS
    ↓
-PRODUITS DE CONNAISSANCE
+KNOWLEDGE PRODUCTS
    ↓
 APPLICATIONS
 
-PROVENANCE · TEMPORALITÉ · INCERTITUDE · VALIDATION   (transversales)
+PROVENANCE · TEMPORALITY · UNCERTAINTY · VALIDATION   (cross-cutting)
 ```
 
-Quatre concepts suffisent. Les modèles physiques, opérationnels, économiques et financiers sont
-des **familles de modèles spécialisées et composables**, pas des étapes successives obligatoires :
-il n'existe aucune chaîne universelle, et un modèle peut consommer directement des sources ou
-bien des produits d'autres modèles.
+Four concepts are enough. Physical, operational, economic and financial models are **specialised, composable
+model families**, not mandatory successive stages: there is no universal chain, and a model can consume sources
+directly or the products of other models.
 
-Les frontières sont **logiques**. Elles n'impliquent ni microservices, ni déploiement séparé, ni
-bus d'événements, ni exécution strictement linéaire.
+The boundaries are **logical**. They imply no microservices, no separate deployment, no event bus, and no strictly
+linear execution.
 
-### 1.1 Trois niveaux, séparés par des contrats explicites
+### 1.1 Three levels, separated by explicit contracts
 
-Au-dessus des quatre frontières, le dépôt distingue trois **niveaux** de responsabilité, qui ne se mélangent
-jamais dans un même module :
+Across the four boundaries, the repository distinguishes three **levels** of responsibility, which never mix in
+one module:
 
-| Niveau | Ce qu'il contient | Ce qu'il ne contient pas |
+| Level | What it contains | What it does not contain |
 |---|---|---|
-| **Socle transversal** | acquisition, transport, conservation de la preuve, contrats de données, exécution, empreinte | aucune connaissance du domaine : ni débit, ni hauteur d'eau, ni série temporelle |
-| **Couche sémantique** | ce qui donne un sens métier aux objets du socle : observation, grandeur dérivée, produit de connaissance | aucun accès direct au réseau ni au magasin brut |
-| **Couche scientifique** | les méthodes : régression, rupture, puissance, filtrage d'état, comparaison à une référence | aucune écriture, aucun accès réseau |
+| **Cross-cutting socle** | acquisition, transport, evidence storage, data contracts, execution, fingerprinting | no domain knowledge: no discharge, no water level, no time series semantics |
+| **Semantic layer** | what gives domain meaning to socle objects: reading a source into observations, derived quantities | no direct network or raw-store access |
+| **Scientific layer** | methods: regression, breaks, power, state filtering, comparison to a reference | no writes, no network access |
 
-La séparation n'est pas cosmétique : c'est elle qui permet d'ajouter une méthode sans toucher au socle, et
-d'ajouter une source sans réécrire une méthode. Un adaptateur de source ne sait rien du domaine — il construit
-une URL et dit comment la source se parcourt ; un modèle ne sait rien du réseau.
+The separation is not cosmetic: it lets a method be added without touching the socle, and a source be added
+without rewriting a method. A source adapter knows nothing of the domain — it builds a URL and says how the source
+is walked; a model knows nothing of the network.
 
-## 2. Frontière 1 — Sources
+### 1.2 Domains are modalities, not platforms
 
-**Question :** d'où viennent les informations, et sous quelles conditions étaient-elles
-disponibles ?
+`hydrology/`, `atmosphere/` and `eo/` are semantic layers for **modalities of observation of one physical world**.
+They do not carry their own contracts, evaluation, or knowledge records: those belong to the socle and are shared.
+A reconstruction that combines modalities — the purpose of TORNE — lives in the scientific layer and consumes the
+observations of several semantic layers; it never reaches into an adapter.
 
-**Responsabilité :** identifier le producteur d'une information, acquérir le contenu brut, le
-conserver, le dater, le versionner, le normaliser, et en qualifier la disponibilité. Une source
-est un producteur ou un détenteur d'information ; une observation est une donnée se rapportant à
-un état ou un événement du monde.
+## 2. Boundary 1 — Sources
 
-**Ce que cette frontière garantit :**
+**Question:** where does the information come from, and under what conditions was it available?
 
-- la version exacte de la donnée est identifiable et reproductible ;
-- la date de validité, la date de publication et la date de disponibilité sont distinguées ;
-- l'identité, les unités et les références spatiales sont portées par la donnée, pas par la
-  mémoire du code ;
-- la révision d'une donnée est visible et n'est jamais présentée comme si elle était disponible à
-  l'époque.
+**Responsibility:** identify the producer of a piece of information, acquire the raw content, keep it, date it,
+version it, normalise it, and qualify its availability. A source is a producer or holder of information; an
+observation is a datum about a state or an event of the world.
 
-**Ce qu'elle ne fait pas :** elle ne déduit rien. Une source ne produit pas de connaissance ; elle
-fournit la matière dont la connaissance est dérivée.
+**What this boundary guarantees:**
 
-**Les quatre règles que l'acquisition doit tenir.** C'est là que l'erreur est la plus facile à commettre et la
-plus difficile à voir : on peut croire avoir obtenu la chose demandée sans l'avoir obtenue. Chaque règle est un
-invariant vérifiable (`docs/CONTRATS_FONDAMENTAUX.md` §4.8 et §4.9) :
+- the exact version of the data is identifiable and reproducible;
+- validity time, publication time and availability time are distinguished;
+- identity, units and spatial references are carried by the data, not by the code's memory;
+- a revision is visible and is never presented as if it had been available at the time.
 
-- **La présence de données brutes ne vaut pas conformité sémantique.** Un adaptateur vérifie, sur les lignes
-  réellement reçues, que les identifiants demandés sont ceux qui reviennent ; il ne suppose pas que le
-  fournisseur a obéi. **L'écho d'un filtre dans l'URL n'est pas une preuve de filtrage** : un fournisseur
-  peut accepter le filtre, le renvoyer dans ses liens, et l'ignorer dans la population qu'il rend.
-- **Le prédicat est propre à la source ; le socle ne fait qu'orchestrer.** Le socle ne connaît ni les
-  identifiants de stations, ni les unités, ni les règles du domaine : il enregistre le verdict, il ne le
-  décide pas. Et les **prédicats de transférabilité** (`docs/RESEARCH_AND_VALIDATION.md` §12) ne sont pas
-  concernés ici : ils relèvent du contrat de validation des affirmations, pas de l'acquisition.
-- **L'exhaustivité est qualifiée par source.** Une réponse HTTP réussie ne prouve pas que le fournisseur a
-  rendu toutes les observations attendues : soit la source le dit, soit elle ne le dit pas, et le parcours peut
-  être tronqué par notre propre budget.
-- **Une erreur d'adaptateur est un résultat, pas une exception.** Une réponse malformée produit une issue
-  structurée — `failed` ou `partial` — et la tentative est consignée comme toute autre.
-- **Un secret ne circule que par référence.** Ce qui est consigné — journal, manifeste, empreinte — porte une
-  référence d'identifiant, jamais la valeur ; et un identifiant ne franchit pas une redirection qui change de
-  serveur, de port ou de schéma.
+**What it does not do:** it infers nothing. A source does not produce knowledge; it provides the material knowledge
+is derived from.
 
-**Deux axes, et une seule porte.** La conformité a son **propre** axe et son **propre** verdict ; le statut
-d'acquisition ne parle que de l'acquisition — la réponse est-elle arrivée, la page a-t-elle été conservée ?
-— et ne dit rien de la conformité de la réponse à la question posée. Une source qui renvoie les lignes
-d'une autre station **ne crée aucune observation** : la porte est `exploitable`, et c'est elle, et elle
-seule, qui décide de l'usage. Ce n'est pas un échec d'acquisition : la réponse est bien arrivée, bien
-conservée, bien empreintée — une réponse non conforme est une preuve, et elle est d'autant plus utile
-qu'on sait qu'elle ne convient pas. Un verdict sans motif n'est pas accepté.
+**The four rules acquisition must hold.** This is where error is easiest to commit and hardest to see: one can
+believe one obtained what was asked without having obtained it. Each rule is a verifiable invariant
+(`docs/CORE_CONTRACTS.md` §4.8 and §4.9):
 
-**Point d'attention :** les règles temporelles du protocole scellé de l'ancien projet électrique sont hors
-périmètre et ne sont pas reprises ici. TORNE a défini ses propres conventions temporelles, en s'appuyant sur la
-distinction canonique entre temps de validité, temps de publication, temps de réception, temps de
-disponibilité et temps d'usage (`docs/CONTRATS_FONDAMENTAUX.md` §3.1).
+- **Raw data is not semantic conformity.** An adapter verifies, on the rows actually received, that the requested
+  identifiers are the ones that come back; it does not assume the provider obeyed. **A filter echoed in the URL is
+  not evidence of filtering**: a provider can accept a filter, echo it in its links, and ignore it in the
+  population it returns.
+- **The predicate belongs to the source; the socle only orchestrates.** The socle knows neither station identifiers,
+  nor units, nor domain rules: it records the verdict, it does not decide it. **Transferability predicates**
+  (`docs/RESEARCH_AND_VALIDATION.md` §12) are not concerned here: they belong to the validation of claims, not to
+  acquisition.
+- **Exhaustiveness is qualified per source.** A successful HTTP response does not prove the provider returned every
+  expected observation: either the source says so or it does not, and the walk may be truncated by our own budget.
+- **An adapter error is a result, not an exception.** A malformed response produces a structured outcome —
+  `failed` or `partial` — and the attempt is recorded like any other.
+- **A secret only travels by reference.** What is recorded — journal, manifest, fingerprint — carries a reference,
+  never the value; and a credential does not cross a redirect that changes host, port or scheme.
 
-## 3. Frontière 2 — Modèles
+**Two axes, and one gate.** Conformity has its **own** axis and its **own** verdict; the acquisition status only
+speaks of acquisition — did the response arrive, was the page kept? — and says nothing about whether the response
+answers the question asked. A source that returns another station's rows **creates no observation**: the gate is
+`exploitable`, and it alone decides use. It is not an acquisition failure: the response did arrive, was kept and
+fingerprinted — a non-conforming response is evidence, and all the more useful for being known not to fit. A
+verdict without a reason is not accepted.
 
-**Question :** quelle question scientifique ou opérationnelle traitons-nous ?
+**Note:** the temporal rules of the sealed protocol of the former electricity project are out of scope and not
+taken over. TORNE defines its own temporal conventions, built on the canonical distinction between validity,
+publication, receipt, availability and use times (`docs/CORE_CONTRACTS.md` §3.1).
 
-**Responsabilité :** transformer des entrées en résultats selon une méthode et des hypothèses
-explicites. Un modèle possède une question précise, un domaine, des entrées, une sortie, des
-hypothèses et des limites déclarées.
+## 3. Boundary 2 — Models
 
-**Ce que cette frontière garantit :**
+**Question:** which scientific or operational question are we addressing?
 
-- un résultat porte toujours la mention de ce qu'il est : état reconstruit, estimation,
-  prévision, simulation, variable dérivée, contrainte, mécanisme ou conséquence économique ;
-- les hypothèses sont écrites, pas implicites ;
-- le domaine de validité est dit ;
-- l'incertitude est qualifiée selon ce qui est réellement connu.
+**Responsibility:** transform inputs into results according to an explicit method and explicit assumptions. A model
+has a precise question, a domain, inputs, an output, assumptions and declared limits.
 
-**Ce qu'elle ne fait pas :** elle ne transforme pas une estimation en observation, ni une
-simulation en fait. Un modèle n'est pas un moteur par le fait de contenir plusieurs étapes ; un
-moteur est un regroupement fonctionnel, et son existence doit être justifiée par une
-responsabilité distincte et une raison opérationnelle démontrée.
+**What this boundary guarantees:**
 
-## 4. Frontière 3 — Produits de connaissance
+- a result always states what it is: reconstructed state, estimate, forecast, simulation, derived variable,
+  constraint, mechanism or economic consequence;
+- assumptions are written, not implicit;
+- the domain of validity is stated;
+- uncertainty is qualified according to what is actually known.
 
-**Question :** quel résultat réutilisable publions-nous ?
+**What it does not do:** it does not turn an estimate into an observation, nor a simulation into a fact. A model is
+not an engine because it has several steps; an engine is a functional grouping, and its existence must be justified
+by a distinct responsibility and a demonstrated operational reason.
 
-**Responsabilité :** produire des résultats versionnés et documentés, destinés à être consommés
-par une application ou à être audités. Un produit est un état, une estimation, une prévision, une
-simulation, une contrainte, un mécanisme ou une conséquence économique.
+## 4. Boundary 3 — Knowledge products
 
-**Ce que cette frontière garantit :**
+**Question:** which reusable result do we publish?
 
-- une version, une date d'étatisation et une provenance ;
-- une incertitude et un domaine de validité ;
-- le lien vers les sources, transformations, modèles et paramètres qui l'ont produite ;
-- un statut de validité explicite : utilisable, dégradé, retiré, ou résultat inconclusif.
+**Responsibility:** produce versioned, documented results meant to be consumed by an application or audited. A
+product is a state, an estimate, a forecast, a simulation, a constraint, a mechanism or an economic consequence.
 
-**Ce qu'elle ne fait pas :** elle n'est pas un registre. Un produit n'est publié que s'il doit
-être réutilisé, audité ou consommé indépendamment ; les intermédiaires internes restent internes.
-Aucun index, catalogue ou registre n'est créé dans le dépôt tant qu'un besoin réel ne le
-justifie.
+**What this boundary guarantees:**
 
-## 5. Frontière 4 — Applications
+- a version, a timestamp and a provenance;
+- an uncertainty and a domain of validity;
+- the link to the sources, transformations, models and parameters that produced it;
+- an explicit validity status: usable, degraded, withdrawn, or inconclusive.
 
-**Question :** quelle décision ou quelle compréhension ce résultat permet-il ?
+**What it does not do:** it is not a registry. A product is published only if it must be reused, audited or
+consumed independently; internal intermediates stay internal. No index, catalogue or registry is created in the
+repository until a real need justifies it.
 
-**Responsabilité :** consommer des produits de connaissance pour produire une compréhension, une
-alerte, une cartographie, une analyse d'exposition ou une hypothèse de recherche. L'intelligence
-financière est une application parmi d'autres, et non la propriétaire du socle.
+## 5. Boundary 4 — Applications
 
-**Ce que cette frontière garantit :**
+**Question:** which decision or understanding does this result enable?
 
-- l'application ne modifie pas les produits qu'elle consomme ;
-- l'usage déclaré : quel résultat, pour quelle décision, sous quelles conditions ;
-- l'échec d'une application ne remet pas en cause les produits valides.
+**Responsibility:** consume knowledge products to produce an understanding, an alert, a map, an exposure analysis or
+a research hypothesis. Financial intelligence is one application among others, not the owner of the socle.
 
-**Ce qu'elle ne fait pas :** elle ne décide pas de la validité d'un modèle. Une application qui
-réussit ne valide pas rétroactivement les modèles amont.
+**What this boundary guarantees:**
 
-**Cette frontière n'est pas ouverte.** La branche « world-to-market » — transformer une intelligence du monde
-physique en décision financière — est **reportée** tant que le socle d'intelligence physique n'est pas
-suffisamment mature. Le report est délibéré, et il découle de la règle ci-dessus : une application financière
-qui réussit ne valide pas rétroactivement les modèles physiques amont, et elle n'a rien à dire de leur justesse.
-Elle s'ouvrira quand les produits de connaissance qu'elle consomme seront eux-mêmes validés.
+- the application does not modify the products it consumes;
+- the declared use: which result, for which decision, under which conditions;
+- the failure of an application does not call valid products into question.
 
-## 6. Préoccupations transversales
+**What it does not do:** it does not decide the validity of a model. An application that succeeds does not validate
+the upstream models retroactively.
 
-Les quatre préoccupations suivantes ne sont pas une cinquième frontière ni une couche : elles
-s'appliquent à chaque élément du schéma et ne recopient ni les données ni les fonctions.
+**This boundary is not open.** The "world-to-market" branch — turning physical-world intelligence into a financial
+decision — is **deferred** until the physical intelligence engine is mature. The deferral is deliberate and follows
+from the rule above: a financial application that succeeds does not validate the physical models upstream, and has
+nothing to say about their correctness. It will open when the knowledge products it consumes are themselves
+validated.
+
+## 6. Cross-cutting concerns
+
+The following four concerns are not a fifth boundary nor a layer: they apply to every element of the diagram and
+copy neither data nor functions.
 
 ### 6.1 Provenance
 
-Toute conclusion remonte aux sources, aux versions, aux transformations, aux modèles et aux
-paramètres qui l'ont produite. Un résultat sans provenance n'est pas publiable : il n'est ni
-reproductible, ni auditable, ni réutilisable.
+Every conclusion traces back to the sources, versions, transformations, models and parameters that produced it. A
+result without provenance is not publishable: it is neither reproducible, nor auditable, nor reusable.
 
-### 6.2 Temporalité
+### 6.2 Temporality
 
-Une donnée porte plusieurs instants distincts, non interchangeables : celui auquel le fait se
-rapporte, celui déclaré par l'émetteur, celui où la version était accessible, celui de sa
-réception, celui où elle devient utilisable, et celui de son utilisation. Une version révisée
-n'est pas présentée comme étant disponible à l'époque sans preuve. Une donnée absente porte la
-raison de son absence ; elle ne porte jamais zéro en guise d'absence.
+A datum carries several distinct, non-interchangeable instants: the one the fact refers to, the one the issuer
+declares, the one at which the version was accessible, the one it was received, the one it becomes usable, and the
+one it is used. A revised version is not presented as available at the time without evidence. Absent data carries
+the reason for its absence; it never carries zero in place of absence.
 
-### 6.3 Incertitude
+### 6.3 Uncertainty
 
-L'incertitude est décrite selon ce qui est connu : données, paramètres, structure du modèle,
-conditions initiales, approximation numérique, scénario. La forme est adaptée à ce qui est
-réellement connu : intervalle, distribution, scénarios, borne, sensibilité, ou conclusion
-qualitative. Une distribution sophistiquée n'est pas requise si les données ne la justifient pas.
-L'inconnu n'est jamais remplacé par zéro, et les sorties dépendantes ne sont pas comptées comme
-des confirmations indépendantes.
+Uncertainty is described according to what is known: data, parameters, model structure, initial conditions,
+numerical approximation, scenario. Its form fits what is actually known: interval, distribution, scenarios, bound,
+sensitivity, or qualitative conclusion. A sophisticated distribution is not required if the data do not justify it.
+The unknown is never replaced by zero, and dependent outputs are not counted as independent confirmations.
 
 ### 6.4 Validation
 
-La validation est choisie selon l'affirmation testée, jamais appliquée uniformément. Elle est
-décrite dans `docs/RESEARCH_AND_VALIDATION.md`. La validation physique, la validation
-économique et la validation financière restent distinctes, et un juge qui dépend d'un autre
-n'est pas une confirmation indépendante.
+Validation is chosen according to the claim tested, never applied uniformly. It is described in
+`docs/RESEARCH_AND_VALIDATION.md`. Physical, economic and financial validation stay distinct, and a judge that
+depends on another is not an independent confirmation.
 
-## 7. Frontières de responsabilité
+## 7. Responsibility boundaries
 
-| Frontière | Garantit | Ne fait pas |
+| Boundary | Guarantees | Does not |
 |---|---|---|
-| Sources | Version, date, qualité, provenance de l'information | Ne déduit rien, ne produit pas de connaissance |
-| Modèles | Méthode, hypothèses, limites, nature et incertitude du résultat | Ne transforme pas une estimation en observation |
-| Produits de connaissance | Version, provenance, domaine de validité, statut | N'est pas un registre, ne catalogue pas l'existant |
-| Applications | Usage déclaré et conditions de la décision | Ne valide pas les modèles amont |
+| Sources | Version, date, quality, provenance of the information | Infer anything, produce knowledge |
+| Models | Method, assumptions, limits, nature and uncertainty of the result | Turn an estimate into an observation |
+| Knowledge products | Version, provenance, domain of validity, status | Act as a registry or catalogue what exists |
+| Applications | Declared use and conditions of the decision | Validate upstream models |
 
-Deux règles transversales de non-duplication :
+Two cross-cutting non-duplication rules:
 
-1. Une couche transversale ne recopie ni les données ni les fonctions qu'elle gouverne.
-2. Un contrat partagé ne contient que les champs réellement communs ; le détail métier reste
-   dans le domaine.
+1. A cross-cutting layer copies neither the data nor the functions it governs.
+2. A shared contract contains only the fields that are really common; domain detail stays in the domain.
 
-## 8. Ce que cette architecture ne crée pas
+## 8. What this architecture does not create
 
-Elle ne propose aujourd'hui aucun moteur, aucun service, aucun registre, aucun bus, aucun
-graphe, aucun framework de plugins, aucun système de workflow, ni aucun répertoire de packages
-prévu pour les contenir. Les frontières décrites sont des responsabilités à remplir par le
-code, pas des répertoires à créer.
+It proposes today no engine, no service, no registry, no bus, no graph, no plugin framework, no workflow system,
+and no package directory meant to contain them. The boundaries are responsibilities for the code to fulfil, not
+directories to create.
 
-Deux règles complètent cette liste, et elles ont bite sur ce que le dépôt a accepté de contenir :
+Further rules, which bind what the repository has accepted to contain:
 
-- **Une responsabilité, une implémentation.** Le dépôt n'héberge jamais deux briques de la même responsabilité,
-  et toute brique reprise d'un dépôt d'origine est classée avant d'entrer — REUSE, ADAPT, REIMPLEMENT ou
-  REJECT — avec son origine déclarée en tête de module. La règle, ses conditions et ce qui a été repris sont
-  dans `docs/CONTRATS_FONDAMENTAUX.md` §5.
-- **Aucune dépendance runtime sans import réel.** Une dépendance qui n'est jamais importée n'est pas une
-  dépendance : elle ne figure ni dans `pyproject.toml`, ni dans le verrou.
-- **Aucun modèle générique remplacé par son état de l'art.** Un modèle n'entre pas parce qu'il a été qualifié
-  ailleurs, mais parce que les données disponibles et la grandeur à reconstruire le demandent.
-- **Aucune bibliothèque de modèles d'un domaine avant que ce domaine ait un premier problème.**
-- **Aucun framework bayésien global, aucun moteur de validation, de simulation ou de sélection** : ces
-  briques ne sont justifiées par aucun besoin concret démontré (`docs/PROGRAMME.md` §9).
+- **One responsibility, one implementation.** The repository never hosts two building blocks with the same
+  responsibility, and every block taken from a source repository is classified before it enters — REUSE, ADAPT,
+  REIMPLEMENT or REJECT — with its origin declared at the top of the module (`docs/CORE_CONTRACTS.md` §5). The one
+  known exception, two day-of-year climatologies, is recorded in `docs/PROGRAMME.md` §6.
+- **No runtime dependency without a real import.** A dependency that is never imported is not a dependency: it
+  appears neither in `pyproject.toml` nor in the lock file.
+- **No generic model replaced by its state of the art.** A model enters because the available data and the quantity
+  to reconstruct call for it, not because it was rated elsewhere.
+- **No model library for a domain before that domain has a first problem.**
+- **No global Bayesian framework, no validation, simulation or selection engine**: no demonstrated need justifies
+  them (`docs/PROGRAMME.md` §8).
 
-Une proposition d'architecture nouvelle doit répondre à quatre questions avant d'être acceptée :
+A new architecture proposal must answer four questions before it is accepted:
 
-1. Quel problème réel ou quelle preuve manquante justifie le changement ?
-2. Pourquoi les composants existants ne suffisent-ils pas ?
-3. Quel est le plus petit changement qui résout le problème ?
-4. Comment saura-t-on qu'il a amélioré le système ?
+1. Which real problem or missing evidence justifies the change?
+2. Why are the existing components not enough?
+3. What is the smallest change that solves the problem?
+4. How will we know it improved the system?
 
-Sans ces réponses, la proposition reste une hypothèse ou est rejetée.
+Without these answers, the proposal remains a hypothesis or is rejected.
