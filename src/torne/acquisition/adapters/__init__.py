@@ -16,8 +16,8 @@ Each adapter verifies the response it receives against what it asked
 - `copernicus` / `copernicus_stac`: Copernicus Data Space, the OData product
   catalogue and the STAC surface-observation catalogue;
 - `ghcnd`: NOAA GHCN-Daily station records;
-- `meteofrance`: Météo-France observation API, behind an OAuth2 token held by
-  reference (`torne.acquisition.credentials`).
+- `meteofrance`: Météo-France observation API and daily climatological API
+  (DPClim), behind an API key held by reference (`torne.acquisition.credentials`).
 """
 
 from __future__ import annotations
@@ -27,13 +27,14 @@ from .copernicus_stac import CopernicusStacAdapter
 from .ghcnd import GhcndDailyAdapter
 from .hubeau import HubeauObservationsAdapter
 from .hubeau_feed import HubeauFeedAdapter
-from .meteofrance import MeteoFranceAdapter
+from .meteofrance import DailyClimatologyAdapter, MeteoFranceAdapter
 from .usgs import UsgsInstantaneousValuesAdapter
 from .usgs_ogc import UsgsObservationNormalsAdapter, UsgsOgcItemsAdapter
 
 __all__ = [
     "CopernicusProductsAdapter",
     "CopernicusStacAdapter",
+    "DailyClimatologyAdapter",
     "GhcndDailyAdapter",
     "HubeauFeedAdapter",
     "HubeauObservationsAdapter",

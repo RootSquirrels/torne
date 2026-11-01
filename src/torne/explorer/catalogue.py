@@ -1,9 +1,16 @@
-"""The established facts the explorer shows, and nothing it could only promise.
+"""The established facts the explorer shows, each with the evidence behind it.
 
 Every fact here is already recorded elsewhere — in a mission record, in
-`docs/SOURCES.md`, or in the code — and is written once more only in typed form,
-so that the explorer reads a structure rather than prose. The tests check that
-each entry points at code that exists (`tests/test_explorer.py`).
+`docs/SOURCES.md`, or in the code. It is written once more only in typed form,
+and **only with references**: a fact, a status or a coverage period without a
+`Ref` cannot be built. `tests/test_explorer.py` resolves every reference against
+the repository (documents and scripts exist, `module:attribute` imports), so a
+renamed file or a moved constant breaks the build instead of leaving the
+explorer silently wrong.
+
+What the code already states is **not** restated here: model identities and
+versions are read from their modules, surface products from `torne.eo`, adapter
+source identifiers are checked against the adapters.
 
 ## The status vocabulary
 
@@ -19,14 +26,15 @@ closed, ordered vocabulary:
   inputs, validated against an independent reference
   (`docs/RESEARCH_AND_VALIDATION.md` §1.1). It requires a persisted record.
 
-No entry may claim `KNOWLEDGE` without naming the record that supports it, and
-no record is persisted today: the explorer shows that gap rather than hiding it.
+No entry may claim `KNOWLEDGE` without naming the persisted record that supports
+it, and no record is persisted today.
 
-## Asset kinds
+## Distinct concepts
 
-A station, a catchment and a raster coverage are three different objects. They
-are presented side by side, but never reduced to one abstraction: each kind
-keeps its own geometry (a point, an outline, a bounding box).
+Countries, domains, physical assets, observation coverage, models and results
+are kept apart. A station, a catchment and a raster coverage are three asset
+kinds with their own geometry; a model is an implementation with an identity
+read from code; a result is only "published" when a record is persisted.
 """
 
 from __future__ import annotations
@@ -38,11 +46,16 @@ __all__ = [
     "ASSETS",
     "DOMAINS",
     "MISSIONS",
+    "MODELS",
     "SOURCES",
     "Asset",
     "AssetKind",
     "Domain",
+    "Fact",
     "Mission",
+    "ModelEntry",
+    "Ref",
+    "RefKind",
     "SourceEntry",
     "Status",
 ]
@@ -69,6 +82,62 @@ class AssetKind(StrEnum):
     RASTER_COVERAGE = "raster_coverage"
 
 
+class RefKind(StrEnum):
+    """What a reference points at. Each kind is resolved by the tests."""
+
+    MISSION = "mission"
+    """A mission of this catalogue, by identifier."""
+    DOCUMENT = "document"
+    """A repository file, optionally followed by ` §section`."""
+    SCRIPT = "script"
+    """A repository script that produced the evidence."""
+    IMPLEMENTATION = "implementation"
+    """`package.module:attribute`, importable."""
+    RECORD = "record"
+    """A persisted knowledge record. None exists yet."""
+
+
+@dataclass(frozen=True, slots=True)
+class Ref:
+    kind: RefKind
+    target: str
+
+    @property
+    def path(self) -> str | None:
+        """The repository path a document or script reference points at."""
+        if self.kind in (RefKind.DOCUMENT, RefKind.SCRIPT):
+            return self.target.split(" §")[0]
+        return None
+
+
+def mission(target: str) -> Ref:
+    return Ref(RefKind.MISSION, target)
+
+
+def doc(target: str) -> Ref:
+    return Ref(RefKind.DOCUMENT, target)
+
+
+def script(target: str) -> Ref:
+    return Ref(RefKind.SCRIPT, target)
+
+
+def impl(target: str) -> Ref:
+    return Ref(RefKind.IMPLEMENTATION, target)
+
+
+@dataclass(frozen=True, slots=True)
+class Fact:
+    """A statement and the evidence it rests on."""
+
+    text: str
+    refs: tuple[Ref, ...]
+
+    def __post_init__(self) -> None:
+        if not self.refs:
+            raise ValueError(f"a fact needs at least one reference: {self.text!r}")
+
+
 @dataclass(frozen=True, slots=True)
 class Domain:
     """A modality of observation of the physical world."""
@@ -86,13 +155,12 @@ class SourceEntry:
     source_id: str
     title: str
     adapter: str
-    """The adapter class name, exported by `torne.acquisition.adapters`."""
+    """The adapter class, exported by `torne.acquisition.adapters`."""
     domain_id: str
     publication_class: str | None
     """`p`, `b`, `c`, `n`, or `None` when not established (contract §3.11)."""
-    access: str
-    limit: str
-    docs: str
+    facts: tuple[Fact, ...]
+    qualified_in: Ref
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,11 +178,38 @@ class Asset:
     country: str | None
     domain_id: str
     source_id: str
+    location_ref: Ref
     point: tuple[float, float] | None = None
     bbox: tuple[float, float, float, float] | None = None
     period: tuple[str, str] | None = None
     """First and last day observed (ISO dates, or years when only years are recorded)."""
-    facts: tuple[str, ...] = ()
+    period_ref: Ref | None = None
+    facts: tuple[Fact, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.period is not None and self.period_ref is None:
+            raise ValueError(f"{self.asset_id}: an observed period needs its reference")
+
+
+@dataclass(frozen=True, slots=True)
+class ModelEntry:
+    """A model or method implemented in the repository, and where it ran.
+
+    Its identity and version are **read from code** (`identity`, `version`), not
+    written here. `runs` says, with evidence, on which real data it was executed;
+    an empty `runs` means implemented and tested, never executed on real data.
+    """
+
+    key: str
+    title: str
+    kind: str
+    """`model` (produces a result with a nature) or `diagnostic` (tests a series)."""
+    domain_ids: tuple[str, ...]
+    identity: Ref
+    """`module:attribute` holding the identity (method name or model id)."""
+    version: Ref | None
+    """`module:attribute` holding the version, when the module exposes one."""
+    runs: tuple[Fact, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -124,23 +219,25 @@ class Mission:
     mission_id: str
     title: str
     status: Status
+    status_basis: tuple[Ref, ...]
     domain_ids: tuple[str, ...]
     countries: tuple[str, ...]
     """ISO 3166-1 alpha-2 codes. Empty for a region-wide mission."""
     region: str | None
     """A region-wide scope such as `europe`, when the mission is not national."""
     question: str
-    produced: str
-    not_established: str
-    records: tuple[str, ...] = ()
-    """Documents and scripts that hold the evidence."""
+    produced: tuple[Fact, ...]
+    not_established: tuple[Fact, ...]
     asset_ids: tuple[str, ...] = ()
     source_ids: tuple[str, ...] = ()
-    knowledge_record_ids: tuple[str, ...] = field(default=())
+    model_keys: tuple[str, ...] = ()
+    knowledge_records: tuple[Ref, ...] = field(default=())
     """Persisted knowledge records; required for `KNOWLEDGE`."""
 
     def __post_init__(self) -> None:
-        if self.status is Status.KNOWLEDGE and not self.knowledge_record_ids:
+        if not self.status_basis:
+            raise ValueError(f"{self.mission_id}: a status needs its supporting evidence")
+        if self.status is Status.KNOWLEDGE and not self.knowledge_records:
             raise ValueError(
                 f"{self.mission_id}: a KNOWLEDGE status requires a persisted knowledge record"
             )
@@ -148,11 +245,18 @@ class Mission:
             raise ValueError(f"{self.mission_id}: a mission has countries or a region")
 
 
+# ------------------------------------------------------------------ domains
+
 DOMAINS: tuple[Domain, ...] = (
     Domain("hydrology", "Hydrology", "torne.hydrology"),
     Domain("atmosphere", "Atmosphere", "torne.atmosphere"),
     Domain("earth_observation", "Earth observation", "torne.eo"),
 )
+
+# ------------------------------------------------------------------ sources
+
+_ATMO1 = doc("docs/ATMO-001.md")
+_ATMO2 = doc("docs/ATMO-002.md")
 
 SOURCES: tuple[SourceEntry, ...] = (
     SourceEntry(
@@ -161,9 +265,19 @@ SOURCES: tuple[SourceEntry, ...] = (
         adapter="HubeauFeedAdapter",
         domain_id="hydrology",
         publication_class=None,
-        access="open, no key",
-        limit="station and window filters are ignored; discharge is computed from stage",
-        docs="docs/SOURCES.md §1",
+        qualified_in=doc("docs/SOURCES.md §1"),
+        facts=(
+            Fact(
+                "Station and window filters are accepted and ignored; only the quantity "
+                "filter is applied.",
+                (doc("docs/SOURCES.md §1.1"),),
+            ),
+            Fact(
+                "Discharge rows are declared computed from stage: the two are not "
+                "independent evidence.",
+                (doc("docs/SOURCES.md §1.3"),),
+            ),
+        ),
     ),
     SourceEntry(
         source_id="usgs.ogc.daily",
@@ -171,9 +285,13 @@ SOURCES: tuple[SourceEntry, ...] = (
         adapter="UsgsOgcItemsAdapter",
         domain_id="hydrology",
         publication_class=None,
-        access="open; optional API key beyond 1 000 requests per hour",
-        limit="publication class not established",
-        docs="docs/SOURCES.md §2",
+        qualified_in=doc("docs/SOURCES.md §2"),
+        facts=(
+            Fact(
+                "Filters are applied; the end of the walk is declared by the absence of `next`.",
+                (doc("docs/SOURCES.md §2"),),
+            ),
+        ),
     ),
     SourceEntry(
         source_id="copernicus.dataspace.stac",
@@ -181,9 +299,17 @@ SOURCES: tuple[SourceEntry, ...] = (
         adapter="CopernicusStacAdapter",
         domain_id="earth_observation",
         publication_class="p",
-        access="catalogue open; assets require OIDC authentication",
-        limit="no unit published; pixel values not read",
-        docs="docs/SOURCES.md §3.2",
+        qualified_in=doc("docs/SOURCES.md §3.2"),
+        facts=(
+            Fact(
+                "Every item carries `published`, distinct from its validity time.",
+                (doc("docs/SOURCES.md §3.2"), impl("torne.eo.observations:catalogue_times")),
+            ),
+            Fact(
+                "Data assets require OIDC authentication: pixel values are not read.",
+                (doc("docs/SOURCES.md §3.2"),),
+            ),
+        ),
     ),
     SourceEntry(
         source_id="noaa.ghcnd.daily",
@@ -191,9 +317,38 @@ SOURCES: tuple[SourceEntry, ...] = (
         adapter="GhcndDailyAdapter",
         domain_id="atmosphere",
         publication_class="n",
-        access="open, no key",
-        limit="always returns the period of record; French values come from ECA&D",
-        docs="docs/SOURCES.md §4",
+        qualified_in=doc("docs/SOURCES.md §4"),
+        facts=(
+            Fact(
+                "No publication date per value: no observation is admissible point-in-time.",
+                (doc("docs/SOURCES.md §4"), _ATMO1),
+            ),
+            Fact(
+                "The access point always returns the period of record; French values are "
+                "redistributed from ECA&D.",
+                (doc("docs/SOURCES.md §4"),),
+            ),
+        ),
+    ),
+    SourceEntry(
+        source_id="meteofrance.climatology",
+        title="Météo-France climatological API (DPClim), daily series",
+        adapter="DailyClimatologyAdapter",
+        domain_id="atmosphere",
+        publication_class="n",
+        qualified_in=doc("docs/SOURCES.md §5"),
+        facts=(
+            Fact(
+                "Answers with an API key: an order, then a CSV file; Lille-Lesquin (59343001) "
+                "returned full months for 1950-01, 1990-01 and 2026-09.",
+                (doc("docs/ATMO-002.md §2"),),
+            ),
+            Fact(
+                "No publication metadata; units, flag meanings and the time basis of daily "
+                "aggregates are not established. The CSV is not parsed into observations.",
+                (doc("docs/ATMO-002.md §2"),),
+            ),
+        ),
     ),
     SourceEntry(
         source_id="meteofrance.observation",
@@ -201,11 +356,21 @@ SOURCES: tuple[SourceEntry, ...] = (
         adapter="MeteoFranceAdapter",
         domain_id="atmosphere",
         publication_class=None,
-        access="credential required",
-        limit="verified up to the authentication refusal only",
-        docs="docs/SOURCES.md §5",
+        qualified_in=doc("docs/SOURCES.md §5"),
+        facts=(
+            Fact(
+                "Answers 403 with the subscribed key: the observation product is not part "
+                "of the subscription.",
+                (doc("docs/ATMO-002.md §2"),),
+            ),
+        ),
     ),
 )
+
+# ------------------------------------------------------------------- assets
+
+_ESS = doc("docs/ATMO-002.md §3.1")
+_PROFILE = doc("docs/ATMO-001.md §4")
 
 ASSETS: tuple[Asset, ...] = (
     Asset(
@@ -215,12 +380,17 @@ ASSETS: tuple[Asset, ...] = (
         country="US",
         domain_id="hydrology",
         source_id="usgs.ogc.daily",
+        location_ref=script("tests/test_hydrology.py"),
         point=(-90.429, 38.9679722222222),
         period=("1933", "2026"),
+        period_ref=doc("docs/PROGRAMME.md §3"),
         facts=(
-            "33 481 daily discharge values acquired",
-            "day-of-year climatology reproduces the agency's published statistics "
-            "to a median 0.11 %",
+            Fact("33 481 daily discharge values acquired.", (doc("docs/PROGRAMME.md §3"),)),
+            Fact(
+                "The day-of-year climatology reproduces the agency's published statistics to a "
+                "median 0.11 %.",
+                (doc("docs/PROGRAMME.md §3"), script("experiments/mission_002_real_world.py")),
+            ),
         ),
     ),
     Asset(
@@ -230,9 +400,23 @@ ASSETS: tuple[Asset, ...] = (
         country="FR",
         domain_id="atmosphere",
         source_id="noaa.ghcnd.daily",
+        location_ref=doc("docs/SOURCES.md §4"),
         point=(3.0975, 50.5700),
         period=("1944-12-01", "2026-09-30"),
-        facts=("29 889 days, complete", "effective sample size 2 028 (6.8 %)"),
+        period_ref=_PROFILE,
+        facts=(
+            Fact("29 889 days, no gap.", (_PROFILE,)),
+            Fact(
+                "Effective sample size from about 500 to 3 900 depending on the lag cap; "
+                "ATMO-001's 2 028 is the value at a cap of 45.",
+                (_ESS,),
+            ),
+            Fact(
+                "Constant mean rejected under a dependence-preserving null; a step survives "
+                "detrending; maximum CUSUM on 1988-11-08. No attribution.",
+                (doc("docs/ATMO-002.md §3.4"),),
+            ),
+        ),
     ),
     Asset(
         asset_id="FRM00007156",
@@ -241,9 +425,22 @@ ASSETS: tuple[Asset, ...] = (
         country="FR",
         domain_id="atmosphere",
         source_id="noaa.ghcnd.daily",
+        location_ref=doc("docs/SOURCES.md §4"),
         point=(2.3378, 48.8217),
         period=("1983-12-18", "2026-10-25"),
-        facts=("62.4 % coverage, 2 638-day gap 1992-1999", "effective sample size 914 (11.3 %)"),
+        period_ref=_PROFILE,
+        facts=(
+            Fact("62.4 % coverage, with a 2 638-day gap from 1992 to 1999.", (_PROFILE,)),
+            Fact(
+                "Gap-aware effective sample size 736 (914 when gaps are collapsed).",
+                (_ESS,),
+            ),
+            Fact(
+                "No step once a linear trend is removed; the 2013 break date is not readable "
+                "on this incomplete series.",
+                (doc("docs/ATMO-002.md §3.4"),),
+            ),
+        ),
     ),
     Asset(
         asset_id="FR000007630",
@@ -252,9 +449,14 @@ ASSETS: tuple[Asset, ...] = (
         country="FR",
         domain_id="atmosphere",
         source_id="noaa.ghcnd.daily",
+        location_ref=doc("docs/SOURCES.md §4"),
         point=(1.3789, 43.6208),
         period=("1947-01-01", "2026-09-30"),
-        facts=("29 128 days, complete", "effective sample size 2 017 (6.9 %)"),
+        period_ref=_PROFILE,
+        facts=(
+            Fact("29 128 days, no gap.", (_PROFILE,)),
+            Fact("Effective sample size 2 016 at a lag cap of 45, 508 at 365.", (_ESS,)),
+        ),
     ),
     Asset(
         asset_id="FR000007650",
@@ -263,65 +465,253 @@ ASSETS: tuple[Asset, ...] = (
         country="FR",
         domain_id="atmosphere",
         source_id="noaa.ghcnd.daily",
+        location_ref=doc("docs/SOURCES.md §4"),
         point=(5.2158, 43.4378),
         period=("1921-01-01", "2026-09-30"),
-        facts=("97.9 % coverage, 793-day gap 1943-1945", "effective sample size 2 023 (5.3 %)"),
+        period_ref=_PROFILE,
+        facts=(
+            Fact("97.9 % coverage, with a 793-day gap from 1943 to 1945.", (_PROFILE,)),
+            Fact("Effective sample size 2 021 at a lag cap of 45, 513 at 365.", (_ESS,)),
+        ),
     ),
 )
+
+# ------------------------------------------------------------------- models
+
+MODELS: tuple[ModelEntry, ...] = (
+    ModelEntry(
+        key="hydrology-anomaly",
+        title="Day-of-year standardised discharge anomaly",
+        kind="model",
+        domain_ids=("hydrology",),
+        identity=impl("torne.hydrology.anomaly:METHOD"),
+        version=impl("torne.hydrology.anomaly:VERSION"),
+        runs=(
+            Fact(
+                "Executed in mission 002 on 33 481 Grafton values, with version 1.0.0; the "
+                "current version has not been re-run on real data.",
+                (script("experiments/mission_002_real_world.py"), mission("mission-002")),
+            ),
+        ),
+    ),
+    ModelEntry(
+        key="hydrology-rating",
+        title="Stage-discharge rating relation (log-log least squares)",
+        kind="model",
+        domain_ids=("hydrology",),
+        identity=impl("torne.hydrology.rating:MODEL_ID"),
+        version=None,
+    ),
+    ModelEntry(
+        key="atmosphere-anomaly",
+        title="Day-of-year temperature climatology and anomaly (civil day)",
+        kind="model",
+        domain_ids=("atmosphere",),
+        identity=impl("torne.atmosphere.anomaly:METHOD"),
+        version=impl("torne.atmosphere.anomaly:VERSION"),
+        runs=(
+            Fact(
+                "Executed on four GHCN-Daily stations against 1991-2020.",
+                (mission("ATMO-001"), mission("ATMO-002")),
+            ),
+        ),
+    ),
+    ModelEntry(
+        key="kalman-local-linear-trend",
+        title="State-space Kalman filter, local linear trend, RTS smoothing",
+        kind="model",
+        domain_ids=(),
+        identity=impl("torne.methods.kalman:LocalLinearTrendModel"),
+        version=None,
+        runs=(
+            Fact(
+                "Executed in mission 002: state reconstructed on the Grafton record, walk-forward "
+                "evaluation over the last three years. No performance is established.",
+                (script("experiments/mission_002_real_world.py"), mission("mission-002")),
+            ),
+        ),
+    ),
+    ModelEntry(
+        key="effective-sample-size",
+        title="Effective sample size and its sensitivity to the lag cap",
+        kind="diagnostic",
+        domain_ids=("atmosphere",),
+        identity=impl("torne.methods.dependence:effective_sample_size_diagnostics"),
+        version=None,
+        runs=(Fact("Applied to four GHCN-Daily stations.", (_ESS, mission("ATMO-002"))),),
+    ),
+    ModelEntry(
+        key="cusum-block-bootstrap",
+        title="CUSUM mean break with a block-bootstrap null",
+        kind="diagnostic",
+        domain_ids=("atmosphere",),
+        identity=impl("torne.methods.breaks:cusum_block_bootstrap"),
+        version=None,
+        runs=(
+            Fact(
+                "Applied to four GHCN-Daily stations, with and without a linear trend.",
+                (doc("docs/ATMO-002.md §3.4"), mission("ATMO-002")),
+            ),
+        ),
+    ),
+)
+
+# ----------------------------------------------------------------- missions
 
 MISSIONS: tuple[Mission, ...] = (
     Mission(
         mission_id="mission-002",
         title="Mississippi at Grafton — end-to-end pipeline on real data",
         status=Status.DEMONSTRATION,
+        status_basis=(script("experiments/mission_002_real_world.py"), doc("docs/PROGRAMME.md §3")),
         domain_ids=("hydrology",),
         countries=("US",),
         region=None,
         question="Can the pipeline acquire, read, evaluate and publish a lineage-verified product?",
-        produced="a standardised discharge anomaly index with a verified lineage",
-        not_established="new information: the anomaly re-expresses one source",
-        records=("experiments/mission_002_real_world.py",),
+        produced=(
+            Fact(
+                "A standardised discharge anomaly index with a verified lineage, produced "
+                "during the run.",
+                (script("experiments/mission_002_real_world.py"),),
+            ),
+        ),
+        not_established=(
+            Fact(
+                "New information: the anomaly re-expresses one source.",
+                (doc("docs/PROGRAMME.md §3"),),
+            ),
+            Fact(
+                "A persisted product: the record lived in memory and the evidence in a "
+                "temporary directory.",
+                (doc("docs/PROGRAMME.md §6"),),
+            ),
+        ),
         asset_ids=("USGS-05587450",),
         source_ids=("usgs.ogc.daily",),
+        model_keys=("hydrology-anomaly", "kalman-local-linear-trend"),
     ),
     Mission(
         mission_id="HYDRO-001",
         title="Hub'EAU — is published discharge a function of published stage?",
         status=Status.QUALIFICATION,
+        status_basis=(doc("docs/SOURCES.md §1"), doc("docs/PRE-REGISTRATION-HYDRO-001.md")),
         domain_ids=("hydrology",),
         countries=("FR",),
         region=None,
         question="Is the discharge Hub'EAU publishes a deterministic function of its stage?",
-        produced="the Hub'EAU access pattern that works, and the pre-registered protocol",
-        not_established="the protocol has not been run; no result is recorded",
-        records=("docs/PRE-REGISTRATION-HYDRO-001.md", "experiments/mission_003_hydro001.py"),
+        produced=(
+            Fact(
+                "The Hub'EAU access pattern that works (network feed, verified selection).",
+                (doc("docs/SOURCES.md §1.2"), impl("torne.hydrology.hubeau:select_station")),
+            ),
+            Fact(
+                "A pre-registered protocol and the script that implements it.",
+                (
+                    doc("docs/PRE-REGISTRATION-HYDRO-001.md"),
+                    script("experiments/mission_003_hydro001.py"),
+                ),
+            ),
+        ),
+        not_established=(
+            Fact(
+                "The protocol has not been run: no station selected, no result recorded.",
+                (doc("docs/PROGRAMME.md §5"),),
+            ),
+        ),
         source_ids=("hubeau.hydrometrie.observations_tr",),
+        model_keys=("hydrology-rating",),
     ),
     Mission(
         mission_id="ATMO-001",
         title="Atmosphere — source inventory and profile of four French stations",
         status=Status.EXPLORATION,
+        status_basis=(_ATMO1, script("experiments/atmo_001_premiere_acquisition.py")),
         domain_ids=("atmosphere",),
         countries=("FR",),
         region=None,
         question="Which atmospheric sources are reachable, and what do their series contain?",
-        produced="a source inventory and an exploratory profile (effective size, mean breaks)",
-        not_established="no knowledge product; homogeneity of the series not checked",
-        records=("docs/ATMO-001.md", "experiments/atmo_001_premiere_acquisition.py"),
+        produced=(
+            Fact("An accessibility inventory of 17 atmospheric access points.", (_ATMO1,)),
+            Fact("An exploratory profile of four GHCN-Daily stations.", (_PROFILE,)),
+        ),
+        not_established=(
+            Fact(
+                "Its effective sample sizes and CUSUM p-values: ATMO-002 showed them to depend "
+                "on estimator settings.",
+                (_ESS, doc("docs/ATMO-002.md §3.4")),
+            ),
+        ),
         asset_ids=("FRE00104040", "FRM00007156", "FR000007630", "FR000007650"),
         source_ids=("noaa.ghcnd.daily", "meteofrance.observation"),
+        model_keys=("atmosphere-anomaly",),
+    ),
+    Mission(
+        mission_id="ATMO-002",
+        title="Atmosphere — official data access and validation of ATMO-001",
+        status=Status.EXPLORATION,
+        status_basis=(_ATMO2, script("experiments/atmo_002_validation.py")),
+        domain_ids=("atmosphere",),
+        countries=("FR",),
+        region=None,
+        question="Do ATMO-001's estimates survive scrutiny, and is the official source reachable?",
+        produced=(
+            Fact(
+                "The effective sample size is a range set by the lag cap, not a single value.",
+                (_ESS,),
+            ),
+            Fact(
+                "ATMO-001's CUSUM p-values were artefacts of a short long-run-variance window; "
+                "a non-constant mean survives, a step mostly does not once detrended.",
+                (doc("docs/ATMO-002.md §3.4"),),
+            ),
+            Fact(
+                "Cold regimes are more persistent than warm ones at all four stations; "
+                "significant at two after correction.",
+                (doc("docs/ATMO-002.md §3.3"),),
+            ),
+            Fact(
+                "The Météo-France daily climatological route works with an API key.",
+                (doc("docs/ATMO-002.md §2"),),
+            ),
+        ),
+        not_established=(
+            Fact(
+                "A confirmatory result: the protocol was fixed after ATMO-001 had shown regime "
+                "counts, so this is a second exploratory pass.",
+                (doc("docs/ATMO-002.md §3"),),
+            ),
+            Fact(
+                "Any attribution of the mean change: station history and homogeneity are not "
+                "checked.",
+                (doc("docs/ATMO-002.md §7"),),
+            ),
+        ),
+        asset_ids=("FRE00104040", "FRM00007156", "FR000007630", "FR000007650"),
+        source_ids=("noaa.ghcnd.daily", "meteofrance.climatology", "meteofrance.observation"),
+        model_keys=("atmosphere-anomaly", "effective-sample-size", "cusum-block-bootstrap"),
     ),
     Mission(
         mission_id="EO-registry",
         title="Surface observation — registry of Copernicus surface products",
         status=Status.QUALIFICATION,
+        status_basis=(doc("docs/SOURCES.md §3.2"), impl("torne.eo.products:SURFACE_PRODUCTS")),
         domain_ids=("earth_observation",),
         countries=(),
         region="europe",
         question="Which surface products exist, what do they cover, and what do they depend on?",
-        produced="a registry of 13 products with coverage and declared meteorological dependence",
-        not_established="no pixel value read; dependence of derived products not audited",
-        records=("src/torne/eo/products.py", "docs/SOURCES.md §3.2"),
+        produced=(
+            Fact(
+                "A registry of surface products with coverage and declared meteorological "
+                "dependence.",
+                (impl("torne.eo.products:SURFACE_PRODUCTS"),),
+            ),
+        ),
+        not_established=(
+            Fact(
+                "Any pixel value, and the dependence of derived products (not audited).",
+                (doc("docs/SOURCES.md §3.2"),),
+            ),
+        ),
         source_ids=("copernicus.dataspace.stac",),
     ),
 )

@@ -46,6 +46,13 @@ def _min_rank(status: str | None) -> int:
     return int(_STATUS_NAMES[status])
 
 
+def _one(section: str, key: str, value: str) -> dict[str, Any]:
+    for item in _manifest()[section]:
+        if item[key] == value:
+            return item
+    raise HTTPException(status_code=404, detail=f"unknown {key} {value!r}")
+
+
 def create_app() -> FastAPI:
     """The explorer application: the API under `/api`, the map at `/`."""
     application = FastAPI(
@@ -73,13 +80,16 @@ def create_app() -> FastAPI:
     @application.get("/api/countries/{code}")
     def country(code: str) -> dict[str, Any]:
         summary = country_summary(code)
-        regions = _manifest()["regions"]
-        if not summary["asset_ids"] and not any(d["mission_ids"] for d in summary["domains"]):
-            summary["covered"] = False
-        else:
-            summary["covered"] = True
-        summary["regions"] = regions
+        summary["covered"] = any(d["mission_ids"] for d in summary["domains"])
+        summary["regions"] = _manifest()["regions"]
         return summary
+
+    @application.get("/api/countries/{code}/domains/{domain_id}")
+    def country_domain(code: str, domain_id: str) -> dict[str, Any]:
+        for domain in country_summary(code)["domains"]:
+            if domain["domain_id"] == domain_id:
+                return domain
+        raise HTTPException(status_code=404, detail=f"unknown domain {domain_id!r}")
 
     @application.get("/api/regions")
     def regions() -> list[dict[str, Any]]:
@@ -102,10 +112,7 @@ def create_app() -> FastAPI:
 
     @application.get("/api/missions/{mission_id}")
     def mission(mission_id: str) -> dict[str, Any]:
-        for m in _manifest()["missions"]:
-            if m["mission_id"] == mission_id:
-                return m
-        raise HTTPException(status_code=404, detail=f"unknown mission {mission_id!r}")
+        return _one("missions", "mission_id", mission_id)
 
     @application.get("/api/assets")
     def assets(
@@ -121,9 +128,38 @@ def create_app() -> FastAPI:
             and (kind is None or a["kind"] == kind.value)
         ]
 
+    @application.get("/api/assets/{asset_id}")
+    def asset(asset_id: str) -> dict[str, Any]:
+        return _one("assets", "asset_id", asset_id)
+
+    @application.get("/api/coverage")
+    def coverage(domain: str | None = None, country: str | None = None) -> list[dict[str, Any]]:
+        return [
+            c
+            for c in _manifest()["coverage"]
+            if (domain is None or c["domain_id"] == domain)
+            and (country is None or c["country"] in (None, country.upper()))
+        ]
+
     @application.get("/api/sources")
     def sources(domain: str | None = None) -> list[dict[str, Any]]:
         return [s for s in _manifest()["sources"] if domain is None or s["domain_id"] == domain]
+
+    @application.get("/api/sources/{source_id}")
+    def source(source_id: str) -> dict[str, Any]:
+        return _one("sources", "source_id", source_id)
+
+    @application.get("/api/models")
+    def models(executed: bool | None = None) -> list[dict[str, Any]]:
+        return [
+            m
+            for m in _manifest()["models"]
+            if executed is None or m["executed_on_real_data"] is executed
+        ]
+
+    @application.get("/api/models/{key}")
+    def model(key: str) -> dict[str, Any]:
+        return _one("models", "key", key)
 
     @application.get("/api/surface-products")
     def surface_products(dependence: str | None = None) -> list[dict[str, Any]]:
@@ -133,9 +169,9 @@ def create_app() -> FastAPI:
             if dependence is None or p["dependence"] == dependence
         ]
 
-    @application.get("/api/knowledge-products")
-    def knowledge_products() -> dict[str, Any]:
-        return _manifest()["knowledge_products"]
+    @application.get("/api/results")
+    def results() -> dict[str, Any]:
+        return _manifest()["results"]
 
     if STATIC_DIR.is_dir():
         application.mount("/", StaticFiles(directory=STATIC_DIR, html=True), name="static")

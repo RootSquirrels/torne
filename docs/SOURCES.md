@@ -21,7 +21,8 @@ and kept in history: `git show 0fc3ad9:docs/SOURCES.md`, Part II (`docs/PROGRAMM
 | Copernicus Data Space OData | satellite product catalogue | `copernicus` | not established | no licence per product |
 | Copernicus Data Space STAC | surface observation (soil moisture, vegetation, snow, water level) | `copernicus_stac` | **P** (each item carries `published`) | assets require OIDC authentication; no unit published |
 | GHCN-Daily (NOAA/NCEI) | station temperature and precipitation | `ghcnd` | **N** (no publication date per value) | always returns the period of record; French values are redistributed from ECA&D |
-| Météo-France observation API | station observations, France | `meteofrance` | not established | OAuth2 token required |
+| Météo-France DPClim | daily station climatology, France | `meteofrance` (`DailyClimatologyAdapter`) | **N** | API key; CSV not parsed (units, flags, time basis not established) |
+| Météo-France observation | station observations, France | `meteofrance` (`MeteoFranceAdapter`) | not established | 403: not in the subscription |
 
 ---
 
@@ -225,29 +226,35 @@ no licence is published per product.
 
 ---
 
-## 5. Météo-France observation API
+## 5. Météo-France
 
-| | |
-|---|---|
-| Source identifier | `meteofrance.observation` |
-| Access point | `public-api.meteofrance.fr/public/DPPaquetObs/…` |
-| Access | **OAuth2 token**, held by reference (`meteofrance.oauth2`, environment variable `METEOFRANCE_TOKEN` or a git-ignored `.env`) |
+Two products, one credential: an **API key** sent in the `apikey` header, held by reference (`meteofrance.apikey`,
+environment variable `METEOFRANCE_API_KEY` or a git-ignored `.env`). The value is read at send time and never logged.
+Details and reconnaissance: `docs/ATMO-002.md` §2.
 
-**Verified on 2026-11-01, without a token:** the three documented routes answer `401` (`"Missing Credentials"`; the
-climatology service answers `you must provide a token`); the former `DPPaquetV1/…` path answers `404`;
-`donnees.meteofrance.fr` does not resolve from the development machine. The adapter classifies the failure as
-`authentication` and interprets nothing; the journal records the credential reference, never a value.
+| | Daily climatology (DPClim) | Observation |
+|---|---|---|
+| Source identifier | `meteofrance.climatology` | `meteofrance.observation` |
+| Adapter | `DailyClimatologyAdapter` | `MeteoFranceAdapter` |
+| Access point | `public-api.meteofrance.fr/public/DPClim/v1` | `public-api.meteofrance.fr/public/DPPaquetObs/…` |
+| Status with the subscribed key | **answers** | **403**: not part of the subscription |
+| Publication class | **N**: no publication metadata | not established |
 
-The body of the refusal (where the source explains the expected header) is **not kept** as evidence: a `4xx` is an
-acquisition failure and the socle keeps status and content type only (deferred A9).
+**Verified on 2026-11-01 with the key (DPClim):** station metadata by department (`/liste-stations/quotidienne`, 35
+stations for department 59); daily data in two steps — an order (`202` with an order id), then the file (`201`,
+`text/csv`, `;`-separated, 136 columns, **decimal comma**). Lille-Lesquin (`59343001`) returned full months for
+1950-01, 1990-01 and 2026-09. Per-value quality columns (`Q*`) carry `1` and `9`; their meaning, the units and the time
+basis of daily aggregates are **not established**, so the CSV is not parsed into observations. No normals were found
+through this API.
 
-**Not verified:** the data itself, the token lifetime, and whether a refresh token is needed.
+**Without a key (ATMO-001):** every route answers `401`. The former `DPPaquetV1/…` path answers `404`;
+`donnees.meteofrance.fr` does not resolve from the development machine. The body of a refusal is not kept as evidence
+(deferred A9).
 
 Open Météo-France datasets on `data.gouv.fr` (digitised daily observation records and monthly climatological tables)
 are **scanned images and an archive inventory**, not structured data, and are not used.
 
 ---
-
 ## 6. What all sources share
 
 What the socle guarantees, whatever the source:

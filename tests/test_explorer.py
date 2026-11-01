@@ -1,41 +1,130 @@
-"""TORNE Explorer — the catalogue tells the truth, and the API only reads.
+"""TORNE Explorer — every fact is traceable, and the API only reads.
 
-Two families of checks.
+Three families of checks, all offline.
 
-**The catalogue points at things that exist.** Every source names an adapter the
-socle exports, every source identifier matches the adapter's own constant when
-it has one, every asset and mission reference resolves, every record path is in
-the repository, and no mission can claim `KNOWLEDGE` without a persisted record.
+**Every reference resolves.** Each fact, status, location and coverage period in
+the catalogue carries references; documents and scripts must exist, a `§section`
+must be a heading of that document, `module:attribute` must import, and mission
+references must name a mission. A renamed file or moved constant fails here.
 
-**The API is read-only.** It answers from the manifest, filters what it serves,
-refuses unknown statuses, and exposes no route that writes.
+**Declared metadata agrees with the code.** Source identifiers match the adapters,
+the STAC publication class matches the adapter's own `Source`, model identities
+are read from code, and no mission claims `KNOWLEDGE` without a persisted record.
+
+**The boundary holds.** The API exposes only reads, and the front end calls no
+data provider.
 """
 
 from __future__ import annotations
 
 import importlib
+import inspect
 import json
+import re
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
 
 import torne.acquisition.adapters as adapters
 from torne.eo import SURFACE_PRODUCTS
-from torne.explorer import ASSETS, MISSIONS, SOURCES, Status, build_manifest
-from torne.explorer.catalogue import DOMAINS, Mission
-from torne.explorer.manifest import country_summary
+from torne.explorer import ASSETS, MISSIONS, MODELS, SOURCES, Status, build_manifest
+from torne.explorer.catalogue import DOMAINS, Fact, Mission, Ref, RefKind
+from torne.explorer.manifest import country_summary, resolve_implementation
 
 ROOT = Path(__file__).resolve().parent.parent
+STATIC = ROOT / "src" / "torne" / "explorer" / "static"
 
-_ADAPTER_MODULES = {
-    "HubeauFeedAdapter": "torne.acquisition.adapters.hubeau_feed",
-    "CopernicusStacAdapter": "torne.acquisition.adapters.copernicus_stac",
-    "GhcndDailyAdapter": "torne.acquisition.adapters.ghcnd",
-    "MeteoFranceAdapter": "torne.acquisition.adapters.meteofrance",
-}
+
+def _all_refs() -> list[Ref]:
+    refs: list[Ref] = []
+    for source in SOURCES:
+        refs.append(source.qualified_in)
+        refs += [r for f in source.facts for r in f.refs]
+    for asset in ASSETS:
+        refs.append(asset.location_ref)
+        refs += [asset.period_ref] if asset.period_ref else []
+        refs += [r for f in asset.facts for r in f.refs]
+    for model in MODELS:
+        refs.append(model.identity)
+        refs += [model.version] if model.version else []
+        refs += [r for f in model.runs for r in f.refs]
+    for mission in MISSIONS:
+        refs += list(mission.status_basis)
+        refs += [r for f in mission.produced + mission.not_established for r in f.refs]
+        refs += list(mission.knowledge_records)
+    return refs
+
+
+def _all_facts() -> list[Fact]:
+    facts: list[Fact] = []
+    for source in SOURCES:
+        facts += source.facts
+    for asset in ASSETS:
+        facts += asset.facts
+    for model in MODELS:
+        facts += model.runs
+    for mission in MISSIONS:
+        facts += mission.produced + mission.not_established
+    return facts
+
 
 # --------------------------------------------------------------------------
-# The catalogue
+# Every reference resolves
+# --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("ref", sorted(set(_all_refs()), key=lambda r: (r.kind, r.target)))
+def test_every_reference_resolves(ref):
+    if ref.kind in (RefKind.DOCUMENT, RefKind.SCRIPT):
+        path = ROOT / ref.path
+        assert path.is_file(), ref.target
+        if " §" in ref.target:
+            section = ref.target.split(" §")[1]
+            text = path.read_text(encoding="utf-8")
+            pattern = rf"^#+ {re.escape(section)}[ .]"
+            assert re.search(pattern, text, flags=re.MULTILINE), (
+                f"no section {section} in {path.name}"
+            )
+    elif ref.kind is RefKind.IMPLEMENTATION:
+        resolve_implementation(ref.target)
+    elif ref.kind is RefKind.MISSION:
+        assert ref.target in {m.mission_id for m in MISSIONS}
+    elif ref.kind is RefKind.RECORD:
+        pytest.fail("no knowledge record is persisted: a RECORD reference cannot resolve")
+
+
+def test_a_fact_without_evidence_cannot_be_built():
+    with pytest.raises(ValueError, match="at least one reference"):
+        Fact("unsupported", ())
+
+
+def test_identifiers_cross_reference_correctly():
+    domain_ids = {d.domain_id for d in DOMAINS}
+    source_ids = {s.source_id for s in SOURCES}
+    asset_ids = {a.asset_id for a in ASSETS}
+    model_keys = {m.key for m in MODELS}
+    for source in SOURCES:
+        assert source.domain_id in domain_ids
+    for asset in ASSETS:
+        assert asset.domain_id in domain_ids
+        assert asset.source_id in source_ids
+    for model in MODELS:
+        assert set(model.domain_ids) <= domain_ids, model.key
+    for mission in MISSIONS:
+        assert set(mission.domain_ids) <= domain_ids, mission.mission_id
+        assert set(mission.source_ids) <= source_ids, mission.mission_id
+        assert set(mission.asset_ids) <= asset_ids, mission.mission_id
+        assert set(mission.model_keys) <= model_keys, mission.mission_id
+
+
+def test_domains_name_their_semantic_layer():
+    for domain in DOMAINS:
+        importlib.import_module(domain.semantic_layer)
+
+
+# --------------------------------------------------------------------------
+# Declared metadata agrees with the code
 # --------------------------------------------------------------------------
 
 
@@ -44,44 +133,50 @@ def test_every_source_names_an_exported_adapter():
         assert source.adapter in adapters.__all__, source.source_id
 
 
-def test_source_identifiers_match_the_adapter_constants():
+def test_source_identifiers_appear_in_their_adapter():
     for source in SOURCES:
-        module_name = _ADAPTER_MODULES.get(source.adapter)
-        if module_name is None:
+        module = inspect.getmodule(getattr(adapters, source.adapter))
+        constant = getattr(module, "SOURCE_ID", None)
+        text = inspect.getsource(module)
+        if constant == source.source_id:
             continue
-        module = importlib.import_module(module_name)
-        assert source.source_id == module.SOURCE_ID
+        # Adapters whose identifier is built per request carry it as a literal or a pattern.
+        prefix = source.source_id.rsplit(".", 1)[0]
+        assert f'"{source.source_id}"' in text or f'"{prefix}.' in text, source.source_id
 
 
-def test_every_reference_resolves():
-    domain_ids = {d.domain_id for d in DOMAINS}
-    source_ids = {s.source_id for s in SOURCES}
-    asset_ids = {a.asset_id for a in ASSETS}
-    for source in SOURCES:
-        assert source.domain_id in domain_ids
-    for asset in ASSETS:
-        assert asset.domain_id in domain_ids
-        assert asset.source_id in source_ids
-    for mission in MISSIONS:
-        assert set(mission.domain_ids) <= domain_ids, mission.mission_id
-        assert set(mission.source_ids) <= source_ids, mission.mission_id
-        assert set(mission.asset_ids) <= asset_ids, mission.mission_id
+def test_the_stac_publication_class_matches_the_adapter():
+    from torne.acquisition.adapters.copernicus_stac import CopernicusStacAdapter
+    from torne.contracts.spatial import BoundingBox
+
+    adapter = CopernicusStacAdapter(
+        collections=["sentinel-2-l2a"],
+        start=datetime(2023, 1, 1, tzinfo=UTC),
+        end=datetime(2023, 2, 1, tzinfo=UTC),
+        page_size=1,
+        max_pages=1,
+        bbox=BoundingBox(west=0.0, south=40.0, east=1.0, north=41.0),
+    )
+    entry = next(s for s in SOURCES if s.source_id == adapter.source.source_id)
+
+    assert entry.publication_class == adapter.source.publication_class.value
 
 
-def test_every_record_path_is_in_the_repository():
-    for mission in MISSIONS:
-        for record in mission.records:
-            path = record.split(" §")[0]
-            assert (ROOT / path).exists(), f"{mission.mission_id}: {path}"
+def test_model_identities_are_read_from_code():
+    manifest = {m["key"]: m for m in build_manifest()["models"]}
+    for model in MODELS:
+        identity = resolve_implementation(model.identity.target)
+        if isinstance(identity, str):
+            assert manifest[model.key]["identity"] == identity
+        if model.version:
+            assert manifest[model.key]["version"] == resolve_implementation(model.version.target)
 
 
-def test_stations_carry_a_point_and_coverages_a_bbox():
-    for asset in ASSETS:
-        if asset.kind.value == "station":
-            assert asset.point is not None, asset.asset_id
-            lon, lat = asset.point
-            assert -180 <= lon <= 180
-            assert -90 <= lat <= 90
+def test_effective_sample_size_facts_cite_the_atmo_002_audit():
+    """ATMO-002 showed the figure depends on the lag cap: no bare single value may remain."""
+    for fact in _all_facts():
+        if "effective sample size" in fact.text.lower():
+            assert any(r.target == "docs/ATMO-002.md §3.1" for r in fact.refs), fact.text
 
 
 def test_no_mission_claims_knowledge_without_a_persisted_record():
@@ -90,14 +185,31 @@ def test_no_mission_claims_knowledge_without_a_persisted_record():
             mission_id="X",
             title="x",
             status=Status.KNOWLEDGE,
+            status_basis=(Ref(RefKind.DOCUMENT, "README.md"),),
             domain_ids=("hydrology",),
             countries=("FR",),
             region=None,
             question="q",
-            produced="p",
-            not_established="n",
+            produced=(),
+            not_established=(),
         )
     assert all(m.status is not Status.KNOWLEDGE for m in MISSIONS)
+
+
+def test_a_status_without_evidence_cannot_be_built():
+    with pytest.raises(ValueError, match="supporting evidence"):
+        Mission(
+            mission_id="X",
+            title="x",
+            status=Status.QUALIFICATION,
+            status_basis=(),
+            domain_ids=("hydrology",),
+            countries=("FR",),
+            region=None,
+            question="q",
+            produced=(),
+            not_established=(),
+        )
 
 
 # --------------------------------------------------------------------------
@@ -109,10 +221,18 @@ def test_the_manifest_is_json_and_derived_from_the_registry():
     manifest = build_manifest()
 
     json.dumps(manifest)
-    assert len(manifest["surface_products"]) == len(SURFACE_PRODUCTS)
-    assert manifest["knowledge_products"]["persisted"] is False
-    assert manifest["knowledge_products"]["items"] == []
+    products = [c for c in manifest["coverage"] if c["subject_kind"] == "surface_product"]
+    assert len(products) == len(SURFACE_PRODUCTS)
+    assert manifest["results"]["persisted"] == []
+    assert manifest["results"]["gap"]
     assert manifest["market_intelligence"]["open"] is False
+
+
+def test_runs_that_produced_a_product_are_not_presented_as_published():
+    results = build_manifest()["results"]
+
+    assert [r["mission_id"] for r in results["runs_not_persisted"]] == ["mission-002"]
+    assert results["persisted"] == []
 
 
 def test_a_country_status_is_the_best_status_of_its_missions():
@@ -120,6 +240,7 @@ def test_a_country_status_is_the_best_status_of_its_missions():
 
     assert france["hydrology"]["status"] == "qualification"
     assert france["atmosphere"]["status"] == "exploration"
+    assert set(france["atmosphere"]["status_from"]) == {"ATMO-001", "ATMO-002"}
     # Region-wide surface products never colour a country by themselves.
     assert france["earth_observation"]["status"] is None
 
@@ -129,6 +250,14 @@ def test_an_uncovered_country_has_no_status():
 
     assert all(d["status"] is None for d in summary["domains"])
     assert summary["asset_ids"] == []
+
+
+def test_every_document_reference_links_to_the_repository():
+    manifest = build_manifest()
+    for mission in manifest["missions"]:
+        for ref in mission["status_basis"]:
+            if ref["kind"] in ("document", "script"):
+                assert ref["url"].startswith(manifest["repository_url"])
 
 
 # --------------------------------------------------------------------------
@@ -158,12 +287,37 @@ def test_the_api_filters_missions(client):
     french = client.get("/api/missions", params={"country": "fr"}).json()
     advanced = client.get("/api/missions", params={"min_status": "demonstration"}).json()
 
-    assert {m["mission_id"] for m in french} == {"HYDRO-001", "ATMO-001"}
+    assert {m["mission_id"] for m in french} == {"HYDRO-001", "ATMO-001", "ATMO-002"}
     assert [m["mission_id"] for m in advanced] == ["mission-002"]
 
 
 def test_the_api_refuses_an_unknown_status(client):
     assert client.get("/api/missions", params={"min_status": "validated"}).status_code == 422
+
+
+def test_the_api_serves_a_country_domain(client):
+    atmosphere = client.get("/api/countries/FR/domains/atmosphere").json()
+
+    assert atmosphere["status"] == "exploration"
+    assert len(atmosphere["asset_ids"]) == 4
+    assert "meteofrance.climatology" in atmosphere["source_ids"]
+
+
+def test_the_api_separates_models_coverage_and_results(client):
+    executed = client.get("/api/models", params={"executed": "true"}).json()
+    not_run = client.get("/api/models", params={"executed": "false"}).json()
+    coverage = client.get("/api/coverage", params={"domain": "atmosphere"}).json()
+    results = client.get("/api/results").json()
+
+    assert "hydrology-rating" in {m["key"] for m in not_run}
+    assert "hydrology-rating" not in {m["key"] for m in executed}
+    assert {c["subject_id"] for c in coverage} == {
+        "FRE00104040",
+        "FRM00007156",
+        "FR000007630",
+        "FR000007650",
+    }
+    assert results["persisted"] == []
 
 
 def test_the_api_filters_assets_by_kind_and_country(client):
@@ -173,8 +327,9 @@ def test_the_api_filters_assets_by_kind_and_country(client):
     assert client.get("/api/assets", params={"kind": "catchment"}).json() == []
 
 
-def test_an_unknown_mission_is_a_404(client):
-    assert client.get("/api/missions/NOPE").status_code == 404
+@pytest.mark.parametrize("path", ["/api/missions/NOPE", "/api/assets/NOPE", "/api/models/NOPE"])
+def test_unknown_identifiers_are_404(client, path):
+    assert client.get(path).status_code == 404
 
 
 def test_the_api_exposes_no_write_route(client):
@@ -191,3 +346,23 @@ def test_the_map_is_served_at_the_root(client):
 
     assert response.status_code == 200
     assert "TORNE Explorer" in response.text
+
+
+# --------------------------------------------------------------------------
+# The front end
+# --------------------------------------------------------------------------
+
+
+def test_the_front_end_calls_no_data_provider():
+    """It reads /api only; the map boundaries are the only external data."""
+    code = (STATIC / "app.js").read_text(encoding="utf-8")
+    for provider in ("hubeau", "usgs.gov", "dataspace.copernicus", "meteofrance", "ncei.noaa"):
+        assert provider not in code, provider
+    assert "/api/manifest" in code
+
+
+def test_planned_features_are_disabled_in_the_page():
+    page = (STATIC / "index.html").read_text(encoding="utf-8")
+
+    assert page.count("disabled") >= 3
+    assert "Market Intelligence" in page

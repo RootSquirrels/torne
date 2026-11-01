@@ -19,7 +19,7 @@ It is made of three parts:
   requires the optional `explorer` extra.
 """
 
-from .catalogue import ASSETS, MISSIONS, SOURCES, Status
+from .catalogue import ASSETS, MISSIONS, MODELS, SOURCES, Status
 from .manifest import build_manifest
 
-__all__ = ["ASSETS", "MISSIONS", "SOURCES", "Status", "build_manifest"]
+__all__ = ["ASSETS", "MISSIONS", "MODELS", "SOURCES", "Status", "build_manifest"]
