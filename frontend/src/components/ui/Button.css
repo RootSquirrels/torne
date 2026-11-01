@@ -74,7 +74,7 @@
 
 .torne-button--secondary {
   background: var(--surface-raised);
-  border-color: var(--border-default);
+  border-color: var(--border-control);
   color: var(--content-primary);
 }
 

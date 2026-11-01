@@ -24,7 +24,9 @@ function Harness({ onChange }: { onChange: (id: string) => void }) {
         onChange(id);
       }}
       ariaLabel="Mission sections"
-    />
+    >
+      <p>The content of {activeId}.</p>
+    </Tabs>
   );
 }
 
@@ -96,5 +98,25 @@ describe('Tabs', () => {
 
     await user.click(screen.getByRole('tab', { name: 'Archive' }));
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('opens a panel that the tab points at, and names it after that tab', () => {
+    render(<Harness onChange={() => undefined} />);
+
+    const overview = screen.getByRole('tab', { name: 'Overview' });
+    const controls = overview.getAttribute('aria-controls');
+    expect(controls).not.toBeNull();
+
+    const panel = document.getElementById(controls as string);
+    expect(panel).not.toBeNull();
+    expect(panel).toHaveAttribute('role', 'tabpanel');
+    expect(panel).toHaveAttribute('aria-labelledby', overview.id);
+    expect(panel).toHaveTextContent('The content of overview.');
+  });
+
+  it('moves the panel with the selection', () => {
+    render(<Harness onChange={() => undefined} />);
+
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('The content of overview.');
   });
 });

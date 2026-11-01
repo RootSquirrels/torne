@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="light">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,12 +9,34 @@
     />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>TORNE Explorer</title>
-    <script type="module" crossorigin src="/assets/index-C6GiCaB_.js"></script>
+    <script>
+      /*
+       * The skin is decided before the first paint.
+       *
+       * The tokens follow the operating system's preference by default, and an
+       * explicit choice — light or dark — is stored under this key. An
+       * instrument does not flash the wrong skin on the way in, so the choice
+       * is applied here, in the head, before anything is drawn. The key is
+       * `torne.theme`, the one `ThemeProvider` writes; `tests/unit/app/theme.test.ts`
+       * holds the two together.
+       */
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('torne.theme');
+          if (stored === 'light' || stored === 'dark') {
+            document.documentElement.setAttribute('data-theme', stored);
+          }
+        } catch (error) {
+          /* A browser that refuses local storage still gets the system skin. */
+        }
+      })();
+    </script>
+    <script type="module" crossorigin src="/assets/index-ByFCSzAO.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/rolldown-runtime-XKyaHtl9.js">
     <link rel="modulepreload" crossorigin href="/assets/react-Bt6j6VEg.js">
     <link rel="modulepreload" crossorigin href="/assets/leaflet-Cpimj6Hl.js">
     <link rel="stylesheet" crossorigin href="/assets/leaflet-Ds4Udj8m.css">
-    <link rel="stylesheet" crossorigin href="/assets/index-C_oIlX9m.css">
+    <link rel="stylesheet" crossorigin href="/assets/index-BEZOgn2E.css">
   </head>
   <body>
     <div id="root"></div>

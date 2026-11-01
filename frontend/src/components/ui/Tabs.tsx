@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 
 import './Tabs.css';
 
@@ -21,25 +21,25 @@ export interface TabsProps {
   onChange: (id: string) => void;
   /** The accessible name of the tab list. */
   ariaLabel: string;
+  /** The content of the active tab. */
+  children?: ReactNode;
 }
 
 /**
- * The tab strip.
+ * The tab strip, and the panel it opens.
  *
  * This implements the ARIA tabs pattern: a `tablist` of `tab`s with a roving
  * `tabindex`, so the strip is a single stop in the tab order. Arrow keys move
  * between tabs, `Home` and `End` jump to the first and the last, and the
  * selection follows the focus (automatic activation).
  *
- * The tab *panels* belong to the caller: this component only renders the
- * strip. It publishes the identifiers a panel needs — the tab carries
- * `id="torne-tab-<id>"` and `aria-controls="torne-tabpanel-<id>"` — so a
- * caller renders its panel as
- * `<div role="tabpanel" id="torne-tabpanel-<id>" aria-labelledby="torne-tab-<id>">`.
- *
- * States: normal, hover, focus, selected, disabled.
+ * The strip owns the panel as well. A tab publishes `aria-controls`, and a
+ * reference to a panel that does not exist is a broken promise — so the
+ * component that makes the promise is the one that keeps it: the panel is
+ * rendered here, with the id the tab points at, and with the tab as its
+ * label. A caller cannot forget it, because there is nothing to forget.
  */
-export function Tabs({ tabs, activeId, onChange, ariaLabel }: TabsProps) {
+export function Tabs({ tabs, activeId, onChange, ariaLabel, children }: TabsProps) {
   const tabRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const focusTab = (id: string) => {
@@ -136,6 +136,20 @@ export function Tabs({ tabs, activeId, onChange, ariaLabel }: TabsProps) {
             </button>
           );
         })}
+      </div>
+
+      {/*
+       * The panel the active tab points at. It is focusable, so the keyboard
+       * reaches the content without going through the strip a second time.
+       */}
+      <div
+        className="torne-tabs__panel"
+        role="tabpanel"
+        id={`torne-tabpanel-${activeId}`}
+        aria-labelledby={`torne-tab-${activeId}`}
+        tabIndex={0}
+      >
+        {children}
       </div>
     </div>
   );

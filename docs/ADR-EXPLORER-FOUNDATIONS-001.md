@@ -150,6 +150,107 @@ because the reader is looking at it. A station carries no status, so a station t
 This is the same rule the rest of the system obeys, applied to the drawing code rather than
 described in a document.
 
+### 11. The request state is shared, and the contract is derived
+
+Two decisions, one cause: a frontend that copies things drifts.
+
+**The request state is shared.** The Explorer reads the catalogue from the map, the entity list,
+the filter bar and the reading panel. Each of them fetching it for itself means the reader
+watches the same catalogue arrive four times, and that one panel's failure blanks only that
+panel. So the resource is fetched once and held: one request per resource, a freshness window
+rather than a promise, and **a failure that does not take the value away** — a catalogue that
+cannot be re-read is still a catalogue that was read, and the reader is told that what is on
+screen is the last version that was.
+
+A request nobody waits for any more is cancelled. The alternative — a general-purpose cache
+with eviction, quotas and invalidation graphs — was not written, because none of it is needed
+for a catalogue that is read once and changes rarely.
+
+**The contract is derived.** The frontend's types were a hand-written mirror of the Pydantic
+schemas, and a mirror drifts. The OpenAPI document is now committed, written by the application
+itself, and the TypeScript is generated from it: each type in the frontend is a *name* for a
+schema in the generated file, not a copy of it. Two gates hold it: a test refuses a committed
+document the application no longer builds, and a check refuses types the document no longer
+generates.
+
+Two places keep a human hand, and both are written down where they are used: a field that is
+not known is `null` **and is always there**, because Pydantic's `Optional[str] = None` is not
+required in the document while the response always carries it; and a position is a pair, because
+the document says so and the generator does not read it.
+
+### 12. The catalogue is cached by the browser, and it may be
+
+The catalogue is a public document that changes when the repository changes — rarely, and never
+in the middle of a reading. The API therefore answers it with a strong `ETag` and a
+`Cache-Control`, and honours `If-None-Match` with a `304` and no body. The browser does the
+work: a second visit to the explorer costs a conditional request and no payload.
+
+The SPA is cached the other way round, and deliberately: the HTML names the hashed assets, so a
+stale HTML would name assets that no longer exist. The HTML is revalidated; the assets, whose
+names carry a content hash, are immutable for a year.
+
+`/health` and every failure answer `no-store`. A failure is never cached: caching it would
+turn a moment's outage into an afternoon of it.
+
+### 13. The colours are gated by what they have to survive
+
+A palette is not a list of preferences. Every pair the system puts on screen answers to a
+different question, so the gate asks three different questions.
+
+**Text on a ground** is held at 4.5:1 (WCAG 2.2 SC 1.4.3). **A line, a border, or a mark that
+identifies a control or a state** is held at 3:1 (SC 1.4.11). **A data mark** — a series, an axis
+— is held at 2:1: the standard exempts the graphics that carry information, and what is left is a
+legibility floor, the ratio below which a mark stops being visible at reading distance.
+
+The last one is a decision, and it was made against a measurement. The categorical register was
+three of eight hues short of 3:1 on paper. Darkening the amber `#E69F00` until it reached the
+ratio is possible, and it was tried: it drops the register's worst separation under deuteranopia
+from 11.1 to 4.1, because a darker amber is a darker vermillion to a dichromatic reader. The
+published palette is worth more than the ratio, and the series is carried by a symbol, a dash
+pattern and a mark in the legend besides.
+
+The borders were not darkened either; they were **split**. `--border-default` separates things
+that are already told apart by something else and stays a hairline. `--border-control` is the
+resting edge of a control and `--border-strong` its active edge, and the two are gated at 3:1 and
+4.5:1 against the surfaces they sit on. A component reads one token for each of those roles and
+never decides for itself.
+
+The gate is a test on the tokens, not on the pages: `tests/test_frontend_contrast.py` reads
+`tokens.css`, and a pair that fails there would fail in the browser on every page, in every run.
+
+### 14. The series register is measured, not chosen
+
+Okabe-Ito is published, and it is the right base for a palette that has to survive a dichromatic
+reader. It is not a guarantee that every one of its pairs survives one.
+
+The measurement said otherwise. The canonical yellow `#F0E442` is 1.4:1 on paper — invisible, not
+weak — so the register substituted an ochre. Under protanopia, that ochre `#A6761D` and the
+vermillion `#D55E00` converged to a CIE dE of 2.8: the same colour twice. The ochre was replaced
+by `#684E12`, chosen because it separates the vermillion by 20.7, and the register now keeps
+every pair above 11.0 in both skins under the three dichromacies.
+
+**The order in which the register is handed out is part of the palette.** A chart never shows eight
+series; it shows a prefix. The order in `chartTheme.ts` — 1, 2, 8, 6, 3, 4, 7, 5 — was chosen so
+that *every prefix* stays above the floor, and the gate reads the order out of the code so that
+reordering it has to be measured again.
+
+### 15. A promise is kept by the component that makes it
+
+Two contracts were written down and then broken by the code, and both were repaired at the level
+where they were broken.
+
+**The tab panel.** The tab strip published `aria-controls` for a panel the caller was supposed to
+render, and the caller rendered none: axe called it, and it was a critical violation. The panel
+is now rendered by the strip itself, with the id the tab points at and the tab as its label. A
+caller cannot forget the panel, because there is nothing left to forget.
+
+**The skin.** The markup forced the light skin, so a reader who had chosen the cockpit skin saw
+the journal skin for a frame. The skin is now decided in the head, before the first paint, from
+the same key the application writes — and a unit test holds the two keys together, because a key
+that drifts apart is a flash nobody notices until it happens.
+
+The rule behind both: a contract that a caller can break is a comment, not a contract.
+
 ## Consequences
 
 - The Python package ships the compiled application: the wheel is self-contained, and
@@ -163,6 +264,9 @@ described in a document.
   typed data through its props and never calls the API itself.
 - The Explorer keeps working while the new applications arrive: the map, the catalogue and the
   provenance are unchanged in meaning.
+- The identity is now defended rather than described: a colour that stops being readable, a
+  register that stops being separable, a control that stops announcing its own boundary, and a
+  bundle that starts growing are all refused by a gate rather than noticed by a reader.
 
 ## What this does not decide
 
@@ -172,10 +276,19 @@ contract and its use are clear.
 
 MapLibre, Cesium and any 3D globe stay out. The financial branch stays closed.
 
+**The application is a desktop instrument.** The Explorer is read on a workstation, in a browser
+window that is wide. The layout therefore has one shape, and the narrow-screen rules that exist
+are a floor rather than a target: they keep the page from breaking, they are not a promise that
+the Explorer is usable on a telephone. The Explorer is a reading instrument, not a pocket one.
+
 ## Verification
 
 - `npx tsc --noEmit`, `npx eslint .`, `npx vitest run`, `npx playwright test` in `frontend/`.
   The browser journeys run on Chromium, Firefox and WebKit.
 - `uv run pytest` in the repository root: the explorer suite, plus a suite that checks the
-  versioned API, the error shape, the declared response models, and that no scientific module
-  imports FastAPI.
+  versioned API, the error shape, the declared response models, that no scientific module
+  imports FastAPI, that the design tokens meet the contrast ratios of §13, and that the series
+  register stays separable under the three dichromacies of §14.
+- `npx playwright test` also runs the gates of §13 and §14: axe over every page in both skins,
+  the visual identity against its baseline, and the bundle budget. The allowlist of accepted
+  accessibility violations is empty.

@@ -1,0 +1,4 @@
+{
+  "$comment": "The accessibility allowlist. An entry is a violation that has been examined and accepted, with the reason it is accepted. The gate refuses to run on a silent allowlist: an entry without a reason is a failure. `rule` is the axe rule id; `pattern` is a regular expression matched against the offending element's axe target selector.",
+  "entries": []
+}

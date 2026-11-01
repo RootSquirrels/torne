@@ -231,9 +231,9 @@ The fallback is narrow on purpose:
 
 | Check | Result |
 |---|---|
-| `pytest` | **948 passed** (921 before the mission) |
-| `ruff check src/torne/explorer tests/` | All checks passed |
-| `ruff format --check src/torne/explorer tests/` | 58 files already formatted |
+| `pytest` | **1036 passed** (921 before the mission) |
+| `ruff check .` | All checks passed |
+| `ruff format --check .` | 195 files already formatted |
 
 The repository-wide check also covers `experiments/`, which was clean when the gate ran. Two scripts
 of the RESOURCE-002 workstream — `experiments/resource_002_exploration.py` and
@@ -246,19 +246,20 @@ carry lint findings of their own. They are outside this mission's scope and were
 |---|---|
 | `tsc --noEmit` | exit 0 |
 | `eslint .` | 0 problems |
-| `vitest run` | 23 files, **123 tests passed** |
-| `vite build` | built in 520 ms, 682 modules |
-| `playwright test` | **30 tests passed** — 10 journeys on Chromium, Firefox and WebKit |
+| `vitest run` | 27 files, **141 tests passed** |
+| `vite build` | built in 521 ms |
+| `playwright test` | **48 tests passed** — 10 journeys on Chromium, Firefox and WebKit, and the four gates of §10 |
 
 The browser journeys run against the application FastAPI actually serves — the compiled frontend
 in the Python package, not a dev server — and they fail the run on any console error or any
 response of 400 or more. They run on the three engines a reader may use: a journey that only
 holds on one of them is a journey only half the readers can take.
 
-**The bundle.** The entry chunk is 17.9 kB gzipped; React is 98.1 kB, Leaflet 43.3 kB, and
-ECharts — which no page downloads until a chart is shown — is a lazy chunk of 209.4 kB. Each chart
-is a chunk of its own, between 1.9 and 2.7 kB gzipped. The whole application is 379.4 kB
-gzipped. `scripts/bundle-report.mjs` fails the build if the entry chunk passes 120 kB.
+**The bundle.** The entry chunk is 19.5 kB gzipped; React is 94.7 kB, Leaflet 42.0 kB, and
+ECharts — which no page downloads until a chart is shown — is a lazy chunk of 202.7 kB. Each chart
+is a chunk of its own, between 1.8 and 2.8 kB gzipped. The whole application is 385.4 kB
+gzipped. `scripts/bundle-budget.mjs` fails the build if the entry chunk passes 120 kB, and the
+budget gate says so when it does.
 
 **The frontiers.** Built at build time from `world-atlas` with a Douglas–Peucker simplification of
 0.1° and three-decimal rounding: 365 kB, against 739 kB.
@@ -408,7 +409,149 @@ the rule the whole system obeys, applied to the drawing code instead of describe
 
 ---
 
-## 9. What could not be verified
+## 9. The state of the data
+
+### 9.1 One reading for the whole application
+
+The Explorer reads the catalogue from several places at once: the map, the entity list, the
+filter bar and the reading panel. Until this lot, each of them fetched the manifest for itself —
+the reader watched the same catalogue arrive four times, and a failure in one of them blanked
+one panel while the others kept working.
+
+`src/services/api/resourceStore.ts` is the shared state. For each resource it holds the last
+value and when it arrived, the failure of the last attempt, and the request in flight. Three
+rules, and they are why it is not a general-purpose cache:
+
+1. **One request per resource.** Two components that ask for the same resource at the same time
+   share one request. The second is not a slower version of the first: it *is* the first,
+   waiting.
+2. **A fresh value is not fetched again.** Freshness is a window — thirty seconds for the
+   catalogue, ten minutes for the prepared boundaries — and not a promise.
+3. **A failure does not take the value away.** A catalogue that cannot be re-read is still a
+   catalogue that was read: the reader keeps the last known state and is told that it could not
+   be refreshed. The Explorer says so in its own words — *"the catalogue could not be refreshed —
+   the version on screen is the last one that was read"*.
+
+A request that nobody is waiting for any more is cancelled — unless another reader is still
+there. `useResource` binds the store to React through `useSyncExternalStore`, so a component
+that mounts while a request is already in flight is served that request rather than starting
+another. Twelve unit tests hold the rules: the single request, the freshness window, the
+revalidation that does not take the value away, the cancellation, the invalidated reading.
+
+### 9.2 The contract is derived, not copied
+
+The frontend's types were a hand-written mirror of the Pydantic schemas. A mirror drifts: the
+first time a field changed, the two would disagree and nothing would say so.
+
+The OpenAPI document is now committed at `frontend/src/types/api/openapi.json` and **written by
+the application itself** (`scripts/dump_openapi.py`), and the TypeScript is generated from it.
+`src/types/api/manifest.ts` no longer holds a copy of anything: each of its types is a *name*
+for a schema in the generated file. A Python test refuses a committed document that the
+application no longer builds, and a frontend check refuses types that the document no longer
+generates.
+
+Two places needed a human hand, and both say why:
+
+- **A field that is not known is `null`, and it is always there.** A Pydantic field declared
+  `Optional[str] = None` is *not required* in the OpenAPI document — it has a default — yet the
+  response always carries it, with the value `null` when it is unknown. The document is
+  imprecise there; the responses are not. The derived type says what the API actually sends.
+- **A position is a pair.** The document declares it with `prefixItems` and `minItems` and
+  `maxItems` both equal to 2; the generator reads that as an array of any length. The truth is
+  the pair, and the type says so.
+
+The error envelope is the one part of the contract the document does not carry: it is produced
+by the application's exception handlers, not by a declared response model. It stays written by
+hand, and says so.
+
+---
+
+## 10. The gates
+
+The identity of §8 and the state of the data of §9 are only worth something if a change that breaks
+them is refused. Four gates were added in this lot, and each one answers a question that cannot be
+answered by reading the code.
+
+### 10.1 The colours of the system, asked of the tokens
+
+`tests/test_frontend_contrast.py` reads `tokens.css` and asks every declared pair whether it
+reaches the ratio it must reach, in both skins. It is the earliest and the cheapest of the gates: a
+pair that fails here would fail in the browser on every page, in every run — and here it says which
+pair, and in which skin.
+
+The pairs are not all the same, so the gate does not treat them the same:
+
+- **text on a ground**, at 4.5:1 — WCAG 2.2 SC 1.4.3, and no exception is claimed;
+- **a line, a border, a mark that identifies a control or a state**, at 3:1 — SC 1.4.11;
+- **a data mark**, at 2:1 — the graphics SC 1.4.11 exempts, held to a legibility floor rather than
+  a compliance one.
+
+Holding the third class to 3:1 would have meant re-colouring the categorical register, and that
+was measured and refused: darkening the amber `#E69F00` until it reaches 3:1 on paper drops the
+register's worst separation under deuteranopia from 11.1 to 4.1. The published palette is worth
+more than the ratio, and what answers for a pale series is the redundancy the system already
+carries — a symbol, a dash pattern, and a mark in the legend.
+
+The border register was split rather than darkened. `--border-default` separates things that are
+already told apart by something else and is allowed to stay a hairline. `--border-control` is the
+resting edge of a control and `--border-strong` its active edge: the reader has to see where a
+control begins, and has to see it change, so they are gated at 3:1 and 4.5:1. Four component
+styles moved to the new token.
+
+Six pairs failed when the gate was written, and all six are fixed: the tertiary ink of the cockpit
+skin (4.38 → 4.62), the two border registers, the map boundary of the journal skin (1.45 → 3.09)
+and of the cockpit skin (1.69 → 3.08).
+
+### 10.2 The register, asked of the reader's eye
+
+`tests/test_frontend_series_palette.py` measures the categorical register the way a dichromatic
+reader sees it: the Machado et al. (2009) simulation at full severity, in linear RGB, then CIE76
+dE.
+
+The measurement found a defect the eye could not have been asked about. The register is Okabe-Ito
+with two substitutions, and the second one broke the palette. The canonical yellow `#F0E442` is
+1.4:1 on paper — not a weak mark, an invisible one — so it was replaced by an ochre. Under
+protanopia that ochre `#A6761D` and the vermillion `#D55E00` then converged to a dE of 2.8: the
+same colour twice, for a reader who has no other way to tell them apart.
+
+The ochre was replaced by a value chosen by measurement rather than by taste — `#684E12`, which
+separates the vermillion by 20.7. The register now keeps every pair above 11.0 in both skins under
+the three dichromacies.
+
+The order in which the register is handed out was measured too, because a chart never shows all
+eight series: it shows a prefix. The order declared in `chartTheme.ts` — 1, 2, 8, 6, 3, 4, 7, 5 —
+keeps *every prefix* of itself above the same floor, so a chart of two series is separable by a
+margin of 78 and a chart of eight by 11. The gate reads the order out of the code and holds it, so
+reordering the register is now a change that has to be measured again.
+
+### 10.3 The pages, asked of the browser
+
+`frontend/tests/e2e/accessibility.spec.ts` opens every page of the Explorer, in both skins, and
+runs axe over it. The allowlist is empty: a violation has to be fixed, not accepted. The gate
+refuses an entry that does not say why the violation is accepted, and an entry that names a
+violation the page no longer produces.
+
+It found real defects, and two of them changed the shape of the code:
+
+- the tab strip published `aria-controls` for a panel that did not exist — a critical violation.
+  The fix was structural rather than editorial: the component that makes the promise is now the
+  one that keeps it, so a caller cannot forget the panel because there is nothing to forget;
+- the skin was forced to light in the markup, so a reader who had chosen the cockpit skin saw the
+  journal skin for a frame. The skin is now decided in the head, before the first paint, and a
+  unit test holds the key the page reads and the key the application writes together;
+- three colour pairs, which the token gate of §10.1 also found.
+
+### 10.4 The bundle, and the face of the thing
+
+Two further gates. The entry chunk of the bundle is held at 120 kB compressed — it is 19.5 kB —
+and the identity has a baseline: five screenshots, two overviews, a country and two charts, are
+compared pixel by pixel in Chromium, with the viewport and the pixel density pinned so that a
+baseline stays valid. The baseline was regenerated when the palette was repaired, and the
+regenerated images were looked at before they were accepted.
+
+---
+
+## 11. What could not be verified
 
 1. **The brief is truncated.** It ends mid-sentence at §13, "Préserver la compatibilité avec les
    routes `/api` actuelles pendant la transition, ou documenter précisément une migration si un
@@ -428,7 +571,7 @@ the rule the whole system obeys, applied to the drawing code instead of describe
 
 ---
 
-## 10. The products
+## 12. The products
 
 | Product | Where |
 |---|---|
@@ -438,6 +581,13 @@ the rule the whole system obeys, applied to the drawing code instead of describe
 | the scientific charts | `frontend/src/components/visualization/` |
 | the craft of the canvas | `frontend/src/components/visualization/chartCraft.ts` |
 | the data contracts | `frontend/src/types/api/`, `frontend/src/types/visualization/` |
+| the generated contract | `frontend/src/types/api/generated.ts`, `scripts/dump_openapi.py` |
+| the shared request state | `frontend/src/services/api/resourceStore.ts`, `frontend/src/services/api/useResource.tsx` |
+| the contrast gate | `tests/test_frontend_contrast.py` |
+| the colour-vision gate | `tests/test_frontend_series_palette.py` |
+| the accessibility gate | `frontend/tests/e2e/accessibility.spec.ts`, `frontend/tests/e2e/axe-allowlist.json` |
+| the bundle budget | `frontend/scripts/bundle-budget.mjs`, `frontend/tests/e2e/bundle-budget.spec.ts` |
+| the identity baseline | `frontend/tests/e2e/identity-visual.spec.ts` |
 | the ported Explorer | `frontend/src/features/explorer/` |
 | the Component Workbench | `frontend/src/features/workbench/`, `frontend/src/dev/` |
 | the API package | `src/torne/explorer/api/` |

@@ -158,16 +158,27 @@
 
   /* --- content --- */
   --content-primary: light-dark(#1a1c20, #e9edf3);
-  --content-secondary: light-dark(#565c65, #a3adbb);
-  --content-tertiary: light-dark(#727982, #78828f);
+  --content-secondary: light-dark(#4e545d, #a3adbb);
+  --content-tertiary: light-dark(#5f656e, #7c8692);
   --content-disabled: light-dark(#9aa0a8, #565e6a);
   --content-inverse: light-dark(#f5f3ef, #0b0d11);
 
-  /* --- borders: the instrument is mostly hairlines --- */
+  /* --- borders: the instrument is mostly hairlines ---
+   *
+   * The first three are structure. They separate two things that are already
+   * told apart by something else, so they are free to stay subtle.
+   *
+   * The last three are identity. A reader has to see where a control begins,
+   * and has to see it change when it changes state. They answer WCAG 2.2
+   * SC 1.4.11, so they are gated: the resting boundary at 3:1 against the
+   * surfaces it sits on, the active one at 4.5:1, and the focus ring above
+   * both.
+   */
   --hairline: light-dark(#eeebe4, #161a20);
   --border-subtle: light-dark(#e6e2d9, #1e232b);
   --border-default: light-dark(#d6d1c6, #2b313b);
-  --border-strong: light-dark(#b3ad9f, #454d5b);
+  --border-control: light-dark(#978a6f, #5c687c);
+  --border-strong: light-dark(#766f5e, #727f94);
   --border-focus: light-dark(#2f6fa8, #58a6e8);
 
   /* --- accent: the ember signal --- */
@@ -197,29 +208,48 @@
 
   /* --- the scientific status ramp: one hue, rising lightness --- */
   --science-status-0: light-dark(#e8e4db, #2a3039);
-  --science-status-0-ink: light-dark(#565c65, #8b95a3);
+  --science-status-0-ink: light-dark(#565c65, #909aa8);
   --science-status-1: light-dark(#c9dcec, #274059);
   --science-status-1-ink: light-dark(#12314a, #cfe4f5);
   --science-status-2: light-dark(#8bb8da, #35618c);
   --science-status-2-ink: light-dark(#0c2537, #eaf4fc);
-  --science-status-3: light-dark(#3a80bb, #4e97d2);
+  --science-status-3: light-dark(#3378b2, #4e97d2);
   --science-status-3-ink: light-dark(#ffffff, #06182a);
   --science-status-4: light-dark(#12507f, #a3d1f4);
   --science-status-4-ink: light-dark(#ffffff, #06182a);
 
-  /* --- the categorical series register: Okabe-Ito, lifted for the dark skin --- */
+  /* --- the categorical series register: Okabe-Ito, lifted for the dark skin ---
+   *
+   * Seven of the eight are the canonical Okabe-Ito hues. Two are not, and
+   * both departures were measured rather than preferred:
+   *
+   * - The canonical yellow `#F0E442` is 1.4:1 on paper: it is not a weak
+   *   mark, it is an invisible one. It is replaced by a deep ochre.
+   * - The canonical black is replaced by a graphite that is still 12:1 on
+   *   paper but does not stamp the page.
+   *
+   * The first ochre that was tried, `#A6761D`, turned out to be a trap: under
+   * protanopia it converged with the vermillion `#D55E00` (CIE dE 2.8 — the
+   * same colour twice, for a reader who cannot use colour to tell them
+   * apart). The ochre below was chosen by measurement instead: it separates
+   * the vermillion by 20.7, and the whole register keeps every pair above
+   * 11.0 in both skins under the three dichromacies.
+   *
+   * The hues themselves are not re-chosen for the dark skin, only their
+   * lightness is lifted, so a series means the same thing in both skins.
+   */
   --series-1: light-dark(#0072b2, #5ab6ee);
   --series-2: light-dark(#e69f00, #f2b53f);
   --series-3: light-dark(#009e73, #45c58f);
   --series-4: light-dark(#cc79a7, #e293c4);
   --series-5: light-dark(#56b4e9, #8ed2f5);
   --series-6: light-dark(#d55e00, #f5915f);
-  --series-7: light-dark(#a6761d, #dcb05c);
+  --series-7: light-dark(#684e12, #c99d36);
   --series-8: light-dark(#333333, #c9ced6);
 
   /* --- chart chrome --- */
   --chart-well: light-dark(#faf9f6, #0d1015);
-  --chart-axis: light-dark(#b3ad9f, #39414e);
+  --chart-axis: light-dark(#b1ab9d, #414b5a);
   --chart-grid: light-dark(#e9e5dc, #181d25);
   --chart-label: light-dark(#6a717a, #8b95a3);
   --chart-crosshair: light-dark(#8b8578, #5c6675);
@@ -231,7 +261,7 @@
   --map-water: light-dark(#e2e9ec, #0b1319);
   --map-land: light-dark(#eae6dd, #252b36);
   --map-land-hover: light-dark(#ded9cd, #2f3643);
-  --map-boundary: light-dark(#c6c0b3, #454e5c);
+  --map-boundary: light-dark(#8c8169, #68768b);
   --map-marker: light-dark(#1a1c20, #e9edf3);
   --map-marker-selected: light-dark(#a4481f, #f08a5f);
 

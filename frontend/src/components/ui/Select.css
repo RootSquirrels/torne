@@ -28,7 +28,7 @@
   height: var(--control-height-md);
   padding-inline: var(--control-padding-inline-md) calc(var(--control-padding-inline-md) + var(--space-4));
   background: var(--surface-inset);
-  border: var(--control-border-width) solid var(--border-default);
+  border: var(--control-border-width) solid var(--border-control);
   border-radius: var(--radius-sm);
   color: var(--content-primary);
   font-family: var(--font-sans);

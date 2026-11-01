@@ -126,9 +126,8 @@ export function ComponentWorkbench() {
           { id: 'charts', label: 'Scientific charts' },
           { id: 'data', label: 'Data display' },
         ]}
-      />
-
-      {tab === 'states' ? (
+      >
+        {tab === 'states' ? (
         <div className="torne-workbench__section">
           <Panel title="Buttons" description="Every variant, every state.">
             <div className="torne-workbench__row">
@@ -379,6 +378,7 @@ export function ComponentWorkbench() {
           </Panel>
         </div>
       ) : null}
+      </Tabs>
     </div>
   );
 }

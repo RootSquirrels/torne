@@ -58,9 +58,22 @@
 
 .torne-tabs__tab--selected {
   background: var(--surface-raised);
-  border-color: var(--border-default);
+  border-color: var(--border-control);
   border-bottom-color: var(--accent);
   color: var(--content-primary);
+}
+
+/*
+ * The panel the strip opens. It carries no edge of its own: the strip is the
+ * instrument, the panel is what the instrument is reading.
+ */
+.torne-tabs__panel {
+  padding-block-start: var(--space-4);
+}
+
+.torne-tabs__panel:focus-visible {
+  outline: var(--focus-ring-width) solid var(--border-focus);
+  outline-offset: var(--focus-ring-offset);
 }
 
 .torne-tabs__tab--selected .torne-tabs__label {

@@ -67,7 +67,31 @@ export interface ChartTokens {
   readonly mapMarkerSelected: string;
 }
 
-const SERIES_VARS = Array.from({ length: 8 }, (_, index) => `--series-${index + 1}`);
+/**
+ * The order in which the register is handed out.
+ *
+ * The hues are the ones the tokens declare; the *order* is not. Okabe-Ito
+ * keeps its eight hues apart for a reader with normal colour vision, but two
+ * of them can still converge under a dichromacy, so the register is dealt out
+ * in an order that was chosen by measuring it: every prefix of this list
+ * keeps every pair apart under protanopia, deuteranopia and tritanopia, in
+ * both skins, by at least 11 units of CIE dE.
+ *
+ * The practical consequence is that a chart with up to eight series is
+ * separable by colour for a reader who cannot use colour, and a chart with
+ * fewer series is separable by a wider margin. The test that holds this
+ * order is `tests/test_frontend_series_palette.py`.
+ */
+const SERIES_VARS = [
+  '--series-1',
+  '--series-2',
+  '--series-8',
+  '--series-6',
+  '--series-3',
+  '--series-4',
+  '--series-7',
+  '--series-5',
+];
 const STATUS_VARS = Array.from({ length: 5 }, (_, index) => `--science-status-${index}`);
 
 function read(root: HTMLElement, name: string, fallback: string): string {
