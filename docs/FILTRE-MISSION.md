@@ -68,7 +68,46 @@ séparément** — jamais un seul score agrégé qui les masque l'un l'autre.
 
 ---
 
-## 3. Ce que la règle ne dit pas
+## 3. La règle de portefeuille
+
+> **Une mission = un produit concret.**
+
+Cette règle a été ajoutée le **1ᵉʳ novembre 2026**, après une revue qui a constaté que TORNE
+accumulait les études sans produire d'information nouvelle : vingt-cinq études, des dizaines de
+sources qualifiées, des problèmes techniques résolus, des erreurs physiques détectées et corrigées —
+et **aucun** produit de connaissance.
+
+### 3.1 Les trois issues admissibles
+
+Une mission aboutit à **l'un** de ces trois résultats, et à un seul :
+
+| Issue | Ce que c'est |
+|---|---|
+| **Knowledge Product** | une variable **nouvelle**, produite **régulièrement**, avec son **incertitude** et sa **validation physique** |
+| **Opportunity Product** | une **relation** économiquement pertinente, testée face à une référence **et** à des données de marché disponibles **au même instant** |
+| **NO-GO documenté** | une hypothèse **définitivement fermée**, avec ses raisons **et les coûts évités** |
+
+**Une mission qui ne produit ni l'un ni l'autre cesse de consommer des ressources.**
+
+### 3.2 Les deux limites
+
+- **Pas plus d'une reconnaissance exploratoire** avant de passer à l'exécution. Une seconde
+  reconnaissance suppose qu'on ne connaissait pas la première — et ce n'est plus une excuse recevable
+  quand la première est dans le dépôt.
+- **Pas de développement d'infrastructure générique** tant qu'un produit réel ne le justifie pas. Le
+  système n'a pas besoin d'être réécrit : `Evidence → Models → Knowledge Products → Applications`
+  tient. Ce qui manque, c'est la preuve qu'un moteur produit une information que personne n'a déjà.
+
+### 3.3 La question de travail
+
+La question n'est plus « quelles données pouvons-nous récupérer ? ». C'est :
+
+> **Quelle variable économique importante n'est pas directement observable, et pouvons-nous la
+> reconstruire mieux ou plus tôt que les autres ?**
+
+---
+
+## 4. Ce que la règle ne dit pas
 
 - Elle ne fixe **aucune** source de données, et **aucun** domaine physique. Hydrologie, atmosphère,
   océanographie et observation de la Terre sont des **moyens** de reconstruire ces informations ; ils

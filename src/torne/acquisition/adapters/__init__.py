@@ -15,6 +15,8 @@ Each adapter verifies the response it receives against what it asked
 - `usgs` / `usgs_ogc`: USGS Water Services and the OGC API (United States);
 - `copernicus` / `copernicus_stac`: Copernicus Data Space, the OData product
   catalogue and the STAC surface-observation catalogue;
+- `enagas`: the Enagas daily system report (Spain) — one gas day per request,
+  the state of the seven LNG import terminals;
 - `ghcnd`: NOAA GHCN-Daily station records;
 - `meteofrance`: Météo-France observation API and daily climatological API
   (DPClim), behind an API key held by reference (`torne.acquisition.credentials`).
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 from .copernicus import CopernicusProductsAdapter
 from .copernicus_stac import CopernicusStacAdapter
+from .enagas import EnagasDailyAdapter
 from .ghcnd import GhcndDailyAdapter
 from .hubeau import HubeauObservationsAdapter
 from .hubeau_feed import HubeauFeedAdapter
@@ -35,6 +38,7 @@ __all__ = [
     "CopernicusProductsAdapter",
     "CopernicusStacAdapter",
     "DailyClimatologyAdapter",
+    "EnagasDailyAdapter",
     "GhcndDailyAdapter",
     "HubeauFeedAdapter",
     "HubeauObservationsAdapter",

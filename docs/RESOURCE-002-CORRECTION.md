@@ -161,12 +161,22 @@ MUSEL.
 > 1. **Un navire ne décharge pas en un jour.** Les volumes se répartissent sur plusieurs jours de
 >    gaz, au rythme de déchargement. Une confrontation « un jour = un navire » est donc fausse, et
 >    l'attribution d'un volume à un navire exige de connaître la cadence de déchargement.
-> 2. **Les deux formes de la référence ne se réconcilient pas.** La référence quotidienne (m³) et la
->    référence mensuelle (GWh) diffèrent d'un **facteur constant de 1,73 à 1,77** — identique sur
->    les cinq terminaux. Ce n'est donc pas une erreur de données : c'est une **différence de
->    convention** (base de volume, base de PCS, ou périmètre), et elle **doit être tranchée par un
->    document de référence** avant toute confrontation. C'est exactement le point que la revue
->    signalait.
+> 2. ~~Les deux formes de la référence ne se réconcilient pas.~~ **CORRIGÉ — c'était notre
+>    erreur, et elle est résolue.** Le facteur 1,75 venait de la conversion : nous avons divisé un
+>    pouvoir calorifique **par gaz à 0 °C** (13,99 MJ/m³) par une masse volumique **de GNL liquide**
+>    (0,456 t/m³). Le rapport quotidien publie la même grandeur en GWh **et** en m³ liquides : leur
+>    rapport, **146,98 m³ par GWh**, se mesure sur le document et se traduit en **67,02 t par GWh**.
+>    Les deux formes de la référence se réconcilient alors à **moins de 0,6 %** : juin 2026, Barcelone
+>    1 560 GWh reconstruits contre 1 559 publiés, Bilbao 3 281 contre 3 299, Carthagène 1 859 contre
+>    1 882, Huelva 2 195 contre 2 173, Sagonte 1 061 contre 1 065, Musel 0 contre 0. **Aucun échange
+>    technique avec l'exploitant n'est nécessaire pour la conversion** : le facteur est dans la
+>    source. Ce qui reste à demander à l'exploitant, c'est le **minimum technique** des cuves — et
+>    c'est le seul point qui reste ouvert.
+>
+> **[FAIT] Notre soupçon d'un décalage des noms de terminaux était infondé.** Le décodeur(indexé par
+> nom de terminal) reproduit l'attribution de la première mesure à l'identique, et le contrôle par
+> le total — l'écart maximal sur 30 jours et 7 terminaux est de 9,7 × 10⁻⁴ — la confirme. Le soupçon
+> était juste en *forme* : un décalage d'une colonne passerait inaperçu. Il n'était pas advenu.
 
 **[FAIT] La base maritime de PortWatch est accessible après tout — via HDX.** Le collecteur
 OCHA-DAP republie les données par pays sur le Humanitarian Data Exchange, et **l'Espagne y est** :
