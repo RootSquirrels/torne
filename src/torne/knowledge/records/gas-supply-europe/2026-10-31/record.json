@@ -1,6 +1,6 @@
 {
   "format": 1,
-  "payload_digest": "ca77745d826ed7e53db05bbc990b82fabb979421b0b61542dbea1c9160a33eda",
+  "payload_digest": "a8cc798e957bb8f317ce77cac2ea4351a50e0cf4724fdb464783956bf80e39e6",
   "product": {
     "domain_of_validity": "European gas supply at the reference date 2026-10-31: 25 LNG terminal installations in 12 countries, over the gas days 2026-06-01 to 2026-10-31, and the underground storage of the 30 countries the platform answered for — 19 of them published usable states — over 2026-09-01 to 2026-09-30. The validation is the confrontation with the operator's daily series: it covers the seven Spanish terminals over June 2026 only, so the other 18 European installations are produced but are not validated that way.",
     "input_statuses": {
@@ -636,7 +636,7 @@
               "terminals": 1.0
             }
           },
-          "generated_at": "2026-11-01T23:01:02.939274+00:00",
+          "generated_at": "2026-11-01T23:25:10.379433+00:00",
           "installations": 25,
           "installations_without_data": [
             "21W0000000000419",
@@ -757,7 +757,7 @@
               "units": "stock en GWh et en m3 liquides ; flux en GWh"
             }
           ],
-          "states": 3765,
+          "states": 3825,
           "system_coverage_days": 7.234152023703083,
           "system_flow_gwh_per_day": 3564.0933333333332,
           "system_reserve_gwh": 25783.193,
@@ -855,9 +855,9 @@
           "confrontation_alsi_enagas.csv": "a9353e89c63e182ce74b8b19532bb3570ed7451ea7677f11e017e37fb590f8fd",
           "confrontation_perimetre_alsi_enagas.csv": "48785c029c81993ba3511d524992f8bdd8aad914e65fe2525cfb15d187d6ef3f",
           "europe_indicateurs.json": "38f6e761f2a9158ff902dc7ca4c5590c0a6bd4c5bfe2258728393abceba53641",
-          "europe_lng_terminals.csv": "a66789b0c342ed36490827bd1cdac4c84ed30e34077bc344eef24ebd925bb9a4",
+          "europe_lng_terminals.csv": "427e4bb4a2cc69e90391b2e14d600bc6e03d766ec21e35fc989d3dcb7f472475",
           "europe_stocks.csv": "5ddf81ad4fba0437eaedbf798a823b13e90c42bdfb2b6c3c843347335b923055",
-          "terminaux_indicateurs.json": "2065093b5b4f29226790c58bc4fefed1648fc45b740facbc549f1edac619cfd0"
+          "terminaux_indicateurs.json": "2377b37777e91f0fc147c6e516589f74d1901c41a0d3ad8b03d9e1fdbabe144c"
         },
         "sources": [
           {
@@ -935,7 +935,7 @@
           "end": "2026-10-31",
           "installations": 25,
           "start": "2026-06-01",
-          "states": 3765
+          "states": 3825
         }
       }
     },

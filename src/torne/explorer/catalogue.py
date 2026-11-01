@@ -566,7 +566,7 @@ MODELS: tuple[ModelEntry, ...] = (
         version=None,
         runs=(
             Fact(
-                "Executed by the LNG-002 mission on 3 765 terminal states — 25 installations in "
+                "Executed by the LNG-002 mission on 3 825 terminal states — 25 installations in "
                 "12 countries — and confronted with an independent source on the seven Spanish "
                 "terminals over June 2026.",
                 (script("experiments/lng_002_lng_terminals.py"), mission("LNG-002")),

@@ -234,27 +234,28 @@ def test_the_published_terminal_states_keep_their_empty_cells(stored: StoredReco
 
 
 def test_a_gap_in_a_series_is_a_gap_and_not_a_zero(stored: StoredRecord) -> None:
-    """A series that skips days says so in its days, and keeps its other values.
+    """Where a series skips days, the days it does publish are complete.
 
-    Two installations do not publish every day of the window. The days they
-    do publish are complete: the stock, the capacity and the withdrawal of
-    those days are there. What is missing is the missing.
+    A series may or may not skip days — it depends on what the platform
+    published that season. What must hold either way is that the days that
+    are published carry their stock and their capacity, and that the absence
+    is an absence: the derived entry of the day after a gap is missing,
+    because the day before it is unknown.
     """
     terminals = _rows(stored.payload["terminals.csv"])
     by_installation: dict[str, list[dict[str, str]]] = {}
     for row in terminals:
         by_installation.setdefault(row["terminal_eic"], []).append(row)
 
-    gaps = 0
     for rows in by_installation.values():
         rows.sort(key=lambda row: row["gas_day"])
         for previous, row in pairwise(rows):
+            assert row["stock_gwh"] != "", "the days that are published carry their stock"
+            assert row["capacity_gwh"] != ""
             if _next_day(previous["gas_day"]) != row["gas_day"]:
-                gaps += 1
-                assert row["stock_gwh"] != "", "the days that are published carry their stock"
-                assert row["capacity_gwh"] != ""
-
-    assert gaps > 0, "the publication holds at least one series with a gap"
+                assert row["derived_entry_gwh"] == "", (
+                    "the day after a gap has no derived entry: its previous day is unknown"
+                )
 
 
 @pytest.mark.skipif(not PRODUCTION.exists(), reason="the production output is not versioned")
