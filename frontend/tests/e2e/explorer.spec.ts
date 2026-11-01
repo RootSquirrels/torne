@@ -110,6 +110,24 @@ test('the workbench declares its data to be synthetic', async ({ page }) => {
   await expect(page.getByText('Synthetic demo data.', { exact: false }).first()).toBeVisible();
 });
 
+test('the workbench draws the scientific charts', async ({ page }) => {
+  await page.goto('/workbench');
+
+  await page.getByRole('tab', { name: 'Scientific charts' }).click();
+
+  // The charts are drawn on a canvas, which is invisible to a reader without
+  // one; the figure and its legend are what they get instead.
+  const coverage = page.getByRole('figure').filter({ hasText: 'Synthetic coverage' });
+  await expect(coverage).toBeVisible();
+  const legend = coverage.locator('.torne-legend');
+  await expect(legend.getByText('observed')).toBeVisible();
+  await expect(legend.getByText('gap')).toBeVisible();
+
+  // The time series says what its stamps mean.
+  const series = page.getByRole('figure').filter({ hasText: 'Discharge and water level' });
+  await expect(series.getByText(/Stamps: Discharge — daily, civil day/)).toBeVisible();
+});
+
 test('the market branch stays closed', async ({ page }) => {
   await page.goto('/');
 

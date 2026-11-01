@@ -8,7 +8,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { CoverageTimeline, buildCoverageBars } from '@/components/visualization/CoverageTimeline';
+import { CoverageTimeline, buildCoverageBars, GAP_SHAPE, KIND_STYLE } from '@/components/visualization/CoverageTimeline';
+import type { CoverageKind } from '@/types/visualization/coverage';
 import type { CoveragePeriod } from '@/types/visualization/coverage';
 
 const MIN = Date.UTC(2020, 0, 1);
@@ -92,6 +93,20 @@ describe('the coverage bars builder', () => {
   });
 });
 
+
+describe('the kinds of the coverage timeline', () => {
+  it('gives every kind a swatch of its own, so none is carried by colour alone', () => {
+    const shapes = (Object.keys(KIND_STYLE) as CoverageKind[]).map((kind) => KIND_STYLE[kind].shape);
+
+    expect(new Set(shapes).size).toBe(shapes.length);
+  });
+
+  it('shows the gap as an empty swatch, not a filled one', () => {
+    // A gap is the absence of a period. A filled swatch would show a pale
+    // period where there is none.
+    expect(GAP_SHAPE).toBe('empty');
+  });
+});
 
 /** The values are behind a disclosure: open it, the way a reader would. */
 async function openTable(): Promise<void> {

@@ -234,7 +234,7 @@ export const demoSpatialScene: SpatialScene = {
   provenance: [],
 };
 
-/** Coverage periods with a gap and an open period. */
+/** Coverage periods: the four kinds, a gap and an open period. */
 export const demoCoveragePeriods: readonly CoveragePeriod[] = [
   {
     id: 'demo-coverage-1',
@@ -252,6 +252,15 @@ export const demoCoveragePeriods: readonly CoveragePeriod[] = [
     start: '2025-09-01',
     end: null,
     open: true,
+    provenance: [],
+  },
+  {
+    id: 'demo-coverage-5',
+    subject: 'Demo product Beta',
+    kind: 'estimated',
+    start: '2022-01-01',
+    end: '2023-04-01',
+    open: false,
     provenance: [],
   },
   {

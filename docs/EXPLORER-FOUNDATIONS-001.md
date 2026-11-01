@@ -241,9 +241,9 @@ carry lint findings of their own. They are outside this mission's scope and were
 |---|---|
 | `tsc --noEmit` | exit 0 |
 | `eslint .` | 0 problems |
-| `vitest run` | 23 files, **114 tests passed** |
+| `vitest run` | 23 files, **123 tests passed** |
 | `vite build` | built in 520 ms, 682 modules |
-| `playwright test` | **27 tests passed** — 9 journeys on Chromium, Firefox and WebKit |
+| `playwright test` | **30 tests passed** — 10 journeys on Chromium, Firefox and WebKit |
 
 The browser journeys run against the application FastAPI actually serves — the compiled frontend
 in the Python package, not a dev server — and they fail the run on any console error or any
@@ -291,7 +291,44 @@ published.
 
 ---
 
-## 7. What could not be verified
+## 7. Lot 1 — what a chart could have misled the reader about
+
+A review of the chart components, against the rules the decision record states, found five things
+that could have made a reader believe something the data does not say. They are fixed.
+
+**The coverage timeline's legend advertised shapes the chart never drew.** The four kinds were
+drawn as rectangles and told apart by colour alone, while the legend promised a dashed rule, a
+circle and a line. The chart now draws the mark the legend shows — a dashed outline for an
+estimated period, a dot for a published one, a rule for a revision — and the swatch is
+**derived** from the mark, so the two cannot disagree. The gap is now an empty, dashed outline
+rather than a pale period: an absence is not a period.
+
+**A time series never said what its stamps meant.** The frequency and the temporal reference were
+in the contract and in the data, and no component read them: a daily civil day in Paris and an
+hourly instant were drawn on the same axis with nothing to say which was which. The chart now
+declares them — in the legend, in the table, under the figure, and in the accessible name.
+
+**The quality of a value was collected and never shown.** `declared`, `source_estimated`,
+`provisional`, `approved`, `unknown`: a reader could not tell a draft from an approved
+reconstruction in a time series. It is now in the tooltip and in the table.
+
+**The tooltips and the map popups were HTML built from the API's strings, unescaped.** A label
+carrying markup was injected into the page. Every tooltip, every popup and every property line
+now goes through one `escapeHtml`, and a test refuses a label that is not escaped.
+
+**A change of option threw away the reader's time range.** A full replacement reset the zoom, so
+a new set of data or a new theme discarded the interval the reader had chosen. The series are now
+replaced and the rest merged, and the reader's range and legend choices survive. Measured on the
+same ECharts build: zoomed to `[50, 100]`, merged → `[50, 100]`, replaced → `[0, 100]`.
+
+Two suspicions were checked and **discarded** rather than reported: `light-dark()` does resolve
+to a concrete colour in the browser, and ECharts' sampling keeps one absent point per bucket, so
+the "a hole is a hole" rule holds. What sampling does change is what the reader can point at, and
+that is not yet declared — see the limits.
+
+---
+
+## 8. What could not be verified
 
 1. **The brief is truncated.** It ends mid-sentence at §13, "Préserver la compatibilité avec les
    routes `/api` actuelles pendant la transition, ou documenter précisément une migration si un
@@ -303,15 +340,18 @@ published.
    country being read. The status fill is what the choropleth encodes, so the marker must not
    replace it — the outline is the place for it. This was found while closing the keyboard
    affordance and is left as a decision rather than a silent change.
-3. **The deferred charts were not written.** Heatmaps, scalar-field maps, scatter plots,
+3. **The sampling of a time series is not declared.** A series with more points than the axis has
+   pixels is drawn from a sampled subset — the absent points survive, so the gaps are honest, but
+   the reader cannot point at a value that was left out, and the chart does not say so.
+4. **The deferred charts were not written.** Heatmaps, scalar-field maps, scatter plots,
    distributions, correlation matrices, network diagrams and calibration plots were studied and
    left alone, as §6.6 allows. A component is written when its contract and its use are clear.
-4. **No application beyond the Explorer was built.** The foundations are exercised by the Explorer
+5. **No application beyond the Explorer was built.** The foundations are exercised by the Explorer
    itself, which is the honest test available before Water Intelligence exists.
 
 ---
 
-## 8. The products
+## 9. The products
 
 | Product | Where |
 |---|---|

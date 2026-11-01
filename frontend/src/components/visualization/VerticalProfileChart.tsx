@@ -25,6 +25,7 @@ import { useMemo } from 'react';
 
 import { ChartFrame } from '@/components/visualization/ChartFrame';
 import { EChart } from '@/components/visualization/EChart';
+import { escapeHtml } from '@/components/visualization/html';
 import { useChartTokens } from '@/components/visualization/chartTheme';
 import type {
   VerticalCoordinateKind,
@@ -203,7 +204,7 @@ export function VerticalProfileChart({
             const value: unknown = Array.isArray(raw) ? raw[0] : null;
             const numberValue = typeof value === 'number' ? value : null;
             lines.push(
-              `<strong>${profile.name}</strong><br/>${axis.label}: ${point.coordinate.value} ${point.coordinate.unit}<br/>${variable.label}: ${formatValue(numberValue, variable.unit)}<br/>quality: ${point.quality}${point.missingReason === null ? '' : `<br/>absent: ${point.missingReason.replaceAll('_', ' ')}`}`,
+              `<strong>${escapeHtml(profile.name)}</strong><br/>${escapeHtml(axis.label)}: ${point.coordinate.value} ${escapeHtml(point.coordinate.unit)}<br/>${escapeHtml(variable.label)}: ${formatValue(numberValue, variable.unit)}<br/>quality: ${escapeHtml(point.quality)}${point.missingReason === null ? '' : `<br/>absent: ${escapeHtml(point.missingReason.replaceAll('_', ' '))}`}`,
             );
           }
           return lines.join('<br/>');

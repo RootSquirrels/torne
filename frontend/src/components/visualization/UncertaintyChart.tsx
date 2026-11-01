@@ -22,8 +22,10 @@ import { useMemo } from 'react';
 import { ChartFrame } from '@/components/visualization/ChartFrame';
 import { EChart } from '@/components/visualization/EChart';
 import type { ChartOption } from '@/components/visualization/EChart';
+import { escapeHtml } from '@/components/visualization/html';
 import {
   dashForNature,
+  describeTemporalReference,
   legendLabelForNature,
   symbolForNature,
   useChartTokens,
@@ -162,7 +164,7 @@ export function UncertaintyChart({
     () =>
       series.map((entry, index) => ({
         series: entry,
-        legendName: legendLabelForNature(entry.variable, entry.nature),
+        legendName: legendLabelForNature(entry.variable, entry.nature, entry.frequency),
         colour: tokens.series[index % tokens.series.length] ?? tokens.accent,
         hasInterval: entry.points.some((point) => point.lower !== null && point.upper !== null),
       })),
@@ -218,7 +220,7 @@ export function UncertaintyChart({
                 ? ` · absent: ${point.missingReason.replaceAll('_', ' ')}`
                 : '';
             lines.push(
-              `<strong>${entry.legendName}</strong><br/>${formatStamp(point.t)}<br/>${formatValue(point.v, entry.series.unit)}${interval}${missing}`,
+              `<strong>${escapeHtml(entry.legendName)}</strong><br/>${formatStamp(point.t)}<br/>${formatValue(point.v, entry.series.unit)}${interval}${missing}`,
             );
           }
           return lines.join('<br/>');
@@ -272,6 +274,8 @@ export function UncertaintyChart({
           <th scope="col">Value</th>
           <th scope="col">Lower</th>
           <th scope="col">Upper</th>
+          <th scope="col">Quality</th>
+          <th scope="col">Stamps</th>
         </tr>
       </thead>
       <tbody>
@@ -283,6 +287,8 @@ export function UncertaintyChart({
               <td>{point.v === null ? 'no value' : formatValue(point.v, entry.series.unit)}</td>
               <td>{point.lower === null ? '—' : formatValue(point.lower, null)}</td>
               <td>{point.upper === null ? '—' : formatValue(point.upper, null)}</td>
+              <td>{point.quality}</td>
+              <td>{describeTemporalReference(entry.series.reference)}</td>
             </tr>
           )),
         )}
@@ -292,17 +298,32 @@ export function UncertaintyChart({
 
   const withoutInterval = plotted.filter((entry) => !entry.hasInterval).map((entry) => entry.legendName);
 
+  const timeNote =
+    plotted.length === 0
+      ? null
+      : `Stamps: ${plotted
+          .map(
+            (entry) =>
+              `${entry.series.variable} — ${entry.series.frequency}, ${describeTemporalReference(entry.series.reference)}`,
+          )
+          .join('. ')}.`;
+
   return (
     <ChartFrame
       title={title}
       description={description}
-      ariaLabel={`${title}. ${plotted.length} series, ${plotted.reduce((sum, entry) => sum + entry.series.points.length, 0)} points.`}
+      ariaLabel={`${title}. ${plotted.length} series, ${plotted.reduce((sum, entry) => sum + entry.series.points.length, 0)} points. ${timeNote ?? ''}`}
       table={table}
       footnote={
-        withoutInterval.length === 0 ? null : (
+        withoutInterval.length === 0 && timeNote === null ? undefined : (
           <>
-            No uncertainty band is drawn for {withoutInterval.join(', ')}: no interval is provided
-            for it.
+            {timeNote === null ? null : <span>{timeNote} </span>}
+            {withoutInterval.length === 0 ? null : (
+              <span>
+                No uncertainty band is drawn for {withoutInterval.join(', ')}: no interval is provided
+                for it.
+              </span>
+            )}
           </>
         )
       }

@@ -13,6 +13,16 @@
 
 import { useEffect, useState } from 'react';
 
+import type { SeriesNature, TemporalFrequency, TemporalReference } from '@/types/visualization/timeSeries';
+
+/** What the nature of a series adds to its name. */
+const NATURE_SUFFIX: Record<SeriesNature, string> = {
+  observation: '',
+  estimate: ' (estimate)',
+  forecast: ' (forecast)',
+  simulation: ' (simulation)',
+};
+
 export interface ChartTokens {
   /** The categorical palette, in order. */
   readonly series: readonly string[];
@@ -145,16 +155,24 @@ export function symbolForNature(
 /** The text a legend uses for a series, with its nature spelled out. */
 export function legendLabelForNature(
   variable: string,
-  nature: 'observation' | 'estimate' | 'forecast' | 'simulation',
+  nature: SeriesNature,
+  frequency?: TemporalFrequency | null,
 ): string {
-  switch (nature) {
-    case 'observation':
-      return variable;
-    case 'estimate':
-      return `${variable} (estimate)`;
-    case 'forecast':
-      return `${variable} (forecast)`;
-    case 'simulation':
-      return `${variable} (simulation)`;
+  const base = `${variable}${NATURE_SUFFIX[nature]}`;
+  return frequency === undefined || frequency === null ? base : `${base} · ${frequency}`;
+}
+
+/**
+ * How a series states the reference its stamps are taken in.
+ *
+ * A stamp is not a number: `2026-01-01` may be a civil day in Paris — a whole
+ * day, averaged or accumulated — or an instant. Two series on one axis that
+ * mean different things must say so, or the reader compares what cannot be
+ * compared.
+ */
+export function describeTemporalReference(reference: TemporalReference): string {
+  if (reference.basis === 'civil-day') {
+    return reference.timeZone === null ? 'civil day' : `civil day (${reference.timeZone})`;
   }
+  return 'instant';
 }

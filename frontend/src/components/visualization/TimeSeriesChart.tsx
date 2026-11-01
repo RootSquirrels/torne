@@ -23,12 +23,14 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { ChartTokens } from '@/components/visualization/chartTheme';
 import {
   dashForNature,
+  describeTemporalReference,
   legendLabelForNature,
   symbolForNature,
   useChartTokens,
 } from '@/components/visualization/chartTheme';
 import { ChartFrame } from '@/components/visualization/ChartFrame';
 import { EChart } from '@/components/visualization/EChart';
+import { escapeHtml } from '@/components/visualization/html';
 import type {
   ReferenceBand,
   SeriesNature,
@@ -321,7 +323,7 @@ export function TimeSeriesChart({
     () =>
       series.map((entry, index) => ({
         series: entry,
-        legendName: legendLabelForNature(entry.variable, entry.nature),
+        legendName: legendLabelForNature(entry.variable, entry.nature, entry.frequency),
         colour: tokens.series[index % tokens.series.length] ?? tokens.accent,
         hasInterval: entry.points.some((point) => point.lower !== null && point.upper !== null),
       })),
@@ -400,7 +402,7 @@ export function TimeSeriesChart({
                 ? ` · absent: ${point.missingReason.replaceAll('_', ' ')}`
                 : '';
             lines.push(
-              `<strong>${point.label}</strong>${nature}<br/>${formatStamp(point.stamp)}<br/>${formatValue(point.value, point.unit)}${interval}${missing}`,
+              `<strong>${escapeHtml(point.label)}</strong>${nature}<br/>${formatStamp(point.stamp)}<br/>${formatValue(point.value, point.unit)}${interval}${missing}<br/>quality: ${escapeHtml(point.quality)}`,
             );
           }
           return lines.join('<br/>');
@@ -476,6 +478,8 @@ export function TimeSeriesChart({
           <th scope="col">Lower</th>
           <th scope="col">Upper</th>
           <th scope="col">Nature</th>
+          <th scope="col">Quality</th>
+          <th scope="col">Stamps</th>
         </tr>
       </thead>
       <tbody>
@@ -488,6 +492,8 @@ export function TimeSeriesChart({
               <td>{point.lower === null ? '—' : formatValue(point.lower, null)}</td>
               <td>{point.upper === null ? '—' : formatValue(point.upper, null)}</td>
               <td>{NATURE_LABEL[natureAt(entry.series, toMillis(point.t))]}</td>
+              <td>{point.quality}</td>
+              <td>{describeTemporalReference(entry.series.reference)}</td>
             </tr>
           )),
         )}
@@ -496,17 +502,35 @@ export function TimeSeriesChart({
   );
 
   const spanNote =
-    spans.length > 0
-      ? `Spans: ${spans.map((span) => span.label).join(', ')}.`
-      : null;
+    spans.length > 0 ? `Spans: ${spans.map((span) => span.label).join(', ')}.` : null;
+
+  // The stamps of a series are not only positions on an axis: they say what a
+  // point stands for, and the reader cannot compare two series that do not
+  // mean the same thing.
+  const timeNote =
+    plotted.length === 0
+      ? null
+      : `Stamps: ${plotted
+          .map(
+            (entry) =>
+              `${entry.series.variable} — ${entry.series.frequency}, ${describeTemporalReference(entry.series.reference)}`,
+          )
+          .join('. ')}.`;
 
   return (
     <ChartFrame
       title={title}
       description={description}
-      ariaLabel={`${title}. ${plotted.length} series, ${plotted.reduce((sum, entry) => sum + entry.series.points.length, 0)} points.`}
+      ariaLabel={`${title}. ${plotted.length} series, ${plotted.reduce((sum, entry) => sum + entry.series.points.length, 0)} points. ${timeNote ?? ''}`}
       table={table}
-      footnote={spanNote}
+      footnote={
+        timeNote === null && spanNote === null ? undefined : (
+          <>
+            {timeNote === null ? null : <span>{timeNote} </span>}
+            {spanNote === null ? null : <span>{spanNote}</span>}
+          </>
+        )
+      }
       actions={
         <button
           type="button"

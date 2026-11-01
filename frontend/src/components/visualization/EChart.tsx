@@ -117,7 +117,14 @@ export function EChart({ option, height, onEvents, onReady }: EChartProps) {
     if (chart === null) {
       return;
     }
-    chart.setOption(option, { notMerge: true });
+    // The time range the reader chose, and the series they hid, are theirs.
+    // A new set of data, a new theme or any other change of option must not
+    // throw them away.
+    //
+    // The series are replaced, so that no stale series survives a change of
+    // data; the zoom and the legend selection are not part of the option, so
+    // they stay where the reader left them.
+    chart.setOption(option, { replaceMerge: ['series'] });
   }, [option]);
 
   useEffect(() => {

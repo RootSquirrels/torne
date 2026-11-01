@@ -115,4 +115,43 @@ describe('the time series chart', () => {
 
     expect(screen.getByText('10 m³/s')).toBeVisible();
   });
+
+  it('shows the quality of each value, so a draft is not read as a published one', async () => {
+    render(<TimeSeriesChart title="Demo discharge" series={[series()]} unit="m³/s" />);
+    await openTable();
+
+    expect(screen.getByText('Quality')).toBeVisible();
+    expect(screen.getAllByText('declared').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('unknown').length).toBeGreaterThan(0);
+  });
+
+  it('declares what the stamps of a series mean', () => {
+    render(<TimeSeriesChart title="Demo discharge" series={[series()]} unit="m³/s" />);
+
+    // A stamp is not only a position on an axis: a civil day in Paris and an
+    // instant do not mean the same thing, and the reader must be told which
+    // one this series carries.
+    expect(screen.getByText(/Stamps: Discharge — daily, civil day \(Europe\/Paris\)/)).toBeVisible();
+  });
+
+  it('declares the reference of each series, when several are drawn together', () => {
+    render(
+      <TimeSeriesChart
+        title="Demo discharge"
+        series={[
+          series(),
+          series({
+            id: 's2',
+            variable: 'Level',
+            unit: 'm',
+            frequency: 'hourly',
+            reference: { basis: 'instant', timeZone: null },
+          }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText(/Discharge — daily, civil day \(Europe\/Paris\)/)).toBeVisible();
+    expect(screen.getByText(/Level — hourly, instant/)).toBeVisible();
+  });
 });

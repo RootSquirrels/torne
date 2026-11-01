@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 
 import './Legend.css';
 
-export type LegendShape = 'square' | 'circle' | 'line' | 'dash';
+export type LegendShape = 'square' | 'circle' | 'line' | 'dash' | 'empty';
 
 export interface LegendItem {
   /** The name of the series or category. */
@@ -34,6 +34,10 @@ export interface LegendProps {
  * comes from the caller, because only the caller knows which register it
  * belongs to.
  *
+ * The `empty` swatch is an outlined but unfilled square: it is what a chart
+ * uses for an absence — a gap, a period that does not exist — so that the
+ * absence is drawn and not merely named.
+ *
  * States: normal, hover (no visual change).
  */
 export function Legend({ items, title }: LegendProps) {
@@ -45,9 +49,12 @@ export function Legend({ items, title }: LegendProps) {
           const shape = item.shape ?? 'square';
           const color = item.color ?? 'var(--content-secondary)';
           const isLine = shape === 'line' || shape === 'dash';
-          const swatchStyle: CSSProperties = isLine
-            ? { borderTopColor: color }
-            : { backgroundColor: color };
+          const swatchStyle: CSSProperties =
+            shape === 'empty'
+              ? { borderColor: color }
+              : isLine
+                ? { borderTopColor: color }
+                : { backgroundColor: color };
 
           return (
             <li className="torne-legend__item" key={item.label}>

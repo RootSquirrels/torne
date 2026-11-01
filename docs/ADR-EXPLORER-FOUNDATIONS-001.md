@@ -61,6 +61,12 @@ A series colour is never a status colour, and an accent is never a data colour.
 Colour is never the only channel: a series also carries a symbol, a forecast also carries a dash
 pattern, and a status also carries its name.
 
+**The legend's swatch is derived from the mark the chart draws.** A legend that advertises a shape
+the chart does not draw is a legend that lies, and a kind carried by its colour alone is not
+carried at all. The two are therefore one value: a kind names a mark, the mark names a swatch,
+and the chart draws the mark. A period that does not exist is drawn as an empty outline, because
+an absence is not a pale period.
+
 ### 4. Leaflet is kept, and the map draws no tiles
 
 The map shows TORNE's own layers on a plain background. An external tile service would make the

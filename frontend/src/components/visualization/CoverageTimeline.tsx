@@ -26,18 +26,75 @@ import { useMemo } from 'react';
 import { ChartFrame } from '@/components/visualization/ChartFrame';
 import { EChart } from '@/components/visualization/EChart';
 import type { ChartOption } from '@/components/visualization/EChart';
+import { escapeHtml } from '@/components/visualization/html';
 import { useChartTokens } from '@/components/visualization/chartTheme';
 import type { ChartTokens } from '@/components/visualization/chartTheme';
 import { Legend } from '@/components/ui/Legend';
+import type { LegendShape } from '@/components/ui/Legend';
 import type { CoverageAvailability, CoverageKind, CoveragePeriod } from '@/types/visualization/coverage';
 
-/** How each kind is drawn. The shape differs as well as the colour. */
-const KIND_STYLE: Record<CoverageKind, { colourIndex: number; shape: 'square' | 'circle' | 'line' | 'dash' }> = {
-  observed: { colourIndex: 0, shape: 'square' },
-  estimated: { colourIndex: 1, shape: 'dash' },
-  published: { colourIndex: 2, shape: 'circle' },
-  revision: { colourIndex: 3, shape: 'line' },
+/**
+ * How each kind is drawn. The shape differs as well as the colour.
+ *
+ * The mark is what the chart draws; the shape is what the legend shows. The
+ * second is derived from the first, so the two cannot disagree: a legend that
+ * advertises a shape the chart does not draw is a legend that lies.
+ *
+ * A kind carried by its colour alone would not be carried at all.
+ */
+export type CoverageMark = 'block' | 'dashed' | 'dot' | 'rule' | 'empty';
+
+/** The swatch that shows a mark in the legend. */
+const MARK_SHAPE: Record<CoverageMark, LegendShape> = {
+  block: 'square',
+  dashed: 'dash',
+  dot: 'circle',
+  rule: 'line',
+  empty: 'empty',
 };
+
+/** The mark each kind is drawn with. */
+const KIND_MARK: Record<CoverageKind, CoverageMark> = {
+  observed: 'block',
+  estimated: 'dashed',
+  published: 'dot',
+  revision: 'rule',
+};
+
+/** The colour each kind takes, in the categorical series register. */
+const KIND_COLOUR_INDEX: Record<CoverageKind, number> = {
+  observed: 0,
+  estimated: 1,
+  published: 2,
+  revision: 3,
+};
+
+/**
+ * How each kind is drawn: the colour, the mark, and the swatch the legend
+ * shows for that mark.
+ *
+ * The swatch is **derived** from the mark, so the legend cannot advertise a
+ * shape the chart does not draw. A kind carried by its colour alone would not
+ * be carried at all.
+ */
+export const KIND_STYLE: Record<
+  CoverageKind,
+  { colourIndex: number; mark: CoverageMark; shape: LegendShape }
+> = (Object.keys(KIND_MARK) as CoverageKind[]).reduce(
+  (accumulator, kind) => {
+    const mark = KIND_MARK[kind];
+    accumulator[kind] = {
+      colourIndex: KIND_COLOUR_INDEX[kind],
+      mark,
+      shape: MARK_SHAPE[mark],
+    };
+    return accumulator;
+  },
+  {} as Record<CoverageKind, { colourIndex: number; mark: CoverageMark; shape: LegendShape }>,
+);
+
+/** The swatch the legend shows for a gap: outlined, and empty. */
+export const GAP_SHAPE: LegendShape = MARK_SHAPE.empty;
 
 const KIND_LABEL: Record<CoverageKind, string> = {
   observed: 'observed',
@@ -222,14 +279,14 @@ export function CoverageTimeline({
           const from = new Date(bar.start).toISOString().slice(0, 10);
           const to = new Date(bar.end).toISOString().slice(0, 10);
           if (bar.kind === 'gap') {
-            return `<strong>gap</strong><br/>${bar.subject}<br/>${from} → ${to}<br/>no coverage`;
+            return `<strong>gap</strong><br/>${escapeHtml(bar.subject)}<br/>${from} → ${to}<br/>no coverage`;
           }
           const end = bar.open
             ? 'still open'
             : bar.unknownEnd
               ? 'end not established'
               : to;
-          return `<strong>${KIND_LABEL[bar.kind]}</strong><br/>${bar.subject}<br/>${from} → ${end}`;
+          return `<strong>${KIND_LABEL[bar.kind]}</strong><br/>${escapeHtml(bar.subject)}<br/>${from} → ${end}`;
         },
       },
       xAxis: {
@@ -264,6 +321,9 @@ export function CoverageTimeline({
             const left = Math.min(startX, endX);
             const width = Math.max(Math.abs(endX - startX), 2);
             const colour = colours.get(bar.kind) ?? tokens.accent;
+            const isGap = bar.kind === 'gap';
+            const mark: CoverageMark = isGap ? 'empty' : KIND_STYLE[bar.kind].mark;
+            const dashed = mark === 'dashed' || mark === 'empty' || bar.unknownEnd;
 
             const children: Record<string, unknown>[] = [
               {
@@ -271,13 +331,36 @@ export function CoverageTimeline({
                 shape: { x: left, y: startY - height / 2, width, height },
                 style: {
                   fill: colour,
-                  opacity: bar.kind === 'gap' ? 0.12 : 0.85,
+                  // The fill is what carries the kind's colour; the outline
+                  // carries its mark. A gap has no fill at all: it is the
+                  // absence of a period, not a pale period.
+                  fillOpacity: isGap ? 0 : 0.85,
                   stroke: colour,
-                  lineWidth: bar.kind === 'gap' || bar.unknownEnd ? 1 : 0,
-                  lineDash: bar.kind === 'gap' ? [3, 3] : bar.unknownEnd ? [4, 3] : undefined,
+                  strokeOpacity: 1,
+                  lineWidth: dashed ? 1.5 : 0,
+                  lineDash:
+                    mark === 'empty' ? [3, 3] : mark === 'dashed' || bar.unknownEnd ? [4, 3] : undefined,
                 },
               },
             ];
+
+            // The mark the legend promises: a dot for a published period, a
+            // rule for a revision. Both are cut in the surface colour, so they
+            // read on any of the four fills.
+            if (mark === 'dot') {
+              children.push({
+                type: 'circle',
+                shape: { cx: left + width / 2, cy: startY, r: 4 },
+                style: { fill: tokens.surface },
+              });
+            }
+            if (mark === 'rule') {
+              children.push({
+                type: 'line',
+                shape: { x1: left + 3, y1: startY, x2: left + width - 3, y2: startY },
+                style: { stroke: tokens.surface, lineWidth: 2 },
+              });
+            }
 
             // An open period ends with a chevron: it has not finished.
             if (bar.open) {
@@ -321,7 +404,7 @@ export function CoverageTimeline({
         color: colours.get(kind) ?? tokens.accent,
         shape: KIND_STYLE[kind].shape,
       })),
-      { label: 'gap', color: colours.get('gap') ?? tokens.muted, shape: 'square' as const },
+      { label: 'gap', color: colours.get('gap') ?? tokens.muted, shape: GAP_SHAPE },
     ],
     [colours, tokens],
   );

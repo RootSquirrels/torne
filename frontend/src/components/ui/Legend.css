@@ -35,6 +35,13 @@
   border-radius: var(--radius-xs);
 }
 
+.torne-legend__swatch--empty {
+  border-width: calc(var(--control-border-width) * 2);
+  border-style: dashed;
+  border-radius: var(--radius-xs);
+  background: none;
+}
+
 .torne-legend__swatch--circle {
   border-radius: var(--radius-full);
 }

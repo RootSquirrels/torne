@@ -32,6 +32,7 @@ import type { ReactNode } from 'react';
 
 import './SpatialMap.css';
 import { useChartTokens } from '@/components/visualization/chartTheme';
+import { escapeHtml } from '@/components/visualization/html';
 import type {
   SpatialArea,
   SpatialLayer,
@@ -93,7 +94,10 @@ function propertiesToLines(properties: Readonly<Record<string, string | number |
     return '';
   }
   return entries
-    .map(([key, value]) => `<div><strong>${key}</strong>: ${String(value)}</div>`)
+    .map(
+      ([key, value]) =>
+        `<div><strong>${escapeHtml(key)}</strong>: ${escapeHtml(String(value))}</div>`,
+    )
     .join('');
 }
 
@@ -181,9 +185,11 @@ export function SpatialMap({
           fillColor: style.marker,
           fillOpacity: 1,
         });
-        marker.bindTooltip(`${point.label} · ${point.kind}`, { direction: 'top' });
+        marker.bindTooltip(`${escapeHtml(point.label)} · ${escapeHtml(point.kind)}`, {
+          direction: 'top',
+        });
         marker.bindPopup(
-          `<strong>${point.label}</strong><div>${point.kind}</div>${propertiesToLines(point.properties)}`,
+          `<strong>${escapeHtml(point.label)}</strong><div>${escapeHtml(point.kind)}</div>${propertiesToLines(point.properties)}`,
         );
         marker.on('click', () => onSelect?.({ kind: 'point', id: point.id }));
         marker.on('dblclick', () => onNavigate?.({ kind: 'point', id: point.id }));
@@ -198,9 +204,9 @@ export function SpatialMap({
           fillColor: area.fill ?? style.fill,
           fillOpacity: area.fillOpacity ?? (area.fill === null ? 0.6 : 1),
         });
-        polygon.bindTooltip(area.label, { sticky: true });
+        polygon.bindTooltip(escapeHtml(area.label), { sticky: true });
         polygon.bindPopup(
-          `<strong>${area.label}</strong>${propertiesToLines(area.properties)}`,
+          `<strong>${escapeHtml(area.label)}</strong>${propertiesToLines(area.properties)}`,
         );
         polygon.on('click', () => onSelect?.({ kind: 'area', id: area.id }));
         polygon.on('dblclick', () => onNavigate?.({ kind: 'area', id: area.id }));
@@ -215,7 +221,9 @@ export function SpatialMap({
           ],
           { color: style.stroke, weight: 1, fill: false, dashArray: '4 3' },
         );
-        rectangle.bindTooltip(`${grid.label} · ${grid.crs}`, { sticky: true });
+        rectangle.bindTooltip(`${escapeHtml(grid.label)} · ${escapeHtml(grid.crs)}`, {
+          sticky: true,
+        });
         rectangle.on('click', () => onSelect?.({ kind: 'grid', id: grid.id }));
         rectangle.on('dblclick', () => onNavigate?.({ kind: 'grid', id: grid.id }));
         group.addLayer(rectangle);
