@@ -45,6 +45,41 @@ from .time import TemporalStamp, to_utc
 from .validity import MissingReason, PointValidity
 
 
+class PublicationClass(StrEnum):
+    """Publication class of a source (contract §3.11). Closed vocabulary.
+
+    Four classes, and a single rule: **never choose a state more favourable
+    than what the source allows**.
+
+    - `TIMESTAMPED` (P) — the source exposes the publication instant of each
+      version: `KNOWN_AT` is that instant;
+    - `LOWER_BOUND` (B) — the source exposes a lower bound: "from this instant
+      on, the information was certainly available", and nothing more; the
+      censoring interval is kept (INV-11);
+    - `CYCLE` (C) — the source exposes a documented publication cycle:
+      `KNOWN_AT` is the earliest possible instant of the cycle, derived from the
+      calendar;
+    - `NO_PUBLICATION` (N) — no instant, no bound, no cycle: no `KNOWN_AT` is
+      invented, the observation is **not admitted** in a point-in-time
+      reconstruction (INV-10), and its retrospective use is declared.
+
+    **The class is established by execution, not by assumption.** A source
+    whose publication cycle is *assumed* but not verified is a
+    `NO_PUBLICATION` source, not a `CYCLE` one: assuming a publication is
+    inventing a bound.
+
+    `None` — the default of `Source.publication_class` — means "**class not
+    established**". It is the starting point of every new source, and it
+    refuses admission to point-in-time reconstruction until the class has been
+    established.
+    """
+
+    TIMESTAMPED = "p"
+    LOWER_BOUND = "b"
+    CYCLE = "c"
+    NO_PUBLICATION = "n"
+
+
 class QualityStatus(StrEnum):
     """Statut de qualité d'une valeur de source (contrat §3.7).
 
@@ -107,6 +142,19 @@ class Source:
     unit: str | None = None
     timezone: str | None = None
     quality_status: str | None = None
+    publication_class: PublicationClass | None = None
+    """The publication class of the source (contract §3.11).
+
+    `None` means "**class not established**": it is the default, and the most
+    common case. A source whose class has not been established **by execution**
+    cannot produce any observation admitted in a point-in-time reconstruction
+    (INV-10): the repository does not fill the absence with an assumed
+    publication.
+
+    The class is a property **of the source**, not of an isolated observation:
+    it is versioned with it, and a change of format or publication cycle can
+    flip it.
+    """
 
     def __post_init__(self) -> None:
         _exiger_texte(self.source_id, "Source.source_id")
@@ -234,4 +282,10 @@ class Observation:
                 raise ValueError("une observation ne peut pas être la révision d'elle-même")
 
 
-__all__ = ["Observation", "QualityStatus", "RawEvidence", "Source"]
+__all__ = [
+    "Observation",
+    "PublicationClass",
+    "QualityStatus",
+    "RawEvidence",
+    "Source",
+]
