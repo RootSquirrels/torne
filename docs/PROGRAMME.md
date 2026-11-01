@@ -34,7 +34,7 @@ Chaque ligne a un emplacement dans le code et une suite de tests qui la contrôl
 | Transport HTTP durci | `src/torne/acquisition/transport.py` | plafond de redirections appliqué, durée mesurée, URL finale consignée, identifiants retirés dès qu'une redirection change de serveur, de port ou de schéma |
 | Magasin brut | `src/torne/acquisition/store.py` | contenu dédupliqué par empreinte et jamais réécrit, **événement d'acquisition** journalisé à chaque récupération, instant de première conservation |
 | Fetcher | `src/torne/acquisition/fetcher.py` | pagination par curseur, par décalage et par lien d'en-tête ; épuisement qualifié par source |
-| Contrat de connecteur | `src/torne/acquisition/contracts.py` | quatre contrôles — transport, structure de la réponse, conformité à la question posée, exhaustivité du parcours — et un verdict de conformité **motivé** |
+| Contrat de connecteur | `src/torne/acquisition/contracts.py` | quatre contrôles — transport, structure de la réponse, conformité à la question posée, exhaustivité du parcours — et un verdict de conformité **motivé**, à quatre états ; la porte n'ouvre que sur un verdict **positif** |
 | Trois adaptateurs réels | `src/torne/acquisition/adapters/` | Hub'EAU v2 (curseur), USGS NWIS (sans pagination), catalogue Copernicus Data Space (OData) |
 | Objets et temporalité | `src/torne/contracts/` | les cinq objets, les trois dimensions temporelles, `usable_at` dérivé, observation absente qualifiée |
 | Méthodes | `src/torne/methods/` | filtre de Kalman en espace d'état, régression et erreur-type CR1, rupture de moyenne par CUSUM, puissance et effet minimal détectable, comparaison appariée à une référence |
@@ -143,14 +143,7 @@ Ces points ne sont pas tranchables aujourd'hui, et aucun n'est une négligence.
    jour où la suite sera distribuée, le déterminisme sous cette configuration devra être vérifié séparément.
 8. **La graine globale n'est pas journalisée dans le manifeste.** L'aléa global n'est jamais touché et la graine
    est transmise, mais elle n'est pas encore tracée dans la preuve.
-9. **Le contrat de conformité a trois états, pas quatre.** Une source peut déclarer un critère demandé et le rendre
-   non vérifiable : dans ce cas le verdict global reste `CONFORME`, et `NON_APPLICABLE` franchit la porte
-   d'exploitabilité. La table de vérité retenue est : tous vérifiés et satisfaits → `CONFORME` ; au moins un vérifié
-   et violé → `NON_CONFORME` ; aucun violé, mais au moins un critère demandé non vérifiable → **`INDETERMINATE`**, et
-   l'issue ne doit alors pas être exploitable. `INDETERMINE` porte le même sens que l'axe d'applicabilité des
-   Knowledge Products (`INDETERMINATE`) : la même règle, au même mot, à deux étages. Ce cas n'est pas implémenté :
-   il est fermé par la piste d'acquisition, pas par la documentation.
-10. **Une source peut accepter un filtre et ne pas l'appliquer.** C'est le cas mesuré de Hub'EAU `observations_tr`
+9. **Une source peut accepter un filtre et ne pas l'appliquer.** C'est le cas mesuré de Hub'EAU `observations_tr`
     sur l'instance observée : une station inexistante rend exactement la même population qu'une station réelle.
     Le constat et sa mesure sont dans `docs/SOURCES.md` §I.1. Ce n'est pas une limite d'architecture — USGS `sites=`
     et Copernicus `$filter` appliquent bien leur filtre — mais c'est une **contrainte de source**, et elle
