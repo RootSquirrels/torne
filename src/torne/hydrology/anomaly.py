@@ -14,11 +14,13 @@ The index is the standardised deviation of a daily value from the
 
 Two conventions are declared, never assumed:
 
-- the climatology is keyed on the **local civil day**, so it is built in the
-  station's zone;
-- the reference is the **whole acquired record**, and the window being
-  scored is inside it. A day scored against a reference that contains it
-  would be scored against itself.
+- the climatology is keyed on the **civil day in the zone the caller gives**
+  (`zone`). Without a zone, the UTC day is used — which matches the local civil
+  day only for a station west of Greenwich whose daily values are stamped at
+  local midnight, and the product records which convention was used;
+- the reference is the **whole acquired record** unless `reference_start` /
+  `reference_end` bound it, and the window being scored is inside it. A day
+  scored against a reference that contains it would be scored against itself.
 
 The uncertainty is what is really known: the interval is the confidence
 interval of the **mean** index over the window, and its statement says
@@ -30,7 +32,7 @@ from __future__ import annotations
 import statistics
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, tzinfo
 from typing import Any
 
 from ..contracts.derived import DerivedVariable, Uncertainty
@@ -39,12 +41,28 @@ from ..contracts.observation import Observation
 from ..contracts.validity import PointValidity
 
 METHOD = "day-of-year standardised anomaly index"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 """Version of the calculation rule.
 
 It is versioned because the rule is part of the product: a reader who finds
 an index has to be able to know which rule produced it.
+
+1.1.0 — the reference bounds filter the record (they were recorded but ignored
+in 1.0.0), the day key is the civil day in the given zone, and the recorded
+day convention states what was actually used (1.0.0 always claimed the local
+civil day while keying on the UTC day).
 """
+
+
+def _day_key(instant: datetime, zone: tzinfo | None) -> tuple[int, int]:
+    """The (month, day) of the instant's civil day in `zone`, or its UTC day."""
+    local = instant.astimezone(zone) if zone is not None else instant
+    return (local.month, local.day)
+
+
+def _day_convention(zone: tzinfo | None) -> str:
+    return f"civil day in {zone}" if zone is not None else "UTC day"
+
 
 NIVEAU_CONFIANCE = 0.95
 """The confidence level of the interval on the mean index."""
@@ -128,21 +146,30 @@ def climatology(
     *,
     reference_start: datetime | None = None,
     reference_end: datetime | None = None,
+    zone: tzinfo | None = None,
 ) -> Climatology:
     """The day-of-year climatology of an acquired record.
 
     Only valid observations enter the statistics: a day the provider did not
-    measure is not a day at the mean. The day is the **local civil day** of
-    the observation's valid time, which the observation already carries.
+    measure is not a day at the mean. The day is the civil day of the
+    observation's valid time in `zone` (the UTC day without a zone).
+    `reference_start` / `reference_end`, when given, bound the observations
+    that enter the reference (inclusive).
     """
+    record = [
+        observation
+        for observation in observations
+        if observation.temporal.valid_time is not None
+        and (reference_start is None or observation.temporal.valid_time >= reference_start)
+        and (reference_end is None or observation.temporal.valid_time <= reference_end)
+    ]
+
     groups: dict[tuple[int, int], list[float]] = {}
-    for observation in observations:
+    for observation in record:
         if observation.validity is not PointValidity.VALID or observation.value is None:
             continue
-        instant = observation.temporal.valid_time
-        if instant is None:
-            continue
-        groups.setdefault((instant.month, instant.day), []).append(float(observation.value))
+        key = _day_key(observation.temporal.valid_time, zone)
+        groups.setdefault(key, []).append(float(observation.value))
 
     by_day: dict[tuple[int, int], ClimatologyDay] = {}
     for (month, day), values in groups.items():
@@ -156,11 +183,7 @@ def climatology(
             count=len(values),
         )
 
-    instants = [
-        observation.temporal.valid_time
-        for observation in observations
-        if observation.temporal.valid_time is not None
-    ]
+    instants = [observation.temporal.valid_time for observation in record]
     start = reference_start or (min(instants) if instants else None)
     end = reference_end or (max(instants) if instants else None)
     years = _years(start, end)
@@ -176,11 +199,14 @@ def climatology(
 def anomalies(
     observations: Sequence[Observation],
     reference: Climatology,
+    *,
+    zone: tzinfo | None = None,
 ) -> list[tuple[Observation, float]]:
     """The standardised anomalies of the observations, against the reference.
 
-    A day whose climatology is unknown — a day never observed in the
-    reference — is **not** scored: it would be scored against nothing.
+    `zone` must be the zone the reference was built with. A day whose
+    climatology is unknown — a day never observed in the reference — is
+    **not** scored: it would be scored against nothing.
     """
     scores: list[tuple[Observation, float]] = []
     for observation in observations:
@@ -189,7 +215,7 @@ def anomalies(
         instant = observation.temporal.valid_time
         if instant is None:
             continue
-        day = reference.pour(instant.month, instant.day)
+        day = reference.pour(*_day_key(instant, zone))
         if day is None or day.standard_deviation <= 0.0:
             continue
         scores.append((observation, (float(observation.value) - day.mean) / day.standard_deviation))
@@ -204,13 +230,15 @@ def anomaly_index(
     spatial_ref: str,
     computed_at: datetime,
     fenetre: tuple[datetime, datetime] | None = None,
+    zone: tzinfo | None = None,
 ) -> DerivedVariable:
     """The anomaly series over the window, as a derived variable.
 
     The series is a `DerivedVariable` of nature `DERIVED`: it is a computed
     quantity, and it never presents itself as an observation of the source.
+    `zone` must be the zone the reference was built with.
     """
-    scores = anomalies(observations, reference)
+    scores = anomalies(observations, reference, zone=zone)
     if fenetre is not None:
         start, end = fenetre
         scores = [
@@ -244,7 +272,7 @@ def anomaly_index(
                 "fenetre_debut": fenetre[0].isoformat() if fenetre else "",
                 "fenetre_fin": fenetre[1].isoformat() if fenetre else "",
                 "observations_scorees": len(inputs),
-                "convention_jour": "local civil day",
+                "convention_jour": _day_convention(zone),
             }
         ),
         computed_at=computed_at,

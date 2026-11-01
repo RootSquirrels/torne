@@ -288,7 +288,7 @@ def main() -> int:
 
     # -- 6. The derived variable ------------------------------------------
     print("\n6. the climatology, and the check against the reference")
-    reference = climatology(observations)
+    reference = climatology(observations, zone=ZONE)
     print(f"  climatology over {reference.years} year(s), {len(reference)} calendar day(s)")
     gap = compare_with_published_normals(
         reference, published_normals, acquired_years=reference.years
@@ -310,6 +310,7 @@ def main() -> int:
         spatial_ref=STATION,
         computed_at=datetime.now(UTC),
         fenetre=(debut_fenetre, fin_fenetre),
+        zone=ZONE,
     )
     mean = mean_anomaly(
         series,

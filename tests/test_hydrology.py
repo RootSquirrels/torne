@@ -267,6 +267,43 @@ def test_the_climatology_groups_by_day_of_year():
     assert bissextile.count == 1
 
 
+def test_the_reference_bounds_filter_the_record():
+    """`reference_start` / `reference_end` select the years that enter the reference."""
+    observations = _serie(nb_annees=3)
+    last_year = observations[-1].temporal.valid_time.year
+
+    reference = climatology(observations, reference_start=datetime(last_year, 1, 1, tzinfo=ZONE))
+
+    day = reference.pour(1, 1)
+    assert day is not None
+    assert day.count == 1
+    assert reference.years == 1
+
+
+def test_the_climatology_keys_on_the_civil_day_of_the_given_zone():
+    """East of Greenwich, local midnight is the previous UTC day.
+
+    A Paris daily value for 1 January is stamped at 23:00 UTC on 31 December:
+    keyed on the UTC day it would land on the wrong calendar day.
+    """
+    paris = ZoneInfo("Europe/Paris")
+    observation = observation_from_feature(
+        _record("2025-01-01", "100.0"),
+        station=station_from_feature(_SITE),
+        source_id="usgs.ogc.daily",
+        evidence_id="evidence-001",
+        zone=paris,
+        acquired_at=datetime(2026, 11, 1, 10, 30, tzinfo=UTC),
+        quantity="discharge",
+        unit="ft^3/s",
+    )
+
+    assert climatology([observation]).pour(12, 31) is not None
+    in_zone = climatology([observation], zone=paris)
+    assert in_zone.pour(1, 1) is not None
+    assert in_zone.pour(12, 31) is None
+
+
 def test_a_dry_year_is_negative_and_a_wet_year_positive():
     """The index says what it is meant to say."""
     observations = _serie(nb_annees=3, facteur=0.5)

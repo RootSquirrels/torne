@@ -1,32 +1,44 @@
-"""Les adaptateurs de source — poser une question, et rien de plus.
+"""Source adapters — ask a question, and nothing more.
 
-Un adaptateur sait **demander** à un fournisseur : il construit une URL, il
-dit comment la source se parcourt, et il rend la question suivante ou
-`None`. Il ne sait **rien interpréter** : ni hydrologie, ni énergie, ni
-logistique. C'est la séparation que le programme impose — « un connecteur ne
-doit pas savoir reconstruire un état hydrologique » (`docs/PROGRAMME.md`).
+An adapter knows how to **ask** a provider: it builds a URL, says how the
+source is walked, and returns the next question or `None`. It **interprets
+nothing**: no hydrology, no meteorology, no surface observation. That is the
+separation the programme imposes — "a connector must not know how to
+reconstruct a physical state" (`docs/ARCHITECTURE.md`).
 
-Les trois adaptateurs ici présents ont été choisis pour la **diversité de
-leur accès**, non pour la quantité de fournisseurs couverts :
+Each adapter verifies the response it receives against what it asked
+(`verdict_conformite`), on the rows that came back, never on the URL:
 
-- `hubeau` : API JSON française, pagination **par curseur** ;
-- `usgs` : API JSON américaine, **sans pagination** — tout vient en une
-  réponse, et les valeurs les plus récentes sont marquées provisoires ;
-- `copernicus` : API **OData**, pagination par `$top`/`$skip`, réponse
-  imbriquée et lien de page suivante dans le corps.
-
-Cette diversité est le but : elle sert à découvrir ce qu'exige vraiment une
-capacité transversale d'acquisition, pas à faire fifty connecteurs.
+- `hubeau` / `hubeau_feed`: Hub'EAU v2 real-time hydrometry (France), cursor
+  pagination; `hubeau` asks for stations and windows the instance ignores,
+  `hubeau_feed` asks only what the source can answer;
+- `usgs` / `usgs_ogc`: USGS Water Services and the OGC API (United States);
+- `copernicus` / `copernicus_stac`: Copernicus Data Space, the OData product
+  catalogue and the STAC surface-observation catalogue;
+- `ghcnd`: NOAA GHCN-Daily station records;
+- `meteofrance`: Météo-France observation API, behind an OAuth2 token held by
+  reference (`torne.acquisition.credentials`).
 """
 
 from __future__ import annotations
 
 from .copernicus import CopernicusProductsAdapter
+from .copernicus_stac import CopernicusStacAdapter
+from .ghcnd import GhcndDailyAdapter
 from .hubeau import HubeauObservationsAdapter
+from .hubeau_feed import HubeauFeedAdapter
+from .meteofrance import MeteoFranceAdapter
 from .usgs import UsgsInstantaneousValuesAdapter
+from .usgs_ogc import UsgsObservationNormalsAdapter, UsgsOgcItemsAdapter
 
 __all__ = [
     "CopernicusProductsAdapter",
+    "CopernicusStacAdapter",
+    "GhcndDailyAdapter",
+    "HubeauFeedAdapter",
     "HubeauObservationsAdapter",
+    "MeteoFranceAdapter",
     "UsgsInstantaneousValuesAdapter",
+    "UsgsObservationNormalsAdapter",
+    "UsgsOgcItemsAdapter",
 ]
