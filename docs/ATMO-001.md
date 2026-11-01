@@ -114,6 +114,50 @@ regarde que le code HTTP lit cette page comme un jeu d'observations.
 > C'est pour cela que la sonde vérifie désormais **la forme du contenu** et pas seulement le statut.
 > Les deux sources sont classées `contenu_inattendu` — un état qui n'existait pas avant.
 
+### 1.5 La voie Météo-France : où poser le jeton
+
+La source institutionnelle n'est pas hors d'atteinte : elle est **derrière un jeton OAuth2**. Le code
+qui l'attend est en place (`src/torne/acquisition/adapters/meteofrance.py`,
+`src/torne/acquisition/credentials.py`, `experiments/atmo_001_meteofrance.py`), et il respecte la
+règle du dépôt : **INV-41 — un secret ne circule que par référence**.
+
+**[FAIT]** Ce que le journal d'acquisition retient d'une demande à Météo-France, sans jeton (course
+réelle du 1ᵉʳ novembre 2026) :
+
+```json
+{"credential_ref": "meteofrance.oauth2", "error_kind": "authentication",
+ "error_detail": "HTTP 401", "status": "failed", "pages": [], "content_sha256": []}
+```
+
+La **référence** est consignée ; la valeur ne l'est pas, et ne le sera jamais.
+
+**Où poser le jeton — deux emplacements, et aucun autre.**
+
+| | Emplacement | Pourquoi |
+|---|---|---|
+| ✅ | variable d'environnement `METEOFRANCE_TOKEN` (PowerShell : `setx METEOFRANCE_TOKEN "…"` ) | rien n'entre dans le dépôt, même en fichier local |
+| ✅ | fichier `.env` **à la racine du dépôt** | déjà ignoré par Git : `.gitignore:36` couvre `.env` et `.env.*` **[FAIT]** (`git check-ignore -v`) |
+| ❌ | **dans cette conversation** | un message est conservé, et un secret collé dans un message est un secret copié |
+| ❌ | **dans un fichier versionné** | le secret part dans l'historique, et l'historique se clone |
+
+Dans les deux cas, la **variable d'environnement prime** sur le fichier `.env` : un choix explicite
+prime sur un commodité local. Le jeton n'est écrit nulle part, et il n'est jamais journalisé.
+
+> **[NON VÉRIFIÉ]** la durée de vie du jeton et l'existence d'un jeton de rafraîchissement n'ont pas pu
+> être vérifiées — le compte n'est pas ouvert. Si le jeton est court, l'éclairement non interactif
+> demandera un second secret (`METEOFRANCE_REFRESH_TOKEN`), qui devra être stocké de la même façon.
+
+**[FAIT]** Le chemin Météo-France est **vérifié de bout en bout jusqu'au refus** : sans jeton, les deux
+appels partent, la source répond `401`, le socle classe l'échec en `authentication`, et rien n'est
+interprété. C'est le comportement attendu, et il est le même que celui d'une panne : l'échec est un
+résultat, consigné.
+
+> ⚠ **[FAIT] Une constatation sur le socle, à arbitrer.** Le corps du refus — 234 octets où Météo-France
+> écrit *« Make sure your API invocation call has a header: 'Authorization : Bearer ACCESS_TOKEN' »* —
+> **n'est pas conservé** : `pages: []`, `content_sha256: []`. Le socle garde le statut et le type de
+> contenu, pas la parole de la source. C'est cohérent avec « un 4xx est un échec d'acquisition », mais
+> une source qui explique son refus voit son explication perdue de la piste d'audit (voir A9).
+
 ---
 
 ## 2. La source retenue, et ce qu'elle contient
@@ -383,6 +427,8 @@ Chacune est **exécutée dans le périmètre** quand elle est locale au domaine,
 | **A6** | **Dépendance `tzdata`** | `zoneinfo` n'a pas de base IANA sur Windows sans ce paquet ; le calcul en jour civil en dépend. `pyproject.toml` ne le déclare pas | **signalée, non appliquée** (fichier partagé) |
 | **A7** | **Export de l'adaptateur** dans `torne.acquisition.adapters.__init__` | le module existe et fonctionne ; il n'est pas exporté, pour ne pas modifier un fichier partagé pendant que le périmètre HYDRO-01 travaille | **signalée, non appliquée** — une ligne |
 | **A8** | **Fiche GHCN-Daily dans `docs/SOURCES.md`** | le dépôt qualifie ses sources dans un document unique ; la fiche GHCN y manque | **signalée, non appliquée** (fichier partagé) |
+| **A9** | **Conserver le corps d'un refus** | quand une source répond `4xx`, le socle consigne le statut, le type et la durée, mais **pas le corps** — donc pas l'explication que la source donne de son refus (ici, le rappel de l'en-tête attendu). Une source qui explique son refus voit sa parole perdue de la piste d'audit | **signalée, non appliquée** (contrat transversal) |
+| **A10** | **Exports des nouveaux modules** | `torne.acquisition.credentials` et l'adaptateur `meteofrance` fonctionnent mais ne sont pas exportés dans les `__init__` des paquets partagés, pour ne pas les modifier pendant que HYDRO-01 travaille | **signalée, non appliquée** — deux lignes |
 
 > Les sept adaptations signalées sont **en attente d'arbitrage**, et **aucune** n'a été appliquée à un
 > fichier partagé. C'est le respect de la règle : les deux périmètres ne modifient pas le socle en
@@ -398,11 +444,15 @@ Chacune est **exécutée dans le périmètre** quand elle est locale au domaine,
 | `src/torne/atmosphere/anomaly.py` | climatologie, anomalies, régimes, épisodes ; tout indexé en **jour civil** |
 | `src/torne/atmosphere/profile.py` | couverture, lacunes, distribution, autocorrélation, taille effective, rupture |
 | `src/torne/acquisition/adapters/ghcnd.py` | l'adaptateur : l'URL, la lecture, et la **vérification de conformité sur le contenu** |
+| `src/torne/acquisition/credentials.py` | les secrets : une référence, résolue au dernier moment (INV-41) |
+| `src/torne/acquisition/adapters/meteofrance.py` | l'adaptateur de la voie institutionnelle, derrière jeton |
 | `experiments/atmo_001_sources_probe.py` | l'inventaire d'accessibilité, rejouable |
 | `experiments/atmo_001_premiere_acquisition.py` | l'acquisition réelle et le profil, rejouable |
+| `experiments/atmo_001_meteofrance.py` | la voie institutionnelle, telle qu'elle répond avec ou sans jeton |
 | `tests/test_atmosphere.py` | 26 tests, **sans réseau** |
+| `tests/test_meteofrance.py` | 13 tests, **sans réseau** : le secret, et la place du refus |
 
-**État de la suite.** 640 tests du dépôt passent ; `ruff check` et `ruff format` sont propres sur les
+**État de la suite.** 690 tests du dépôt passent ; `ruff check` et `ruff format` sont propres sur les
 fichiers de ce périmètre.
 
 ---
@@ -410,9 +460,10 @@ fichiers de ce périmètre.
 ## 9. Ce qui n'a pas pu être vérifié
 
 - **[NON VÉRIFIÉ]** l'API d'observation Météo-France et l'API climatologique : elles exigent un jeton
-  OAuth2. **La marche à suivre** : fournir un compte Météo-France (WeatherStore) et un token, à lire
-  au dernier moment dans une variable d'environnement, jamais dans une demande consignée — le socle
-  est déjà bâti pour ça (`credential_ref`).
+  OAuth2. **La marche à suivre** : poser le jeton dans `METEOFRANCE_TOKEN` (variable d'environnement)
+  ou dans un `.env` à la racine du dépôt — voir §1.5 — puis relancer
+  `experiments/atmo_001_meteofrance.py`. Le secret n'a pas à être écrit dans le chat, et il n'a pas à
+  être versionné.
 - **[NON VÉRIFIÉ]** le portail `donnees.meteofrance.fr` : le DNS ne répond pas depuis ce poste. **La
   marche à suivre** : vérifier depuis un autre réseau, ou via le catalogue data.gouv.fr, si les
   fichiers d'observation publiés par Météo-France y sont référencés.
