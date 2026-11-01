@@ -30,7 +30,8 @@ import torne.acquisition.adapters as adapters
 from torne.eo import SURFACE_PRODUCTS
 from torne.explorer import ASSETS, MISSIONS, MODELS, SOURCES, Status, build_manifest
 from torne.explorer.catalogue import DOMAINS, Fact, Mission, Ref, RefKind
-from torne.explorer.manifest import country_summary, resolve_implementation
+from torne.explorer.manifest import KNOWLEDGE_RECORDS_GAP, country_summary, resolve_implementation
+from torne.knowledge.store import read_record
 
 ROOT = Path(__file__).resolve().parent.parent
 STATIC = ROOT / "src" / "torne" / "explorer" / "static"
@@ -91,7 +92,9 @@ def test_every_reference_resolves(ref):
     elif ref.kind is RefKind.MISSION:
         assert ref.target in {m.mission_id for m in MISSIONS}
     elif ref.kind is RefKind.RECORD:
-        pytest.fail("no knowledge record is persisted: a RECORD reference cannot resolve")
+        path = ROOT / ref.target
+        assert path.is_file(), ref.target
+        read_record(path)
 
 
 def test_a_fact_without_evidence_cannot_be_built():
@@ -193,7 +196,10 @@ def test_no_mission_claims_knowledge_without_a_persisted_record():
             produced=(),
             not_established=(),
         )
-    assert all(m.status is not Status.KNOWLEDGE for m in MISSIONS)
+    assert all(m.status is not Status.KNOWLEDGE for m in MISSIONS if m.mission_id != "LNG-002")
+    knowledge = [m for m in MISSIONS if m.status is Status.KNOWLEDGE]
+    assert [m.mission_id for m in knowledge] == ["LNG-002"]
+    assert all(m.knowledge_records for m in knowledge)
 
 
 def test_a_status_without_evidence_cannot_be_built():
@@ -223,16 +229,32 @@ def test_the_manifest_is_json_and_derived_from_the_registry():
     json.dumps(manifest)
     products = [c for c in manifest["coverage"] if c["subject_kind"] == "surface_product"]
     assert len(products) == len(SURFACE_PRODUCTS)
-    assert manifest["results"]["persisted"] == []
     assert manifest["results"]["gap"]
-    assert manifest["market_intelligence"]["open"] is False
+    branches = {branch["branch_id"]: branch for branch in manifest["branches"]}
+    assert branches["supply"]["open"] is True
+    assert branches["market"]["open"] is False
 
 
 def test_runs_that_produced_a_product_are_not_presented_as_published():
     results = build_manifest()["results"]
 
     assert [r["mission_id"] for r in results["runs_not_persisted"]] == ["mission-002"]
-    assert results["persisted"] == []
+    assert [p["mission_id"] for p in results["persisted"]] == ["LNG-002"]
+
+
+def test_the_gap_names_the_results_that_are_still_only_in_memory():
+    """A persisted record closes the "nothing is persisted" gap.
+
+    The runs that did not persist anything remain listed, and the gap says so:
+    publishing one product does not make the others published.
+    """
+    results = build_manifest()["results"]
+
+    assert results["gap"], "a run that stayed in memory is a gap the manifest names"
+    assert results["gap"] != KNOWLEDGE_RECORDS_GAP, (
+        "a record is persisted: the gap is not that nothing is persisted"
+    )
+    assert [r["mission_id"] for r in results["runs_not_persisted"]] == ["mission-002"]
 
 
 def test_a_country_status_is_the_best_status_of_its_missions():
@@ -246,10 +268,25 @@ def test_a_country_status_is_the_best_status_of_its_missions():
 
 
 def test_an_uncovered_country_has_no_status():
-    summary = country_summary("DE")
+    summary = country_summary("JP")
 
     assert all(d["status"] is None for d in summary["domains"])
     assert summary["asset_ids"] == []
+
+
+def test_a_country_answered_for_carries_the_status_of_its_domain():
+    """A mission that covers a country is visible in that country's summary.
+
+    The domain that was answered for says so; the others stay unknown. A
+    country is not covered by a mission, and a domain is not covered by
+    another domain's work.
+    """
+    summary = country_summary("DE")
+
+    gas = next(d for d in summary["domains"] if d["domain_id"] == "gas")
+    assert gas["status"] == "knowledge"
+    assert gas["mission_ids"] == ["LNG-002"]
+    assert all(d["status"] is None for d in summary["domains"] if d["domain_id"] != "gas")
 
 
 def test_every_document_reference_links_to_the_repository():
@@ -287,8 +324,8 @@ def test_the_api_filters_missions(client):
     french = client.get("/api/missions", params={"country": "fr"}).json()
     advanced = client.get("/api/missions", params={"min_status": "demonstration"}).json()
 
-    assert {m["mission_id"] for m in french} == {"HYDRO-001", "ATMO-001", "ATMO-002"}
-    assert [m["mission_id"] for m in advanced] == ["mission-002"]
+    assert {m["mission_id"] for m in french} == {"HYDRO-001", "ATMO-001", "ATMO-002", "LNG-002"}
+    assert [m["mission_id"] for m in advanced] == ["mission-002", "LNG-002"]
 
 
 def test_the_api_refuses_an_unknown_status(client):
@@ -317,7 +354,7 @@ def test_the_api_separates_models_coverage_and_results(client):
         "FR000007630",
         "FR000007650",
     }
-    assert results["persisted"] == []
+    assert [p["mission_id"] for p in results["persisted"]] == ["LNG-002"]
 
 
 def test_the_api_filters_assets_by_kind_and_country(client):
@@ -396,4 +433,6 @@ def test_planned_features_are_advertised_rather_than_implemented():
 
     features = {entry["feature"] for entry in manifest["planned"]}
     assert features, "the manifest must say what is planned"
-    assert manifest["market_intelligence"]["open"] is False
+    branches = {branch["branch_id"]: branch for branch in manifest["branches"]}
+    assert branches["market"]["open"] is False
+    assert branches["market"]["reason"], "a closed branch says why it is closed"

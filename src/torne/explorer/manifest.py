@@ -60,9 +60,13 @@ REPOSITORY_URL = "https://github.com/RootSquirrels/torne/blob/main/"
 """Where document and script references link to."""
 
 KNOWLEDGE_RECORDS_GAP = (
-    "No knowledge record is persisted: records are built in memory and no record format exists "
-    "on disk yet. Runs that produced a product only in memory are listed separately, never as "
-    "published results."
+    "No knowledge record is persisted: the runs that produced a product only in memory are "
+    "listed separately, never as published results."
+)
+
+PARTIAL_PERSISTENCE_GAP = (
+    "Some results are still only in memory: the runs that produced a product without a "
+    "persisted record are listed separately, never as published results."
 )
 
 
@@ -290,10 +294,14 @@ def _results() -> dict[str, Any]:
         for m in MISSIONS
         if m.status >= Status.DEMONSTRATION and not m.knowledge_records
     ]
+    if in_memory:
+        gap = KNOWLEDGE_RECORDS_GAP if not persisted else PARTIAL_PERSISTENCE_GAP
+    else:
+        gap = None
     return {
         "persisted": persisted,
         "runs_not_persisted": in_memory,
-        "gap": KNOWLEDGE_RECORDS_GAP if not persisted else None,
+        "gap": gap,
     }
 
 
@@ -318,14 +326,48 @@ def build_manifest(
         "surface_products": [_surface_product(p) for p in surface_products.values()],
         "results": _results(),
         "planned": [
-            {"feature": "period filter", "needs": "persisted knowledge records"},
-            {"feature": "uncertainty filter", "needs": "persisted knowledge records"},
+            {
+                "feature": "period filter",
+                "needs": "a catalogue projection that carries the period of each coverage",
+            },
+            {
+                "feature": "uncertainty filter",
+                "needs": "a catalogue projection that carries the uncertainty of each result",
+            },
             {"feature": "catchments", "needs": "BASIN-001 catchment geometry source"},
             {"feature": "raster coverages on the map", "needs": "pixel access to surface products"},
+            {
+                "feature": "the gas sources in the source registry",
+                "needs": "the qualification of the GIE platforms and of the operator's series "
+                "in docs/SOURCES.md",
+            },
         ],
-        "market_intelligence": {
-            "open": False,
-            "reason": "Objective B is deferred until the physical engine is validated "
-            "(docs/ARCHITECTURE.md section 5).",
-        },
+        "branches": [
+            {
+                "branch_id": "supply",
+                "title": "Supply Intelligence",
+                "open": True,
+                "reason": (
+                    "The physical supply engine is validated: the European gas supply is "
+                    "published as a knowledge product, and confronted with an independent "
+                    "source on the seven Spanish terminals."
+                ),
+                "domain_ids": ["gas"],
+                "mission_ids": ["LNG-002"],
+                "product_ids": ["gas-supply-europe"],
+            },
+            {
+                "branch_id": "market",
+                "title": "Market Intelligence",
+                "open": False,
+                "reason": (
+                    "The supply side is validated, but no price, no margin and no counterparty "
+                    "is sourced: turning physical intelligence into a financial decision has "
+                    "nothing to read yet (docs/ARCHITECTURE.md section 5)."
+                ),
+                "domain_ids": [],
+                "mission_ids": [],
+                "product_ids": [],
+            },
+        ],
     }

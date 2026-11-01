@@ -94,7 +94,7 @@ class RefKind(StrEnum):
     IMPLEMENTATION = "implementation"
     """`package.module:attribute`, importable."""
     RECORD = "record"
-    """A persisted knowledge record. None exists yet."""
+    """A persisted knowledge record, by its repository path."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,9 +104,11 @@ class Ref:
 
     @property
     def path(self) -> str | None:
-        """The repository path a document or script reference points at."""
+        """The repository path a document, script or record reference points at."""
         if self.kind in (RefKind.DOCUMENT, RefKind.SCRIPT):
             return self.target.split(" §")[0]
+        if self.kind is RefKind.RECORD:
+            return self.target
         return None
 
 
@@ -251,6 +253,7 @@ DOMAINS: tuple[Domain, ...] = (
     Domain("hydrology", "Hydrology", "torne.hydrology"),
     Domain("atmosphere", "Atmosphere", "torne.atmosphere"),
     Domain("earth_observation", "Earth observation", "torne.eo"),
+    Domain("gas", "Gas supply", "torne.supply"),
 )
 
 # ------------------------------------------------------------------ sources
@@ -554,9 +557,52 @@ MODELS: tuple[ModelEntry, ...] = (
             ),
         ),
     ),
+    ModelEntry(
+        key="gas-supply-terminal-layer",
+        title="European LNG terminal layer: reserve, margin, derived entry, concentration, loss scenario",
+        kind="model",
+        domain_ids=("gas",),
+        identity=impl("torne.supply.terminals:serie_par_installation"),
+        version=None,
+        runs=(
+            Fact(
+                "Executed by the LNG-002 mission on 3 765 terminal states — 25 installations in "
+                "12 countries — and confronted with an independent source on the seven Spanish "
+                "terminals over June 2026.",
+                (script("experiments/lng_002_lng_terminals.py"), mission("LNG-002")),
+            ),
+        ),
+    ),
+    ModelEntry(
+        key="gas-supply-storage-layer",
+        title="European underground storage: fill, coverage, reconstitution, concentration",
+        kind="model",
+        domain_ids=("gas",),
+        identity=impl("torne.supply.gas:buffer_jours"),
+        version=None,
+        runs=(
+            Fact(
+                "Executed by the LNG-002 mission on 570 storage states — the 19 countries that "
+                "published them, among the 30 the platform answered for. The autonomy the "
+                "platform publishes was found to be a deterministic function of the stock and "
+                "the consumption it also publishes.",
+                (script("experiments/lng_002_european_gas.py"), mission("LNG-002")),
+            ),
+        ),
+    ),
 )
 
 # ----------------------------------------------------------------- missions
+
+_GAS_RECORD = Ref(
+    RefKind.RECORD,
+    "src/torne/knowledge/records/gas-supply-europe/2026-10-31/record.json",
+)
+"""The published record of the European gas supply.
+
+It is the first record the repository persists: the `KNOWLEDGE` status of
+LNG-002 rests on it, and the Explorer serves it as it is.
+"""
 
 MISSIONS: tuple[Mission, ...] = (
     Mission(
@@ -713,5 +759,100 @@ MISSIONS: tuple[Mission, ...] = (
             ),
         ),
         source_ids=("copernicus.dataspace.stac",),
+    ),
+    Mission(
+        mission_id="LNG-002",
+        title="European gas supply — LNG terminals and underground storage",
+        status=Status.KNOWLEDGE,
+        status_basis=(
+            doc("docs/LNG-002.md"),
+            script("experiments/lng_002_european_gas.py"),
+            script("experiments/lng_002_lng_terminals.py"),
+            _GAS_RECORD,
+        ),
+        domain_ids=("gas",),
+        countries=(
+            "AT",
+            "BE",
+            "BG",
+            "CH",
+            "CY",
+            "CZ",
+            "DE",
+            "DK",
+            "EE",
+            "ES",
+            "FI",
+            "FR",
+            "GR",
+            "HR",
+            "HU",
+            "IE",
+            "IT",
+            "LT",
+            "LU",
+            "LV",
+            "MT",
+            "NL",
+            "NO",
+            "PL",
+            "PT",
+            "RO",
+            "SE",
+            "SI",
+            "SK",
+            "UA",
+        ),
+        region=None,
+        question=(
+            "Does the European gas supply carry information that its sources do not publish — "
+            "at the level of the installation?"
+        ),
+        produced=(
+            Fact(
+                "The concentration of the reserve, which no platform publishes: a Herfindahl "
+                "index of 0.0649 among the installations and 0.2413 among the countries, with "
+                "the first country carrying 42.5 % of the European reserve.",
+                (doc("docs/LNG-002.md §2.3"), _GAS_RECORD),
+            ),
+            Fact(
+                "The state of the terminal system: 25 783 GWh of exploitable reserve and "
+                "3 564 GWh per day of send-out — 7.2 days of coverage if no cargo arrived, on "
+                "the tanks alone, without underground storage.",
+                (doc("docs/LNG-002.md §2.3"), _GAS_RECORD),
+            ),
+            Fact(
+                "The validation: the seven Spanish terminals, over the same gas days, against an "
+                "independent source — a median relative difference of 1.16 % on the stock and "
+                "0.00 % on the volumes, over 210 comparisons, the days aligned D to D.",
+                (doc("docs/LNG-002.md §4"), _GAS_RECORD),
+            ),
+            Fact(
+                "What the loss of an installation costs the system: the most critical one costs "
+                "0.7 day of coverage, and the three worst cases are Spanish.",
+                (doc("docs/LNG-002.md §2.3"), _GAS_RECORD),
+            ),
+        ),
+        not_established=(
+            Fact(
+                "Any new country-level autonomy: the autonomy the platform publishes is a "
+                "deterministic function of the stock and the consumption it also publishes, and "
+                "the ratio is 0.100 for the nineteen countries that publish both.",
+                (doc("docs/LNG-002.md §3"),),
+            ),
+            Fact(
+                "The absolute entry into the tanks: the platform publishes the network injection "
+                "only, so the entry derived from the stock equation is a lower bound, and the "
+                "coverage computed from it an upper bound.",
+                (doc("docs/LNG-002.md §4.1"), _GAS_RECORD),
+            ),
+            Fact(
+                "The validation of the eighteen installations outside Spain: they are produced, "
+                "but they were not confronted with an independent source.",
+                (doc("docs/LNG-002.md §6"), _GAS_RECORD),
+            ),
+        ),
+        model_keys=("gas-supply-terminal-layer", "gas-supply-storage-layer"),
+        knowledge_records=(_GAS_RECORD,),
     ),
 )

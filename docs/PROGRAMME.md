@@ -60,6 +60,7 @@ Each line has a place in the code and a test suite that checks it. The full suit
 | Semantic layers | `hydrology/`, `atmosphere/`, `eo/` | reading each source into canonical observations without inventing units, zones or publication instants |
 | Methods | `methods/` | Kalman filter with irregular time steps, ML-estimated variances and RTS smoothing; CRPS, Winkler, pinball, PIT and calibration; effective sample size, block and cluster bootstrap; Benjamini–Hochberg, Bonferroni, Romano–Wolf; CR1 regression; CUSUM breaks; power |
 | Execution, evaluation, knowledge | `execution/`, `evaluation/`, `knowledge/` | replay from configuration with explicit seed; cumulative temporal splits, baselines, metrics, uncertainty; frozen products with lineage verifiable down to raw evidence |
+| Knowledge publication | `knowledge/store.py`, `scripts/publish_gas_supply.py` | a knowledge product is **persisted**: one versioned record per product, carrying the digest of the payload it points at; a published product is never rewritten, its payload and its description included; a publication script that verifies what it published, and refuses to serve a product whose check fails |
 | Explorer API | `explorer/api/`, `explorer/services/` | a versioned read-only API (`/api/v1`, with `/api` kept and marked deprecated); a Pydantic response model on every route, one coherent error shape, and an OpenAPI document that describes what is served |
 | Explorer front end | `frontend/` | a compiled static application (React, TypeScript strict, Vite) with a design system of one grammar and two skins, scientific chart components and a component workbench; served by FastAPI, and free of any runtime CDN dependency |
 
@@ -155,10 +156,16 @@ None of these is an oversight; each is recorded so that it is not smoothed over.
 
 **Explorer**
 
-- **Knowledge records are not persisted.** `knowledge.record.ExecutionRecord` lives in memory and mission scripts
-  write their evidence to temporary directories. TORNE Explorer therefore lists no knowledge product, and says so.
-  A persisted record format is the prerequisite for the explorer's "intelligence" level; BASIN-001's first product is
-  the natural occasion to define it.
+- **Knowledge records are persisted.** The first knowledge product is published: the European gas supply
+  (`gas-supply-europe`, version `2026-10-31`), built by `scripts/publish_gas_supply.py` from the LNG-002 production
+  output and checked against it. The record carries the digest of the payload it points at, and the store refuses to
+  rewrite a published version — payload or description included. The Explorer serves it, and the Supply Intelligence
+  branch reads it. **What remains**: the gas sources themselves are still unqualified, so the product cites no
+  registered source; the record's `source_ids` is empty and the manifest says so in its `planned` list.
+  See `docs/ADR-KNOWLEDGE-PUBLICATION-001.md`.
+- **The branches are read from the manifest.** The Explorer's top bar no longer hardcodes its spaces: the manifest
+  carries the branches, each with its title, whether it is open, and why. `supply` is open; `market` is closed, and
+  says so in a sentence a reader can see rather than in a tooltip no one opens.
 - **The API prefix is in transition.** `/api/v1` is canonical; `/api` still answers the same questions and marks
   its answers `Deprecation: true`, with a `Link` header naming the successor. The legacy prefix is kept until its
   consumers have moved; removing it is a deliberate, announced step, not a side effect. The rule is published: the

@@ -19,13 +19,13 @@ from .result import Results
 from .source import Source
 
 __all__ = [
+    "Branch",
     "CountryDetail",
     "CountryDomain",
     "CountrySummary",
     "CoverageEntry",
     "Domain",
     "Manifest",
-    "MarketIntelligence",
     "PlannedFeature",
     "Region",
     "SurfaceProduct",
@@ -158,11 +158,25 @@ class PlannedFeature(BaseModel):
     needs: str = Field(description="What the feature would need before it could exist.")
 
 
-class MarketIntelligence(BaseModel):
-    """The state of the market branch of the platform."""
+class Branch(BaseModel):
+    """One branch of the platform, and whether it is open.
 
-    open: bool = Field(description="Whether the market branch is open. It is not, today.")
+    A branch is an application of what the repository has established. It is
+    open when the products it consumes are themselves validated, and closed
+    otherwise — and a closed branch says why, in words a reader can check.
+    """
+
+    branch_id: str = Field(description="The branch's identifier.")
+    title: str = Field(description="What the branch is called.")
+    open: bool = Field(description="Whether the branch is open.")
     reason: str = Field(description="Why it is closed, or why it is open.")
+    domain_ids: list[str] = Field(
+        default_factory=list, description="The observation modalities it reads."
+    )
+    mission_ids: list[str] = Field(default_factory=list, description="The missions behind it.")
+    product_ids: list[str] = Field(
+        default_factory=list, description="The published products it serves."
+    )
 
 
 class Manifest(BaseModel):
@@ -192,4 +206,6 @@ class Manifest(BaseModel):
     surface_products: list[SurfaceProduct] = Field(description="The surface observation products.")
     results: Results = Field(description="What is published, and what was only run.")
     planned: list[PlannedFeature] = Field(description="What is planned and not available.")
-    market_intelligence: MarketIntelligence = Field(description="The state of the market branch.")
+    branches: list[Branch] = Field(
+        description="The branches of the platform, and whether they are open."
+    )
