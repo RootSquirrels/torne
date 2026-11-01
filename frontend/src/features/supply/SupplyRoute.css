@@ -1,0 +1,434 @@
+/**
+ * The supply branch: a document.
+ *
+ * The page is a reading, not an instrument: one column of text, with the
+ * map, the table and the chart set into it. Every rule here is scoped to the
+ * branch's own classes — the components it uses are owned elsewhere, and
+ * their own styles must survive.
+ */
+
+.torne-supply {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: 104rem;
+  margin: 0 auto;
+  padding: var(--space-5);
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------------- header */
+
+.torne-supply__page-header {
+  background: var(--surface-raised);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-bottom: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-2);
+  padding: var(--space-5);
+}
+
+.torne-supply__eyebrow {
+  margin: 0;
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
+}
+
+.torne-supply__title {
+  margin: var(--space-2) 0 0;
+  color: var(--content-primary);
+  font-family: var(--font-display);
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-tight);
+}
+
+.torne-supply__lede {
+  margin: var(--space-3) 0 0;
+  max-width: 52rem;
+  color: var(--content-secondary);
+  font-size: var(--font-size-lg);
+  line-height: var(--line-height-relaxed);
+}
+
+.torne-supply__meta {
+  margin: var(--space-2) 0 0;
+  color: var(--content-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/**
+ * The status of the product, and the evidence that supports it.
+ *
+ * A status is never shown on its own: what earned it sits beside it.
+ */
+.torne-supply__status {
+  display: grid;
+  grid-template-columns: minmax(4rem, max-content) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.torne-supply__status-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
+
+.torne-supply__status-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* ------------------------------------------------------------------ sections */
+
+.torne-supply__section {
+  margin-bottom: var(--space-2);
+}
+
+.torne-supply__section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-bottom: var(--control-border-width) solid var(--hairline);
+}
+
+.torne-supply__section-title {
+  margin: 0;
+  color: var(--content-tertiary);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--letter-spacing-wider);
+  line-height: var(--line-height-snug);
+  text-transform: uppercase;
+}
+
+.torne-supply__section-note {
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+  font-variant-numeric: var(--font-numeric);
+  text-align: right;
+}
+
+.torne-supply__section-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* --------------------------------------------------------------------- facts */
+
+.torne-supply__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.torne-supply__fact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.torne-supply__fact-name {
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+  letter-spacing: var(--letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.torne-supply__fact-value {
+  margin: 0;
+  color: var(--content-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-variant-numeric: var(--font-numeric);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* -------------------------------------------------------------------- prose */
+
+.torne-supply__prose {
+  max-width: 52rem;
+}
+
+.torne-supply__paragraph {
+  margin: var(--space-1) 0 0;
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+.torne-supply__note {
+  margin: var(--space-1) 0 0;
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-relaxed);
+}
+
+.torne-supply__failure {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--content-primary);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+.torne-supply__stale {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  color: var(--content-secondary);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-default);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+}
+
+/* ------------------------------------------------------------------ measures */
+
+.torne-supply__measures {
+  margin-top: var(--space-3);
+}
+
+.torne-supply__measure-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.torne-supply__measure {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.torne-supply__measure-label {
+  color: var(--content-primary);
+  font-size: var(--font-size-xs);
+}
+
+.torne-supply__measure-unit {
+  color: var(--content-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-3xs);
+}
+
+/* ---------------------------------------------------------------------- map */
+
+.torne-supply__split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.torne-supply__map {
+  min-width: 0;
+}
+
+.torne-supply__table {
+  min-width: 0;
+}
+
+/**
+ * A long table scrolls in its own box.
+ *
+ * The page is a document: a table of three hundred days does not push the
+ * rest of the reading off the screen.
+ */
+.torne-supply__scroll {
+  max-height: 30rem;
+  overflow: auto;
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.torne-supply__entity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.torne-supply__entity-name {
+  color: var(--content-primary);
+  font-size: var(--font-size-sm);
+}
+
+.torne-supply__entity-id {
+  color: var(--content-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-3xs);
+}
+
+.torne-supply__flag-unknown {
+  color: var(--content-tertiary);
+  font-size: var(--font-size-xs);
+}
+
+/* ----------------------------------------------------------------- absences */
+
+.torne-supply__absences {
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-inset);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.torne-supply__absence-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.torne-supply__absence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  background: var(--surface-raised);
+  border: var(--control-border-width) solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.torne-supply__absence-code {
+  color: var(--content-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+/* --------------------------------------------------------------- provenance */
+
+.torne-supply__lineage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: torne-lineage;
+}
+
+.torne-supply__lineage-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--control-border-width) solid var(--hairline);
+}
+
+.torne-supply__lineage-kind {
+  min-width: 7rem;
+  color: var(--content-tertiary);
+  font-size: var(--font-size-3xs);
+  letter-spacing: var(--letter-spacing-wider);
+  text-transform: uppercase;
+}
+
+.torne-supply__lineage-label {
+  color: var(--content-primary);
+  font-size: var(--font-size-sm);
+}
+
+.torne-supply__lineage-id {
+  color: var(--content-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.torne-supply__lineage-revision {
+  color: var(--content-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+}
+
+.torne-supply__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.torne-supply__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  color: var(--content-secondary);
+  font-size: var(--font-size-xs);
+}
+
+.torne-supply__source-publisher {
+  color: var(--content-primary);
+  font-size: var(--font-size-sm);
+}
+
+.torne-supply__source-dataset {
+  color: var(--content-secondary);
+  font-size: var(--font-size-sm);
+}
+
+.torne-supply__source-units,
+.torne-supply__source-access {
+  color: var(--content-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-3xs);
+}
+
+.torne-supply__code {
+  margin: 0;
+  color: var(--content-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  overflow-wrap: anywhere;
+}
+
+.torne-supply__badge-line {
+  margin: 0 0 var(--space-2);
+}

@@ -27,6 +27,16 @@ export interface SpatialPoint {
   readonly kind: string;
   /** The layer the point belongs to. */
   readonly layerId: string;
+  /**
+   * The colour the point is filled with, when it carries a value.
+   *
+   * Absent or null when the point carries no value: it is then drawn in the
+   * neutral marker colour, and a colour is never invented to fill a gap. The
+   * field is optional so that a scene which colours nothing does not have to
+   * say so, and a point that carries a value keeps its colour when it is
+   * selected — the selection is then an outline, as it is for an area.
+   */
+  readonly fill?: string | null;
   /** The values shown in the pop-up. */
   readonly properties: Readonly<Record<string, string | number | boolean | null>>;
 }

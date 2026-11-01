@@ -87,7 +87,15 @@ export type ApiSurfaceProduct = Schema<'SurfaceProduct'>;
 
 export type ApiPlannedFeature = Schema<'PlannedFeature'>;
 
-export type ApiMarketIntelligence = Schema<'MarketIntelligence'>;
+/**
+ * A branch of the platform, and whether it is open.
+ *
+ * The vocabulary of what a branch may become is the manifest's own: the
+ * branches it carries, each with the products it serves and the reason it is
+ * open or closed. There is no separate schema for "the market branch" — a
+ * branch is a row of the catalogue, and a branch that is closed says why.
+ */
+export type ApiBranch = Schema<'Branch'>;
 
 // ------------------------------------------------------------------ mission
 
@@ -106,9 +114,40 @@ export type ApiAssetKind = Schema<'Asset'>['kind'];
  */
 export type ApiAsset = Schema<'Asset'>;
 
-// ------------------------------------------------------------------- source
+// -------------------------------------------------------------------- source
 
 export type ApiSource = Schema<'Source'>;
+
+// ------------------------------------------------------------------- product
+
+/**
+ * A published knowledge product.
+ *
+ * A product is a persisted, versioned record: the payload it holds, the
+ * layers that payload is made of, the units those layers publish, and the
+ * lineage that produced it. The branch that serves it says so in the
+ * manifest.
+ */
+export type ApiProductSummary = Schema<'ProductSummary'>;
+
+export type ApiProductList = Schema<'ProductList'>;
+
+export type ApiProductDetail = Schema<'ProductDetail'>;
+
+/**
+ * One published state of one entity of one layer.
+ *
+ * A value is absent when the product says so: `values` holds `null` for a
+ * measure that was not established, and that null is never a zero.
+ */
+export type ApiProductState = Schema<'ProductState'>;
+
+export type ApiProductStates = Schema<'ProductStates'>;
+
+/** One day of the confrontation with an independent source. */
+export type ApiConfrontationRow = Schema<'ConfrontationRow'>;
+
+export type ApiConfrontationRows = Schema<'ConfrontationRows'>;
 
 // -------------------------------------------------------------------- model
 

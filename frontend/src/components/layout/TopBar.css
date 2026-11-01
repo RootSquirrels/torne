@@ -144,14 +144,37 @@
   box-shadow: var(--shadow-1);
 }
 
+/**
+ * A closed branch says that it is closed, and says why.
+ *
+ * The reason the catalogue gives is written under the name, in the bar
+ * itself: a reader who cannot go to the branch must still learn what the
+ * platform has not established yet. The name keeps a readable contrast — a
+ * closed branch is dimmed, not hidden.
+ */
 .torne-topbar__space--closed {
-  color: var(--content-disabled);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  max-width: 26rem;
+  color: var(--content-tertiary);
   cursor: not-allowed;
 }
 
 .torne-topbar__space--closed:hover {
   background: transparent;
-  color: var(--content-disabled);
+  color: var(--content-tertiary);
+}
+
+.torne-topbar__closed-reason {
+  color: var(--content-secondary);
+  font-size: var(--font-size-2xs);
+  font-weight: var(--font-weight-regular);
+  letter-spacing: normal;
+  line-height: var(--line-height-snug);
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
 }
 
 .torne-topbar__soon {

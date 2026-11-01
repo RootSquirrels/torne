@@ -9,6 +9,7 @@
 
 import type {
   ApiAsset,
+  ApiConfrontationRows,
   ApiCountryDetail,
   ApiDomain,
   ApiErrorResponse,
@@ -16,6 +17,9 @@ import type {
   ApiManifest,
   ApiMission,
   ApiModel,
+  ApiProductDetail,
+  ApiProductList,
+  ApiProductStates,
   ApiRegion,
   ApiResults,
   ApiSource,
@@ -169,6 +173,48 @@ export const api = {
     request<ApiModel>(`/models/${encodeURIComponent(key)}`, signal),
 
   results: (signal?: AbortSignal) => request<ApiResults>('/results', signal),
+
+  /**
+   * The published products.
+   */
+  products: (signal?: AbortSignal) => request<ApiProductList>('/products', signal),
+
+  /**
+   * One product: its payload, its layers, its units and its lineage.
+   */
+  product: (productId: string, signal?: AbortSignal) =>
+    request<ApiProductDetail>(`/products/${encodeURIComponent(productId)}`, signal),
+
+  /**
+   * The states of a layer.
+   *
+   * Without an entity, the API serves the last published state of every
+   * entity of the layer; with one, it serves the whole series of that entity.
+   */
+  productStates: (
+    productId: string,
+    params: { layer: string; entity?: string },
+    signal?: AbortSignal,
+  ) => {
+    const query = new URLSearchParams();
+    query.set('layer', params.layer);
+    if (params.entity !== undefined) {
+      query.set('entity', params.entity);
+    }
+    return request<ApiProductStates>(
+      `/products/${encodeURIComponent(productId)}/states?${query.toString()}`,
+      signal,
+    );
+  },
+
+  /**
+   * The confrontation of the product with an independent source.
+   */
+  productConfrontation: (productId: string, signal?: AbortSignal) =>
+    request<ApiConfrontationRows>(
+      `/products/${encodeURIComponent(productId)}/confrontation`,
+      signal,
+    ),
 };
 
 export type Api = typeof api;

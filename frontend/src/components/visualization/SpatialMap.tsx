@@ -187,16 +187,22 @@ export function SpatialMap({
       groups.current.set(layer.id, group);
 
       for (const point of scene.points.filter((entry) => entry.layerId === layer.id)) {
-        // A point carries no status, so the selection may take the fill. An
-        // area carries one, and there the selection is an outline only: the
-        // fill says what the country has reached, and that does not change
-        // because the reader is looking at it.
+        // A point that carries a value keeps its colour when it is selected:
+        // the selection is an outline only, as it is for an area, because the
+        // colour says what the point is and that does not change because the
+        // reader is looking at it. A point that carries no value may take the
+        // selection's fill, because there is nothing to hide.
         const isSelected = selectedId === point.id;
         const marker = L.circleMarker([point.position[1], point.position[0]], {
           radius: isSelected ? 7 : 6,
           color: isSelected ? style.selected : style.ink,
           weight: isSelected ? 2 : 1,
-          fillColor: isSelected ? style.selected : style.marker,
+          fillColor:
+            point.fill !== undefined && point.fill !== null
+              ? point.fill
+              : isSelected
+                ? style.selected
+                : style.marker,
           fillOpacity: 1,
         });
         marker.bindTooltip(`${escapeHtml(point.label)} · ${escapeHtml(point.kind)}`, {

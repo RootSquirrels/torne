@@ -65,6 +65,13 @@ export interface ChartTokens {
   readonly mapBoundary: string;
   readonly mapMarker: string;
   readonly mapMarkerSelected: string;
+  /**
+   * The attention colour: a state that must be seen.
+   *
+   * It belongs to the semantic register, not to the series: it says "this is
+   * in tension", never "this is the third series".
+   */
+  readonly warning: string;
 }
 
 /**
@@ -135,6 +142,7 @@ export function readChartTokens(root: HTMLElement): ChartTokens {
     mapBoundary: read(root, '--map-boundary', '#c6c0b3'),
     mapMarker: read(root, '--map-marker', '#1a1c20'),
     mapMarkerSelected: read(root, '--map-marker-selected', '#a4481f'),
+    warning: read(root, '--semantic-warning', '#8a6100'),
   };
 }
 
