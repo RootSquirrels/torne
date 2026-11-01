@@ -27,12 +27,14 @@ Usage :
 from __future__ import annotations
 
 import json
+import shutil
 import ssl
 import sys
 import tempfile
 import time
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
@@ -127,9 +129,15 @@ def main(argv: list[str]) -> int:
 
     sortie = Path(argv[1]) if len(argv) > 1 else Path(tempfile.mkdtemp(prefix="torne-marine-002-"))
     sortie.mkdir(parents=True, exist_ok=True)
+    global ANNEE, MOIS
+    if len(argv) > 2:
+        ANNEE = argv[2]
+    if len(argv) > 3:
+        MOIS = argv[3]
     secret = _secret()
     print("TORNE — MARINE-002, test d'ORAS5 sur le Climate Data Store")
-    print(f"cle CDS : presente (jamais affichee) · sortie : {sortie}")
+    print(f"cle CDS : presente (jamais affichee) · annee {ANNEE} mois {MOIS}")
+    print(f"sortie : {sortie}")
     print()
 
     _reconnaissance(secret)
@@ -228,13 +236,15 @@ def _execution(secret: str, corps: dict, sortie: Path) -> None:
         )
         print()
         return
-    if status not in (200, 202):
+    if status not in (200, 201, 202):
         print(f"   HTTP {status} — {_detail(reponse)}")
         print()
         return
 
     tache = json.loads(reponse)
-    identifiant = tache.get("identifier") or tache.get("job_id") or tache.get("id")
+    identifiant = (
+        tache.get("jobID") or tache.get("identifier") or tache.get("job_id") or tache.get("id")
+    )
     print(f"   commande acceptee (HTTP {status}) · tache {identifiant}")
     if not identifiant:
         print(f"   reponse : {json.dumps(tache)[:400]}")
@@ -260,17 +270,54 @@ def _execution(secret: str, corps: dict, sortie: Path) -> None:
         return
 
     actif = tache.get("asset", {})
+    if not actif:
+        # Le CDS place le fichier dans un lien « results » : le chemin du
+        # client de bureau passe par lui, pas par « asset ».
+        resultats = next(
+            (lien["href"] for lien in tache.get("links", []) if lien.get("rel") == "results"),
+            None,
+        )
+        if resultats is None:
+            print(f"   [NON VERIFIE] aucun fichier dans la reponse : {json.dumps(tache)[:400]}")
+            return
+        status, corps = _appeler(resultats, secret)
+        if status != 200:
+            print(f"   [NON VERIFIE] lecture des resultats : HTTP {status} — {_detail(corps)}")
+            return
+        actif = json.loads(corps).get("asset", {}).get("value", {})
+
     href = actif.get("href")
     if not href:
         print(f"   [NON VERIFIE] aucun fichier dans la reponse : {json.dumps(tache)[:400]}")
         return
     print(f"   fichier : {href}")
+    print(f"   taille annoncee : {actif.get('file:size')} octets")
     destination = sortie / Path(href).name
-    status, corps = _appeler(href, secret)
-    destination.write_bytes(corps)
-    print(f"   telecharge : {destination} ({len(corps)} octets)")
-    print(f"   signature : {corps[:8]!r}")
+    if destination.exists() and destination.stat().st_size == int(actif.get("file:size") or 0):
+        print(f"   deja telecharge : {destination}")
+    else:
+        _telecharger(href, secret, destination)
+    corps = destination.read_bytes()[:8]
+    print(f"   signature : {corps!r}")
     _decoupe(destination, corps)
+
+
+def _telecharger(href: str, secret: str, destination: Path) -> None:
+    """Le fichier, ecrit en flux : le produit global pese 1,8 Go."""
+    demande = urllib.request.Request(href, headers={"PRIVATE-TOKEN": secret})
+    recu = 0
+    debut = time.time()
+    with (
+        urllib.request.urlopen(demande, timeout=900, context=_contexte()) as reponse,
+        open(destination, "wb") as sortie,
+    ):
+        while True:
+            bloc = reponse.read(1 << 20)
+            if not bloc:
+                break
+            sortie.write(bloc)
+            recu += len(bloc)
+    print(f"   telecharge : {recu} octets en {round(time.time() - debut)} s -> {destination}")
 
 
 def _decoupe(fichier: Path, corps: bytes) -> None:
@@ -278,6 +325,26 @@ def _decoupe(fichier: Path, corps: bytes) -> None:
     print()
     print("4. l'echantillon 3D sur la zone")
     print(f"   zone : {ZONE[0]}-{ZONE[1]} N, {ZONE[2]}-{ZONE[3]} E")
+
+    if corps[:4] == b"PK\x03\x04":
+        # Le CDS livre une ARCHIVE : un netCDF par grandeur.
+        print("   [FAIT] le CDS livre une ARCHIVE zip, pas un netCDF :")
+        with zipfile.ZipFile(fichier) as archive:
+            for membre in archive.infolist():
+                print(f"      {membre.file_size / 1e6:8.1f} Mo  {membre.filename}")
+            for membre in archive.namelist():
+                if not membre.endswith(".nc"):
+                    continue
+                cible = fichier.parent / membre
+                if not (cible.exists() and cible.stat().st_size > 0):
+                    with (
+                        archive.open(membre) as source,
+                        open(cible, "wb") as sortie,
+                    ):
+                        shutil.copyfileobj(source, sortie, length=1 << 22)
+        print("   archive extraite")
+        return
+
     if corps[:4] == b"CDF\x01":
         print("   format netCDF-3 classique : lisible par scipy.io.netcdf_file")
         return
