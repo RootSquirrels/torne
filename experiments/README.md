@@ -22,7 +22,7 @@ it, reproduce it and see its value. What fails that test stays here, or disappea
 | `mission_003_hydro001.py` | **HYDRO-001**, source qualification: bounded acquisition of the two Hub'EAU feeds (stage `H`, discharge `Q`), station selection by declared criteria, and an out-of-sample, chronological evaluation of whether the published discharge is a function of the published stage. Protocol: [`docs/PRE-REGISTRATION-HYDRO-001.md`](../docs/PRE-REGISTRATION-HYDRO-001.md). | yes; no key |
 | `atmo_001_sources_probe.py` | ATMO-001 accessibility inventory of 17 atmospheric access points. | yes |
 | `atmo_001_premiere_acquisition.py` | ATMO-001 acquisition of four GHCN-Daily French stations and their exploratory profile. | yes |
-| `atmo_001_meteofrance.py` | ATMO-001 Météo-France route, as it answers with or without a token. | yes; `METEOFRANCE_TOKEN` |
+| `atmo_001_meteofrance.py` | ATMO-001 Météo-France route, as it answers with or without an API key; step 3 reads the climatological API. | yes; `METEOFRANCE_API_KEY` |
 
 Scripts that touch the network write their raw evidence to a temporary directory they print at the end. Keys and
 tokens are read at the last moment and never appear in a recorded request. Hub'EAU throttles (`503` when asked too

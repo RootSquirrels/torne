@@ -78,7 +78,7 @@ One real catchment, three observation modalities, a first reconstruction of its 
 | # | Input | Role in the reconstruction | Building blocks in place | Gap |
 |---|---|---|---|---|
 | 1 | Observed discharge (Hub'EAU) | integrated response of the catchment; the outlet constraint | `hubeau_feed` adapter, `hydrology.hubeau` station selection, HYDRO-001 qualification | station selection depends on the basin |
-| 2 | Historical precipitation and temperature | forcing | `ghcnd` adapter and `atmosphere/` (point stations, publication class N) | Météo-France needs an OAuth2 token; ERA5 is reachable only through Open-Meteo's re-serving; a gridded or catchment-averaged forcing is not built |
+| 2 | Historical precipitation and temperature | forcing | `ghcnd` adapter and `atmosphere/` (point stations, publication class N) | Météo-France's climatological API (DPClim) is reachable with an API key (verified, `docs/ATMO-002.md` §2) but its daily CSV is not yet read into canonical observations (units, flag semantics and time basis to establish); ERA5 is reachable only through Open-Meteo's re-serving; a gridded or catchment-averaged forcing is not built |
 | 3 | Soil moisture and evapotranspiration (EO) | the storage state the outlet does not show | `copernicus_stac` adapter and `eo/` registry: SSM (Sentinel-1, independent, from 2014-10), SWI (index, not audited) | **CLMS evapotranspiration starts on 2025-11-01**: it covers no historical year; pixel values are not read (assets require OIDC authentication) |
 | 4 | Land cover and catchment geometry | the spatial support of the state | `contracts/spatial.py` (footprint, grid; no projection) | no land-cover or catchment-boundary source is integrated |
 | 5 | Spatio-temporal reconstruction of the water state | the knowledge product | Kalman filter and smoother, evaluation, knowledge records | the state-space formulation linking 1–4 is not written |
@@ -102,7 +102,7 @@ each source taken separately**. Before the pre-registration is frozen, that is m
 
 1. **The catchment.** A French catchment is required by Hub'EAU; its size must be large enough for 1 km surface
    products and small enough for one outlet gauge to integrate it.
-2. **The forcing source.** Météo-France (token to provide, through `METEOFRANCE_TOKEN` or a git-ignored `.env`),
+2. **The forcing source.** Météo-France (DPClim, reachable with an API key held in `METEOFRANCE_API_KEY` or a git-ignored `.env`; the CSV is not yet interpreted),
    ERA5 through a stable path, or GHCN-Daily stations alone.
 3. **Evapotranspiration.** Either accept that EO evapotranspiration is unavailable before 2025-11 and reconstruct it,
    or restrict the period. Reading pixel values requires a Copernicus account.

@@ -1,4 +1,8 @@
-"""HYDRO-001 — the first knowledge product of TORNE about a real French river.
+"""HYDRO-001 — source qualification: is Hub'EAU's published discharge a function of its published stage?
+
+This is a qualification of a source, not a reconstruction of the physical state of the river. The script
+builds a knowledge-product record of that qualification; the existence of the record does not by itself
+establish that it holds new knowledge (see `docs/PROGRAMME.md`).
 
 The script runs the whole milestone in the order the milestone asks for:
 

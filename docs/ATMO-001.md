@@ -20,7 +20,7 @@ uv run pytest tests/test_atmosphere.py tests/test_meteofrance.py
 
 1. **The French institutional source is behind a token.** The three documented Météo-France routes answer `401`. The
    adapter and the credential-by-reference code are in place (`acquisition/adapters/meteofrance.py`,
-   `acquisition/credentials.py`); with a token in `METEOFRANCE_TOKEN` or a git-ignored `.env`, the same script runs.
+   `acquisition/credentials.py`); with a key in `METEOFRANCE_API_KEY` or a git-ignored `.env`, the same script runs (this record assumed an OAuth2 token in `METEOFRANCE_TOKEN`; ATMO-002 established that the portal issues an API key).
 2. **A complete, documented observation source is open**: GHCN-Daily (NOAA/NCEI), 109 French stations, 1921–2026, with
    the producer's quality flags. For France its upstream source is **ECA&D**, not Météo-France.
 3. **None of these observations is admissible in point-in-time reconstruction.** GHCN-Daily never publishes when a

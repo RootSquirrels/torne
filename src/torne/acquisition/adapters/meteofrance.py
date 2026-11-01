@@ -10,7 +10,7 @@ pourquoi —
      'Authorization : Bearer ACCESS_TOKEN' …"}
 
 Ce module ne connaît **jamais** la valeur du jeton. La demande porte une
-**référence** — ``meteofrance.oauth2`` — et c'est le socle qui résout le
+**référence** — ``meteofrance.apikey`` — et c'est le socle qui résout le
 secret au dernier moment, à partir de l'environnement ou d'un fichier local
 ignoré (INV-41). Ce qui est consigné — journal, manifeste, empreinte — porte
 le nom de la référence, jamais le jeton.

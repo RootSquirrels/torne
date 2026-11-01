@@ -10,7 +10,7 @@ n'entre dans aucune demande consignée.
 Ce que ce module garantit :
 
 - la demande d'acquisition porte une **référence** (`credential_ref`) — un
-  nom, comme ``meteofrance.oauth2`` — et jamais la valeur ;
+  nom, comme ``meteofrance.apikey`` — et jamais la valeur ;
 - la valeur n'est lue qu'au moment de l'envoi, et n'est renvoyée que si la
   référence demandée est bien celle que ce fournisseur connaît ;
 - une référence inconnue ne reçoit **rien** : un fournisseur ne peut pas

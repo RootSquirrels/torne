@@ -5,6 +5,11 @@
 **Protocol implemented by**: `experiments/mission_003_hydro001.py`.
 **Question answered by the published product**: `torne.hydro-001.hubeau.<station>.relation`.
 
+> **Amendment 2026-11-01 (status wording only).** Where this document, `A.1` and `B.6` below call HYDRO-001 the
+> "first knowledge product", read: **the first source-qualification result recorded as a knowledge-product object**.
+> `docs/PROGRAMME.md` classifies HYDRO-001 as source qualification, not new knowledge. This amendment was made before any
+> run was recorded and changes no hypothesis, threshold, refutation criterion or decision rule.
+
 This document is the contract between the experiment and whoever reads its
 result. Everything that could be decided by looking at the outcome is decided
 here, in advance, and the script follows this document rather than the other
