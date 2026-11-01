@@ -117,7 +117,7 @@ def marge_installation(
     suite: Sequence[GasDay],
     fenetre: int = FENETRE_JOURS,
     stock_mini_frac: float = STOCK_MINI_FRAC,
-) -> list[float]:
+) -> list[float | None]:
     """La marge, jour par jour : la reserve divisee par le debit de sortie moyen.
 
     La meme loi que le produit espagnol (`torne.supply.lng`), reprise telle
@@ -125,8 +125,16 @@ def marge_installation(
     la fenetre traileresse. Aucun prix, aucune hypothese de marche : la seule
     question posee est « combien de jours, au rythme observe ».
 
-    Une installation qui ne sort rien donne une couverture nulle : la question
-    n'a pas de reponse, et non pas une reponse infinie.
+    **Une installation qui ne sort rien n'a pas de couverture — elle n'est pas
+    a zero.** La question « combien de jours de couverture » n'a pas de
+    reponse pour une cuve pleine et inactive : la reponse `None` dit
+    exactement cela. Publier zero pour un site plein et inactif dirait
+    l'inverse de la verite, et c'est la confusion la plus grave qu'un
+    indicateur de couverture puisse commettre.
+
+    C'est un cas **reel** : au 31 octobre 2026, plusieurs sites de stockage
+    europeens publient un stock plein ou proche du plein et **aucun**
+    soutirage — la reserve est la, et elle ne sort pas.
 
     Ce que la couverture mesure, et ce qu'elle borne : la **reserve** est la
     part du stock au-dessus du minimum technique, et elle se consomme au
@@ -136,20 +144,27 @@ def marge_installation(
     le flux publie ne le dit. Le controle de confrontation a mesure l'ampleur
     de l'effet sur les terminaux espagnols.
     """
-    marges: list[float] = []
+    marges: list[float | None] = []
     for index in range(len(suite)):
         debit, _ = debit_sortie_moyen(suite, fenetre, index)
         if debit <= 0:
-            marges.append(0.0)
+            marges.append(None)
             continue
         reserve = reserve_operationnelle(suite[index].stock, suite[index].capacite, stock_mini_frac)
         marges.append(reserve / debit)
     return marges
 
 
-def jours_en_tension(marges: Sequence[float], seuil: float = SEUIL_TENSION_JOURS) -> int:
-    """Le nombre de jours ou la couverture est tombee sous le seuil."""
-    return sum(1 for marge in marges if marge < seuil)
+def jours_en_tension(
+    marges: Sequence[float | None],
+    seuil: float = SEUIL_TENSION_JOURS,
+) -> int:
+    """Le nombre de jours ou la couverture est tombee sous le seuil.
+
+    Un jour **sans couverture mesurable** (site qui ne sort rien) n'est pas un
+    jour de tension : il n'est pas compte.
+    """
+    return sum(1 for marge in marges if marge is not None and marge < seuil)
 
 
 def degradation_installation(suite: Sequence[GasDay], fenetre: int = FENETRE_JOURS) -> float | None:
@@ -157,13 +172,41 @@ def degradation_installation(suite: Sequence[GasDay], fenetre: int = FENETRE_JOU
 
     Negative quand la couverture se resserre : c'est la question « la situation
     se degrade-t-elle plus vite que prevu ? », posee au niveau de
-    l'installation et non du pays.
+    l'installation et non du pays. Les jours sans couverture mesurable sont
+    ecartes : ils n'ont pas de valeur, pas une valeur de zero.
     """
-    marges = marge_installation(suite, fenetre)
+    marges = [marge for marge in marge_installation(suite, fenetre) if marge is not None]
     if len(marges) < 2:
         return None
     pas = (marges[-1] - marges[0]) / (len(marges) - 1)
     return pas
+
+
+def scenario_perte_site(
+    reserve_pays: float,
+    reserve_site: float,
+    debit_pays: float,
+) -> dict[str, float] | None:
+    """Ce qu'il reste de couverture d'un pays si un site tombe.
+
+    Le denominateur est le **soutirage publie du pays**, et non la somme des
+    soutirages des sites : la plateforme publie certains flux au niveau
+    national seulement, et un site qui n'a pas de debit propre ne doit pas
+    faire disparaitre le flux du pays avec lui.
+
+    `None` si le pays n'a pas de soutirage observable : la question n'a alors
+    pas de reponse.
+    """
+    if debit_pays <= 0:
+        return None
+    avant = reserve_pays / debit_pays
+    apres = max(reserve_pays - reserve_site, 0.0) / debit_pays
+    return {
+        "couverture_avant_jours": avant,
+        "couverture_apres_jours": apres,
+        "jours_perdus": avant - apres,
+        "part_reserve_perdue": reserve_site / reserve_pays if reserve_pays > 0 else 0.0,
+    }
 
 
 def dechargement_derive(suite: Sequence[GasDay]) -> list[float | None]:

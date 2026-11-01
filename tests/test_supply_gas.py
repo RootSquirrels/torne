@@ -53,6 +53,7 @@ from torne.supply.terminals import (
     marge_installation,
     reserve_operationnelle,
     scenario_perte,
+    scenario_perte_site,
     serie_par_installation,
 )
 
@@ -345,11 +346,50 @@ class TestCoucheTerminal:
         assert marges[-1] == pytest.approx(8.0)
 
     def test_une_installation_qui_ne_sort_rien_n_a_pas_de_marge(self) -> None:
+        # Une cuve pleine et inactive n'a pas une couverture de zero jour :
+        # elle n'a pas de couverture MESURABLE. Publier zero dirait l'inverse
+        # de la verite, et c'est le cas reel de plusieurs sites de stockage.
         suite = [
             _jour_terminal("T1", "ES", dt.date(2026, 6, 1 + i), 1000.0, 2000.0, 0.0)
             for i in range(3)
         ]
-        assert marge_installation(suite) == [0.0, 0.0, 0.0]
+        assert marge_installation(suite) == [None, None, None]
+
+    def test_un_site_sans_soutirage_n_est_pas_compte_en_tension(self) -> None:
+        # Un jour sans couverture mesurable n'est pas un jour de tension :
+        # il n'est pas compte, il n'est pas traite comme un zero.
+        suite = [
+            _jour_terminal("T1", "ES", dt.date(2026, 6, 1 + i), 1000.0, 2000.0, 0.0)
+            for i in range(5)
+        ]
+        assert jours_en_tension(marge_installation(suite)) == 0
+
+    def test_la_degradation_ignore_les_jours_sans_couverture(self) -> None:
+        suite = [
+            _jour_terminal("T1", "ES", dt.date(2026, 6, 1), 1000.0, 2000.0, 0.0),
+            _jour_terminal("T1", "ES", dt.date(2026, 6, 2), 1200.0, 2000.0, 100.0),
+            _jour_terminal("T1", "ES", dt.date(2026, 6, 3), 1400.0, 2000.0, 100.0),
+        ]
+        # Le premier jour n'a pas de couverture : il est ecarte. La
+        # degradation se calcule alors sur les deux jours qui en ont une --
+        # 20,0 jours puis 18,0 jours, parce que la fenetre traileresse
+        # dilue le debit observe.
+        assert degradation_installation(suite) == pytest.approx(-2.0)
+
+    def test_le_scenario_de_perte_d_un_site_utilise_le_soutirage_du_pays(self) -> None:
+        # Le denominateur est le soutirage PUBLIE DU PAYS : un site qui n'a
+        # pas de debit propre ne doit pas faire disparaitre le flux du pays.
+        resultat = scenario_perte_site(
+            reserve_pays=20_000.0, reserve_site=5_000.0, debit_pays=500.0
+        )
+        assert resultat is not None
+        assert resultat["couverture_avant_jours"] == pytest.approx(40.0)
+        assert resultat["couverture_apres_jours"] == pytest.approx(30.0)
+        assert resultat["jours_perdus"] == pytest.approx(10.0)
+        assert resultat["part_reserve_perdue"] == pytest.approx(0.25)
+
+    def test_un_scenario_sans_soutirage_n_a_pas_de_reponse(self) -> None:
+        assert scenario_perte_site(20_000.0, 5_000.0, 0.0) is None
 
     def test_le_nombre_de_jours_en_tension(self) -> None:
         assert jours_en_tension([0.5, 2.9, 3.1, 10.0]) == 2

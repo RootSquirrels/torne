@@ -49,6 +49,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -232,6 +233,24 @@ def _premier_mois(debut: str, fin: str) -> tuple[str, str]:
     return debut_mois.isoformat(), fin_mois.isoformat()
 
 
+def _pages(magasin: FileRawStore, issue) -> list[tuple[str, bool]]:
+    """Les pages d'une reponse, avec le refus qu'elles portent eventualement."""
+    pages: list[tuple[str, bool]] = []
+    for preuve in issue.evidence:
+        chemin = magasin.content_path(preuve.evidence_id)
+        if not chemin.exists():
+            continue
+        try:
+            charge = json.loads(chemin.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        message = ""
+        if charge.get("error"):
+            message = str(charge.get("message") or charge.get("error"))
+        pages.append((message, bool(message)))
+    return pages
+
+
 def _acquerir_alsi(
     fetcher: Fetcher,
     magasin: FileRawStore,
@@ -266,6 +285,22 @@ def _acquerir_alsi(
                 plateforme="alsi",
             )
             issue = fetcher.acquire(adaptateur)
+            # La plateforme refuse par intermittence certaines requetes (un
+            # 200 et un corps qui porte la cle). Un refus laisse un trou
+            # dans la serie, et le trou bouge d'une execution a l'autre :
+            # une fenetre qui contient un refus est donc reprise.
+            for _tentative in range(2):
+                pages = _pages(magasin, issue)
+                if pages and not any(erreur for erreur, _ in pages):
+                    break
+                if _tentative == 0:
+                    time.sleep(3.0)
+                    issue = fetcher.acquire(adaptateur)
+            refus.extend(
+                f"{installation['eic']} : refus de la plateforme — {_assainir(erreur)}"
+                for erreur, _ in pages
+                if erreur
+            )
             for preuve in issue.evidence:
                 chemin = magasin.content_path(preuve.evidence_id)
                 if not chemin.exists():
@@ -496,8 +531,14 @@ def _main(argv: list[str]) -> int:
                     "stock_gwh": round(jour.stock, 3),
                     "capacite_gwh": round(jour.capacite, 3),
                     "sortie_gwh_j": round(jour.sortie, 3),
-                    "marge_jours": round(marges[index], 3),
-                    "tension": int(marges[index] < SEUIL_TENSION_JOURS),
+                    # Une installation qui ne sort rien n'a pas de couverture
+                    # mesurable : elle n'a pas une couverture de zero jour.
+                    "marge_jours": (round(marges[index], 3) if marges[index] is not None else ""),
+                    "tension": (
+                        int(marges[index] < SEUIL_TENSION_JOURS)
+                        if marges[index] is not None
+                        else ""
+                    ),
                     # L'entree derivee dans les cuves : cargaisons ET
                     # transferts par gazoduc, moins les sorties par camion et
                     # par navire que la plateforme ne publie pas. Ce n'est
@@ -513,7 +554,8 @@ def _main(argv: list[str]) -> int:
         nom = next((e.nom for e in etats if e.installation == code), code)
         marque = "  <<< TENDUE" if tension else ""
         print(
-            f"   {nom[:34]:<36} {marge:>7.1f} j  tension {tension:>3} j  "
+            f"   {nom[:34]:<36} {marge if marge is not None else float('nan'):>7.1f} j  "
+            f"tension {tension:>3} j  "
             f"pente {pente:+.3f} j/j  decharge {derive_total:>9,.0f} GWh{marque}"
         )
 
